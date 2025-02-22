@@ -1,0 +1,6 @@
+#glwindow {
+    width: 800px;
+    height: 760px;
+    background-color: red;
+    border: 1px solid black; 
+}
