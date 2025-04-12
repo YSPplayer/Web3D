@@ -1,3 +1,7 @@
+import {LineModelBuildData} from "./Geomety/data.js"
+const sdata = new LineModelBuildData();
+const centerPos = sdata.modelAttribute.keyPoint.centerPosition;
+console.log(`centerPosition: [${centerPos[0]}, ${centerPos[1]}, ${centerPos[2]}]`);
 // 获取画布元素
 const canvas = document.getElementById('glwindow');
 const gl = canvas.getContext('webgl');

@@ -1,27 +1,21 @@
-import { Shader } from "../Shader/shader";
+// import { ModelAttribute } from "./data.js";
 export class Model {
-    #shader;
-    #vao;
-    #vbos;
-    #datas;
-    #hasTexture;
-    #empty;
     constructor() {
-        if (new.target !== Model)
-            throw new Error("不允许直接调用构造函数构建该对象！");
-        this.modelAttribute = null; // 模型属性
-        this.#shader = null; // 模型着色器对象
-        this.#vao = null; // 对VAO进行统一管理的对象
-        this.#vbos = []; // 顶点缓冲对象数组
-        this.#datas = []; // 存放所有类型渲染数据的容器
-        this.#hasTexture = false; // 是否有贴图
-        this.#empty = true; // 当前模型是否有数据
+        this._modelAttribute = null; // 模型属性
+        this._shader = null; // 模型着色器对象
+        this._vao = null; // 对VAO进行统一管理的对象
+        this._vbos = []; // 顶点缓冲对象数组
+        this._datas = []; // 存放所有类型渲染数据的容器
+        this._hasTexture = false; // 是否有贴图
+        this._empty = true; // 当前模型是否有数据
     }
     
     dispose() {
-        array.forEach(element => {
-            
+        this._vbos.forEach(vbo => {
+            gl.deleteBuffers(1,vbo);
         });
+        if(this._vao !== null) gl.deleteBuffers(1,this._vao);
+        this._empty = true;
     }
 
     //virtual
@@ -31,17 +25,17 @@ export class Model {
     resetPosition() {}
 
     isEmpty() {
-        return this.#empty;
+        return this._empty;
     }
 
     hasTexture() {
-        return this.#hasTexture;
+        return this._hasTexture;
     }
 
 
     getVBOData(type) {
-        if (this.#empty || type >= this.datas.length) return null;
-        return this.#datas[type];
+        if (this._empty || type >= this._datas.length) return null;
+        return this._datas[type];
     }
 
     static createEmptyModel() {
@@ -80,6 +74,11 @@ export class Model {
         if (bufferType === gl.ARRAY_BUFFER) {
             gl.vertexAttribPointer(attributeIndex, componentsPerVertex, gl.FLOAT, false, componentsPerVertex * Float32Array.BYTES_PER_ELEMENT, 0);
             gl.enableVertexAttribArray(attributeIndex); // 启用顶点属性
+        }
+        const error = gl.getError();
+        if (error !== gl.NO_ERROR) {
+            console.error("WebGL错误：", error);
+            return false;
         }
         return true;
     }
