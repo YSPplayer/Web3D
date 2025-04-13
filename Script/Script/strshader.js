@@ -9,7 +9,7 @@ void main() {
 }
 `;
 
-const f_defaultShader = `
+const f_defaultshader = `
 #version 300 es
 precision mediump float; 
 out vec4 FragColor;   
@@ -18,3 +18,4 @@ void main() {
     FragColor = vec4(defaultObjectColor, %1);
 }
 `;
+const f_lineshader = f_defaultshader.arg("1.0");

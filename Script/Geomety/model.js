@@ -1,8 +1,8 @@
-// import { ModelAttribute } from "./data.js";
+import { Shader } from "../Shader/shader.js";
 export class Model {
     constructor() {
         this._modelAttribute = null; // 模型属性
-        this._shader = null; // 模型着色器对象
+        this._shader = new Shader(); // 模型着色器对象
         this._vao = null; // 对VAO进行统一管理的对象
         this._vbos = []; // 顶点缓冲对象数组
         this._datas = []; // 存放所有类型渲染数据的容器
@@ -12,9 +12,9 @@ export class Model {
     
     dispose() {
         this._vbos.forEach(vbo => {
-            gl.deleteBuffers(1,vbo);
+            if (vbo !== null) gl.deleteBuffer(1,vbo);
         });
-        if(this._vao !== null) gl.deleteBuffers(1,this._vao);
+        if(this._vao !== null) Util.deleteVertexArray(this._vao);
         this._empty = true;
     }
 
