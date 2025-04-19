@@ -1,5 +1,5 @@
 import {CameraAttribute,} from "./data.js"
-class Camera {
+export class Camera {
     constructor() {
         this.cameraAttribute = new CameraAttribute();
         // 创建投影矩阵
@@ -74,7 +74,7 @@ class Camera {
     }
 
     resetPosition(model) {
-        const modelAttribute = model.modelAttribute;
+        const modelAttribute = model._modelAttribute;
         glMatrix.vec3.set(
             this.cameraAttribute.position,
             0.0,

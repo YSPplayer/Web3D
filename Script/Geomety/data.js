@@ -1,3 +1,4 @@
+import { LightType,LightPointType} from "../const.js";
 export class ModelKeyPoint {//模型关键点
     constructor() {
         this.position = glMatrix.mat4.create();//默认的模型矩阵，用于控制模型的位置和方向
@@ -30,18 +31,18 @@ export class ModelAttribute { //模型属性
   
     copy() {
         const copy = new ModelAttribute();
-        copy.keyPoint = this.keyPoint.clone();
+        copy.keyPoint = this.keyPoint.copy();
         return copy;
     }
 }
 export class Material {
     constructor(ambient, diffuse, specular, shininess) {
         // 环境光照色
-        this.ambient = ambient ? glMatrix.vec3.clone(ambient) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.ambient = ambient !== undefined  ? glMatrix.vec3.clone(ambient) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
         // 漫反射颜色，控制模型表面颜色
-        this.diffuse = diffuse ? glMatrix.vec3.clone(diffuse) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.diffuse = diffuse !== undefined  ? glMatrix.vec3.clone(diffuse) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
         // 镜面高光的颜色，控制模型亮度
-        this.specular = specular ? glMatrix.vec3.clone(specular) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.specular = specular !== undefined  ? glMatrix.vec3.clone(specular) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
         // 光的散射半径
         this.shininess = shininess !== undefined ? shininess : 0.0;
     }
@@ -63,19 +64,23 @@ export class Material {
     }
 }
 export class Color {
-    constructor(r, g, b) {
+    constructor(r, g, b, a) {
         this.r = r;
         this.g = g;
         this.b = b;
+        this.a = a !== undefined ? a : 255;  
     }
     redF() {
-        return this.r / 255;
+        return this.r / 255.0;
     }
     greenF() {
-        return this.g / 255;
+        return this.g / 255.0;
     }
     blueF() {
-        return this.b / 255;
+        return this.b / 255.0;
+    }
+    alphaF() {
+        return this.a / 255.0;
     }
 }
 export class LightAttribute {
@@ -122,15 +127,38 @@ export class LineModelBuildData {
 
 }
 
-const VBOType = Object.freeze({
-    Vertex: 0,    // 顶点索引
-    Texture: 1,   // 贴图索引
-    Normal: 2,    // 法线索引
-    Mapcolor: 3,  // 伪彩色贴图索引
-    Wall: 4,      // 墙面数组
-    Flag: 5,      // 存储标签位，记录丢弃点
-    Index: 6,     // 存储索引位，存放每一个点的索引
-    Max: 7
-});
-
-export { VBOType };
+export class RenderData {
+    constructor() {
+        this.isParallelFov = false;//是否为平行视口
+        this.parallel = 0.83;//平行视口视野大小
+        this.baseParallel = 0.83;//平行视口视野大小
+        this.fov = Math.PI / 9.0;//视口视野大小
+        this.baseFov = Math.PI / 9.0;//视口视野大小
+        this.maxFov = 3.14;//最大视野大小
+        this.minFov = Math.PI / 360.0;//最小视野大小
+        this.lightIntensity = 1.0;//光照强度因子
+        this.lightDiffuse = 1.15;//光照的漫反射因子
+        this.lightAmbient = 0.2;//光照的环境光因子
+        this.lightAo =1.0;//物理渲染环境光遮蔽
+        this.lightMetallic = 0.556;//物理渲染金属度
+        this.lightRoughness = 0.2;//物理渲染粗糙度
+        this.lightPbrColorIntensity = 1.0;//物理渲染光照强度
+        this.rotationZ = 0.0;//Z轴旋转角度
+        this.rotationX = 0.0;//X轴旋转角度
+        this.zDynamic = 3.0;//Z轴高度
+        this.rotateXZ = false;//旋转XZ
+        this.moveXY = false;
+        this.moveX = 0.0;
+        this.moveY = 0.0;
+        this.adjustLight = false;//调整光照
+        this.moveXLight = 0.0;//光照水平坐标
+        this.moveYLight = 0.0;//光照垂直坐标
+        this.width = 0;//视口高度
+        this.height = 0;//视口高度
+        this.sceneColor = new Color(255,255,255);
+        this.lightColor = new Color(255,255,255);
+        this.modelColor = new Color(255,255,255);
+        this.lightType = LightType.Point;
+        this.lightPointType = LightPointType.Dynamics;
+    }
+}

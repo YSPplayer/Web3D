@@ -1,3 +1,4 @@
+import { GlType } from "../const.js";
 String.prototype.arg = function() {
     let str = this;
     for (let i = 0; i < arguments.length; i++) {
@@ -6,15 +7,10 @@ String.prototype.arg = function() {
     }
     return str;
 };
-const GlType = Object.freeze({
-    Null: 0,  
-    WebGl: 1,
-    WebGl2:2
-});
-let canvas = null;
-let gl = null;
-let glType = GlType.Null;
-const Util = {
+export let canvas = null;
+export let gl = null;
+export let glType = GlType.Null;
+export const Util = {
     deleteVertexArray(vao) {
         if (glType === GlType.WebGl2) {
             gl.deleteVertexArray(vao);
@@ -28,15 +24,22 @@ const Util = {
     initializeGL() {
         if(canvas === null && gl === null) {
         canvas = document.getElementById('glwindow');
-        gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        //antialias 启用多重采样深度缓冲
+        gl = canvas.getContext('webgl2',{ antialias: true,depth: true}) 
+         || canvas.getContext('webgl', { antialias: true,depth: true})
+         || canvas.getContext('experimental-webgl',
+            { antialias: true,depth: true}
+        );
         if(gl === null) {
             console.log('浏览器不支持WebGL');
             return;
         }
         if (gl instanceof WebGL2RenderingContext) {
             glType = GlType.WebGl2;
+            console.log('当前浏览器使用WebGL2环境');
         } else if (gl instanceof WebGLRenderingContext) {
             glType = GlType.WebGl1;
+            console.log('当前浏览器使用WebGL1环境');
         } else {
             glType = GlType.Null;
                 console.log('浏览器不支持WebGL');

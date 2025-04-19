@@ -1,4 +1,4 @@
-import { Model } from "./model";
+import { Model } from "./model.js";
 class planemodel extends Model {
     constructor() {
         this.modelAttribute = null; // 模型属性

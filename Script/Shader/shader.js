@@ -1,3 +1,4 @@
+import { gl } from "../Util/util.js"
 //Shader脚本管理类
 export class Shader {
     constructor() {

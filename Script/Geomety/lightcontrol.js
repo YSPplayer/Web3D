@@ -6,23 +6,6 @@ export class LightControl {
     render(data, camera) {
         const color = data.lightColor;
         const material = this.lightAttribute.material;
-        // // 根据材质类型设置光照属性
-        // if (!data.material.isEmpty() && data.material.getType() === RenderType.Phong) {
-        //     const phongMaterial = data.material; // 假设已经是PhongMaterial类型
-            
-        //     // 复制材质属性
-        //     Object.assign(material, phongMaterial.getMaterialLight());
-            
-        //     // 设置漫反射颜色
-        //     glMatrix.vec3.set(
-        //         material.diffuse,
-        //         color.redF() * data.lightDiffuse,
-        //         color.greenF() * data.lightDiffuse,
-        //         color.blueF() * data.lightDiffuse
-        //     );
-        // } else {
-        // }
-        // 设置漫反射颜色
         glMatrix.vec3.set(
             material.diffuse,
             color.redF() * data.lightDiffuse,

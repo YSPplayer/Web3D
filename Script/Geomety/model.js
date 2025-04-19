@@ -1,7 +1,9 @@
 import { Shader } from "../Shader/shader.js";
+import { gl,Util } from "../Util/util.js";
+import { ModelAttribute } from "./data.js";
 export class Model {
     constructor() {
-        this._modelAttribute = null; // 模型属性
+        this._modelAttribute = new ModelAttribute(); // 模型属性
         this._shader = new Shader(); // 模型着色器对象
         this._vao = null; // 对VAO进行统一管理的对象
         this._vbos = []; // 顶点缓冲对象数组
@@ -61,16 +63,23 @@ export class Model {
             gl.bufferData(bufferType, dataSize * Float32Array.BYTES_PER_ELEMENT, usage);
         }
         // 持久映射 CPU 缓冲区到 GPU 数据指针
-        if (data != null) {
-            const buffer = gl.mapBufferRange(bufferType, 0, dataSize * Float32Array.BYTES_PER_ELEMENT, gl.MAP_WRITE_BIT);
-            if (!buffer) {
-                console.error("绑定缓冲对象错误：GPU映射失败！");
-                return false; // 检查映射是否成功
-            }
-            // 复制数据到缓冲区
-            new Float32Array(buffer).set(data);
-            gl.unmapBuffer(bufferType); // 取消映射
-        }
+        // if (data !== null) {
+        //     const buffer = gl.mapBufferRange(bufferType, 0, dataSize * Float32Array.BYTES_PER_ELEMENT, gl.MAP_WRITE_BIT);
+        //     if (!buffer) {
+        //         console.error("绑定缓冲对象错误：GPU映射失败！");
+        //         return false; // 检查映射是否成功
+        //     }
+        //     // 复制数据到缓冲区
+        //     new Float32Array(buffer).set(data);
+        //     gl.unmapBuffer(bufferType); // 取消映射
+        // }
+         // 直接使用bufferData传输数据
+        if (data !== null) {
+            // 创建Float32Array视图，确保数据格式正确
+            const typedArray = (data instanceof Float32Array) ? data : new Float32Array(data);
+            // 使用bufferData直接传输数据到GPU
+            gl.bufferData(bufferType, typedArray, usage);
+        } 
         if (bufferType === gl.ARRAY_BUFFER) {
             gl.vertexAttribPointer(attributeIndex, componentsPerVertex, gl.FLOAT, false, componentsPerVertex * Float32Array.BYTES_PER_ELEMENT, 0);
             gl.enableVertexAttribArray(attributeIndex); // 启用顶点属性
