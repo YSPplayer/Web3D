@@ -9,13 +9,21 @@ export const LightType = Object.freeze({
     Point : 1//点光源
 }
 );
-
+export const GlData = {
+    mouseLeftPressed: false,
+    mouseRightPressed: false,
+    lastX: 0.0,
+    lastY: 0.0,
+}
 export const LightPointType = Object.freeze({
     Static : 0,//静态
     Dynamics : 1//动态
 }
 );
-
+export const PlaneModelType = Object.freeze({
+    Surface : 0,
+    Ring : 1
+});
 export const VBOType = Object.freeze({
     Vertex: 0,    // 顶点索引
     Texture: 1,   // 贴图索引

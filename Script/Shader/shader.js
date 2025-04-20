@@ -38,7 +38,9 @@ export class Shader {
         }
         return false;
     }
-
+    getAttribLocation(key) {
+        return gl.getAttribLocation(this.shaderProgram, key);
+    }
     setShaderMat4(mat4, key) {
         gl.uniformMatrix4fv(gl.getUniformLocation(this.shaderProgram, key), false, mat4);
     }

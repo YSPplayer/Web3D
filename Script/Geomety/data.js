@@ -1,4 +1,4 @@
-import { LightType,LightPointType} from "../const.js";
+import { LightType,LightPointType,PlaneModelType} from "../const.js";
 export class ModelKeyPoint {//模型关键点
     constructor() {
         this.position = glMatrix.mat4.create();//默认的模型矩阵，用于控制模型的位置和方向
@@ -160,5 +160,8 @@ export class RenderData {
         this.modelColor = new Color(255,255,255);
         this.lightType = LightType.Point;
         this.lightPointType = LightPointType.Dynamics;
+        this.ptype = PlaneModelType.Surface;
+        this.oldPos = { x: -99.0, y: -99.0 };
+        this.newPos = { x: -99.0, y: -99.0 };
     }
 }
