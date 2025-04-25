@@ -1,4 +1,4 @@
-import { LightType,LightPointType,PlaneModelType} from "../const.js";
+import { LightType,LightPointType,PlaneModelType,MapColorType} from "../const.js";
 export class ModelKeyPoint {//模型关键点
     constructor() {
         this.position = glMatrix.mat4.create();//默认的模型矩阵，用于控制模型的位置和方向
@@ -34,6 +34,54 @@ export class ModelAttribute { //模型属性
         copy.keyPoint = this.keyPoint.copy();
         return copy;
     }
+}
+
+export class PlaneModelAttribute extends ModelAttribute {
+    constructor() {
+        super(); // 调用父类构造函数
+        this.owidth = 0;      // 模型宽度
+        this.oheight = 0;     // 模型高度
+        this.sparse = false;  // 模型宽高是否因算法而稀疏
+        this.width = 0.0;     // 模型实际宽度（实际宽度 = (点云宽度数量 - 1)* 分辨率）
+        this.height = 0.0;    // 模型实际高度（实际高度 = (点云高度数量 - 1)* 分辨率）
+        this.xincrement = 0.0; // X轴分辨率
+        this.yincrement = 0.0; // Y轴分辨率
+        this.maxZ = 0.0;      // 模型的实际最大Z轴高度，默认是分辨率之后的结果
+        this.minZ = 0.0;      // 模型的实际最小Z轴高度，默认是分辨率之后的结果
+        this.absMax = 0.0;    // 绝对最大值
+        this.mtype = MapColorType.Gold; // 当前模型显示的colormap类型
+        this.restoreZ = [];   // 1:1还原Z轴值
+        this.rootZ = [];      // 根Z值
+        // 运算参数
+        this.unitStep = 0.0;
+        this.cz = 0.0;
+        this.xSpace = 0.0;
+    }
+
+    copy() {
+        const copy = new PlaneModelAttribute();
+        // 复制基类属性
+        copy.keyPoint = this.keyPoint.copy();
+        // 复制本类属性
+        copy.owidth = this.owidth;
+        copy.oheight = this.oheight;
+        copy.sparse = this.sparse;
+        copy.width = this.width;
+        copy.height = this.height;
+        copy.xincrement = this.xincrement;
+        copy.yincrement = this.yincrement;
+        copy.maxZ = this.maxZ;
+        copy.minZ = this.minZ;
+        copy.absMax = this.absMax;
+        copy.mtype = this.mtype;
+        copy.unitStep = this.unitStep;
+        copy.cz = this.cz;
+        copy.xSpace = this.xSpace;
+        copy.restoreZ = [...this.restoreZ];
+        copy.rootZ = [...this.rootZ];
+        return copy;
+    }
+    
 }
 export class Material {
     constructor(ambient, diffuse, specular, shininess) {

@@ -42,7 +42,6 @@ export class LineModel extends Model {
          // 复制模型属性
          this._modelAttribute = lineModelBuildData.modelAttribute.copy();
          this._empty = false;
-         //解绑VAO避免意外修改
          gl.bindVertexArray(null);
          return true;
       }

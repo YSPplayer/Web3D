@@ -9,21 +9,39 @@ export const LightType = Object.freeze({
     Point : 1//点光源
 }
 );
+
 export const GlData = {
     mouseLeftPressed: false,
     mouseRightPressed: false,
+    controlPressed: false,
     lastX: 0.0,
     lastY: 0.0,
+    modelSensitivity: 1.0,
 }
+
 export const LightPointType = Object.freeze({
     Static : 0,//静态
     Dynamics : 1//动态
 }
 );
+
 export const PlaneModelType = Object.freeze({
     Surface : 0,
     Ring : 1
 });
+
+export const MapColorType = Object.freeze({ 
+    Gold : 0, //黄铜色
+    Rainbow : 1,//七彩色
+    Contour : 2,//等高线
+    BlackWhite : 3,//黑白色
+    Blue : 4,//蓝色
+    Rainbow2 : 5,//七彩色2
+    Rainbow3 : 6,//七彩色3
+    Viridis : 7,//翡翠绿
+    ColorMax : 8
+});
+
 export const VBOType = Object.freeze({
     Vertex: 0,    // 顶点索引
     Texture: 1,   // 贴图索引

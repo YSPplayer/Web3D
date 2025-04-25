@@ -215,7 +215,7 @@ export class Model {
         }
         const error = gl.getError();
         if (error !== gl.NO_ERROR) {
-            console.error("WebGL错误：", error);
+            console.error("绑定缓冲对象错误：", error);
             return null;
         }
         return buffer;

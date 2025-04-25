@@ -5,9 +5,8 @@ import { canvas } from "./Util/util.js"
 import { GlWindow } from "./Gl/glwindow.js";
 function init() {
     //场景
-    let sence = new Sence();
-    sence.initScene();
     let glwindow = new GlWindow();
+    glwindow.initGL();
     let model = new LineModel();
     let bdata = new LineModelBuildData(); 
     bdata.vertices.push(-0.5);
@@ -22,11 +21,7 @@ function init() {
     } else {
         console.log('模型初始化失败！');
     }
-    sence.setCurrentModel(model);
-    let data = new RenderData();
-    data.width = canvas.width;
-    data.height = canvas.height;
-    sence.render(data);
+    glwindow.setCurrentModel(model);
 }
 window.addEventListener('DOMContentLoaded',function(){
    init();
