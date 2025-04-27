@@ -167,6 +167,24 @@ export class CameraAttribute {
         this.projection = glMatrix.mat4.create(); // 默认为单位矩阵
     }
 }
+export class PlaneModelBuildData {
+    constructor() {
+        this.hasTexture = false; // 是否存储贴图
+        this.vertices = []; // 顶点数组
+        this.textures = []; // 贴图数组
+        this.normals = []; // 法线数组 
+        this.colorMaps = []; // 存放伪彩色数据
+        this.walls = []; 
+        this.flags = []; // 标签位数组
+        this.index = []; // 存储索引位
+        this.imageDatas = []; // 贴图数据的数组
+        this.textureAttribute = {}; // 贴图的属性
+        this.indices = []; // 顶点索引数组
+        this.planeModelAttribute = new PlaneModelAttribute(); //模型数据属性
+        // this.showMode = 0; 
+        this.ptype = PlaneModelType.Surface; 
+    }
+}
 export class LineModelBuildData {
     constructor() {
         this.vertices = []; 
