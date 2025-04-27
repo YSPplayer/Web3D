@@ -24,6 +24,17 @@ export class ModelKeyPoint {//模型关键点
         return copy;
     }
 }
+export class PlaneModelKeyPoint extends  ModelKeyPoint { //平面模型关键点
+    constructor() {
+        super();
+        //模型4个边界点
+        this.topLeft = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.topRight = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.bottomLeft = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.bottomRight = glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+    }
+
+}
 export class ModelAttribute { //模型属性
     constructor() { 
         this.keyPoint = new ModelKeyPoint();
@@ -35,10 +46,27 @@ export class ModelAttribute { //模型属性
         return copy;
     }
 }
+export class Axes {
+    constructor() {
+        this.increment = 0;//分辨率
+        this.offset = 0;//偏移量
+    }
+}
+export class X3pData {
+    constructor() {
+        this.sizeX = 0;//点云宽度数量
+        this.sizeY = 0;//点云高度数量
+        this.axes = Array(3).fill(null);//XYZ轴类型
+        this.minZ = 0;//Z轴最小值
+        this.maxZ = 0;//Z轴最大值
+        this.pointData = [];//点云数据
+    }
 
+}
 export class PlaneModelAttribute extends ModelAttribute {
     constructor() {
         super(); // 调用父类构造函数
+        this.keyPoint = new PlaneModelKeyPoint();//平面模型关键点
         this.owidth = 0;      // 模型宽度
         this.oheight = 0;     // 模型高度
         this.sparse = false;  // 模型宽高是否因算法而稀疏

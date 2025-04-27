@@ -5,7 +5,7 @@ import { LightControl } from "./lightcontrol.js"
 import { gl,Util } from "../Util/util.js"
 export class Sence {
     constructor() {
-        this.currentModel = new LineModel();//当前创景中的模型
+        this.currentModel = null;//当前场景中的模型
         this.camera = new Camera(); //相机
         this.lightControl = new LightControl(); //光照
 

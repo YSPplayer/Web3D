@@ -9,12 +9,10 @@ export class LineModel extends Model {
       this.linkModel = null;
    }
    initModel(lineModelBuildData) {
-         //绑定着色器
          if(!this._shader.bindShader(v_lineshader, f_lineshader)) {
-            console.error("着色器绑定失败");
+            console.error("[LineModel.initModel]着色器绑定失败");
             return false;
          }
-         // 处理顶点数据
          this._datas[VBOType.Vertex] = [...lineModelBuildData.vertices];
          let vertex = this._datas[VBOType.Vertex];
          let vsize = vertex.length;
@@ -22,10 +20,8 @@ export class LineModel extends Model {
                console.error("顶点数据为空");
                return false;
          }
-         // 3. 创建VAO并绑定
          this._vao = gl.createVertexArray();
          gl.bindVertexArray(this._vao);
-         // 4. 创建并绑定VBO
          this._vbos[VBOType.Vertex] = Model.bindBufferObject(
                this._vbos[VBOType.Vertex],
                gl.ARRAY_BUFFER,
@@ -39,7 +35,6 @@ export class LineModel extends Model {
                console.error("绑定缓冲对象失败");
                return false;
          }
-         // 复制模型属性
          this._modelAttribute = lineModelBuildData.modelAttribute.copy();
          this._empty = false;
          gl.bindVertexArray(null);
@@ -69,8 +64,8 @@ export class LineModel extends Model {
          shader.setShaderMat4(cameraAttribute.projection, "projection");
            //modelAttribute.material.diffuse
          shader.setShaderVec3([1.0, 1.0, 0.0], "defaultObjectColor");
-         gl.bindVertexArray(this._vao);
          gl.drawArrays(gl.LINES, 0, this._datas[VBOType.Vertex].length / 3);
+         gl.bindVertexArray(null);
    }
 
 }

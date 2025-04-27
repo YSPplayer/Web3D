@@ -25,6 +25,13 @@ export const LightPointType = Object.freeze({
 }
 );
 
+export const ImageType = Object.freeze({
+    Default : 0,//默认图片
+    Specular : 1,//镜面反射
+    Max : 2,//最大值
+}
+);
+
 export const PlaneModelType = Object.freeze({
     Surface : 0,
     Ring : 1
@@ -53,6 +60,10 @@ export const VBOType = Object.freeze({
     Max: 7
 });
 
+export const GL_CONST = Object.freeze({
+    ALGORITHM_MAX_POINT_SIZE : 2000000,//最大非稀疏点云数
+});
+
 //shader脚本 不能把头声明放在第二行会报错
 export const v_lineshader = `#version 300 es
 in vec3 aPos; 
@@ -72,5 +83,4 @@ void main() {
     FragColor = vec4(defaultObjectColor,1.0);
 }
 `;
-export const f_lineshader = f_defaultshader;
-//const f_lineshader = f_defaultshader.arg("1.0");
+export const f_lineshader = f_defaultshader;//const f_lineshader = f_defaultshader.arg("1.0");

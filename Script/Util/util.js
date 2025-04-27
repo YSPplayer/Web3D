@@ -11,6 +11,7 @@ export let canvas = null;
 export let gl = null;
 export let glType = GlType.Null;
 export const Util = {
+    
     deleteVertexArray(vao) {
         if (glType === GlType.WebGl2) {
             gl.deleteVertexArray(vao);
