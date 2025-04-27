@@ -1,4 +1,4 @@
-import {LineModelBuildData,RenderData,PlaneModelBuildData,PlaneModelAttribute,ModelKeyPoint,X3pData,Axes} from "./Geomety/data.js"
+import {LineModelBuildData,RenderData,PlaneModelBuildData,PlaneModelAttribute,ModelKeyPoint,X3pData} from "./Geomety/data.js"
 import { Sence } from "./Geomety/sence.js"
 import { LineModel } from "./Geomety/linemodel.js"
 import { Algorithm } from "./Math/algorithm.js"
@@ -36,59 +36,21 @@ function init() {
 }
 
 function createPlaneModel(glwindow) {
-    // 创建一个非常简单的平面模型 - 只有两个三角形组成的矩形
+    let x3pdata = new X3pData();
+    x3pdata.maxZ = 0;
+    x3pdata.minZ = 0;
+    x3pdata.sizeX = 30;
+    x3pdata.sizeY = 20;
+    for(let i = 0; i < 3; ++i) {
+        x3pdata.axes[i].increment = 1;
+
+    }
+    x3pdata.pointData =  new Array(x3pdata.sizeX * x3pdata.sizeY).fill(null);
+    for(let i = 0; i < x3pdata.sizeX * x3pdata.sizeY; i++) {
+        x3pdata.pointData[i] = 0.5;
+    }
+    let bdata = Algorithm.BuildPlaneModel(x3pdata);
     let model = new Planemodel();
-    let bdata = new PlaneModelBuildData();
-    
-    // 设置类型
-    bdata.ptype = 0; // Surface
-    
-    // 四个顶点的坐标
-    const vertices = [
-        -0.5, -0.5, 0.0,  // 左下
-        0.5, -0.5, 0.0,   // 右下
-        0.5, 0.5, 0.0,    // 右上
-        -0.5, 0.5, 0.0    // 左上
-    ];
-    
-    // 纹理坐标
-    const textures = [
-        0.0, 0.0,
-        1.0, 0.0,
-        1.0, 1.0,
-        0.0, 1.0
-    ];
-    
-    // 法向量 (全部朝向z轴正方向)
-    const normals = [
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0,
-        0.0, 0.0, 1.0
-    ];
-    
-    // 索引 (两个三角形组成一个矩形)
-    const indices = [
-        0, 1, 2, // 第一个三角形
-        0, 2, 3  // 第二个三角形
-    ];
-    
-    // 设置数据
-    bdata.vertices = vertices;
-    bdata.textures = textures;
-    bdata.normals = normals;
-    bdata.indices = indices;
-    
-    // 创建一个简单的ModelKeyPoint
-    bdata.planeModelAttribute = new PlaneModelAttribute();
-    bdata.planeModelAttribute.keyPoint = new ModelKeyPoint();
-    bdata.planeModelAttribute.keyPoint.position = glMatrix.mat4.create();
-    bdata.planeModelAttribute.keyPoint.centerPosition = glMatrix.vec3.fromValues(0, 0, 0);
-    bdata.planeModelAttribute.keyPoint.changeCenterPosition = glMatrix.vec3.fromValues(0, 0, 0);
-    bdata.planeModelAttribute.keyPoint.minPosition = glMatrix.vec3.fromValues(-0.5, -0.5, 0);
-    bdata.planeModelAttribute.keyPoint.maxPosition = glMatrix.vec3.fromValues(0.5, 0.5, 0);
-    bdata.planeModelAttribute.keyPoint.modelSize = 1.0;
-    
     // 初始化模型
     let success = model.initModel(bdata);
     if(success) {

@@ -189,7 +189,9 @@ export class Model {
         gl.bindBuffer(bufferType, buffer);
         // 先绑定空指针，避免显存溢出的问题
         if (empty) {
-            gl.bufferData(bufferType, dataSize * Float32Array.BYTES_PER_ELEMENT, usage);
+             bufferType === gl.ARRAY_BUFFER ? gl.bufferData(bufferType, dataSize * Float32Array.BYTES_PER_ELEMENT, usage) :
+             gl.bufferData(bufferType, dataSize * Uint32Array.BYTES_PER_ELEMENT, usage);
+            
         }
         // 持久映射 CPU 缓冲区到 GPU 数据指针
         // if (data !== null) {
@@ -205,9 +207,9 @@ export class Model {
          // 直接使用bufferData传输数据
         if (data !== null) {
             // 创建Float32Array视图，确保数据格式正确
-            const typedArray = (data instanceof Float32Array) ? data : new Float32Array(data);
+          //  const typedArray = (data instanceof Float32Array) ? data : new Float32Array(data);
             // 使用bufferData直接传输数据到GPU
-            gl.bufferData(bufferType, typedArray, usage);
+            gl.bufferData(bufferType, data, usage);
         } 
         if (bufferType === gl.ARRAY_BUFFER) {
             gl.vertexAttribPointer(attributeIndex, componentsPerVertex, gl.FLOAT, false, componentsPerVertex * Float32Array.BYTES_PER_ELEMENT, 0);

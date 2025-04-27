@@ -56,7 +56,7 @@ export class X3pData {
     constructor() {
         this.sizeX = 0;//点云宽度数量
         this.sizeY = 0;//点云高度数量
-        this.axes = Array(3).fill(null);//XYZ轴类型
+        this.axes = Array(3).fill(new Axes());//XYZ轴类型
         this.minZ = 0;//Z轴最小值
         this.maxZ = 0;//Z轴最大值
         this.pointData = [];//点云数据
