@@ -38,10 +38,17 @@ export class Planemodel extends Model {
         this.hasTexture = planeModelBuildData.hasTexture;
         this._vao = gl.createVertexArray();
         gl.bindVertexArray(this._vao);
+        
+        // 确保将顶点数据转换为Float32Array
+        const vertexData = new Float32Array(this._datas[VBOType.Vertex]);
+        
+        // 确保将索引数据转换为Uint32Array
+        const indicesData = new Uint32Array(this.indices);
+        
         if((this._vbos[VBOType.Vertex] = Model.bindBufferObject(
             this._vbos[VBOType.Vertex],
             gl.ARRAY_BUFFER,
-            this._datas[VBOType.Vertex], 
+            vertexData, 
             vsize,  
             VBOType.Vertex,
             3,
@@ -49,7 +56,7 @@ export class Planemodel extends Model {
         )) === null || (this.ebo = Model.bindBufferObject(
                     this.ebo,
                     gl.ELEMENT_ARRAY_BUFFER,
-                    this.indices,
+                    indicesData,
                     isize,
                     -1,
                     -1

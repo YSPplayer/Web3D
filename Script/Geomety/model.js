@@ -206,10 +206,20 @@ export class Model {
         // }
          // 直接使用bufferData传输数据
         if (data !== null) {
-            // 创建Float32Array视图，确保数据格式正确
-          //  const typedArray = (data instanceof Float32Array) ? data : new Float32Array(data);
-            // 使用bufferData直接传输数据到GPU
-            gl.bufferData(bufferType, data, usage);
+            // 确保数据类型正确
+            // 对于顶点数据使用Float32Array，对于索引数据使用Uint32Array
+            if (bufferType === gl.ARRAY_BUFFER) {
+                // 确保顶点数据是Float32Array类型
+                const typedData = (data instanceof Float32Array) ? data : new Float32Array(data);
+                gl.bufferData(bufferType, typedData, usage);
+            } else if (bufferType === gl.ELEMENT_ARRAY_BUFFER) {
+                // 确保索引数据是Uint32Array类型
+                const typedData = (data instanceof Uint32Array) ? data : new Uint32Array(data);
+                gl.bufferData(bufferType, typedData, usage);
+            } else {
+                // 对于其他类型的缓冲区，使用原始数据
+                gl.bufferData(bufferType, data, usage);
+            }
         } 
         if (bufferType === gl.ARRAY_BUFFER) {
             gl.vertexAttribPointer(attributeIndex, componentsPerVertex, gl.FLOAT, false, componentsPerVertex * Float32Array.BYTES_PER_ELEMENT, 0);
