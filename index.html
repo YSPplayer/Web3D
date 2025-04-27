@@ -7,11 +7,17 @@
     <link rel="stylesheet" href="./Css/3dtoos.css">
 </head>
 <body>
+    <div>
+        <input type="file" id="x3pFileInput" accept=".x3p" style="display: none;">
+       <button id="selectX3pButton">打开X3P文件</button>
+
+    </div>
     <div class="bg">
-       <canvas id="glwindow">
+        <canvas id="glwindow">
         </canvas>
     </div>
     <script src="./Package/gl-matrix.js"></script>
+    <script src="./Package/jszip.min.js"></script>
     <!-- <script type="module" src="./Script/const.js"></script>
     <script type="module" src="./Script/Util/util.js"></script> -->
     <script type="module" src="./Script/temp.js"></script>

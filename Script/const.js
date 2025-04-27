@@ -51,8 +51,8 @@ export const MapColorType = Object.freeze({
 
 export const VBOType = Object.freeze({
     Vertex: 0,    // 顶点索引
-    Texture: 1,   // 贴图索引
-    Normal: 2,    // 法线索引
+    Normal: 1,    // 法线索引
+    Texture: 2,   // 贴图索引
     Mapcolor: 3,  // 伪彩色贴图索引
     Wall: 4,      // 墙面数组
     Flag: 5,      // 存储标签位，记录丢弃点
@@ -63,7 +63,67 @@ export const VBOType = Object.freeze({
 export const GL_CONST = Object.freeze({
     ALGORITHM_MAX_POINT_SIZE : 2000000,//最大非稀疏点云数
 });
+export const v_planemodelshader = `#version 300 es
+in vec3 aPos; 
+in vec3 aNormal;
+uniform mat4 mposition;
+uniform mat4 view;
+uniform mat4 projection;
+uniform mat3 normalMatrix;
+out vec3 Normal;
+out vec3 FragPos;
+void main() {
+	 FragPos = vec3(mposition * vec4(aPos, 1.0)); 
+    gl_Position = projection * view * vec4(FragPos, 1.0);
+     Normal = normalMatrix * aNormal;
+}
+`;
 
+export const f_planemodelshader = `#version 300 es
+precision highp float;
+out vec4 FragColor;   
+struct Material {
+    vec3 ambient;
+    vec3 diffuse; 
+    vec3 specular;
+    float shininess;
+};
+
+struct Light {
+    vec3 position;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    float constant;
+    float linear;
+    float quadratic;
+};
+in vec3 Normal;
+in vec3 FragPos;
+uniform Material material;
+uniform Light light;
+uniform vec3 viewPos;
+uniform vec3 defaultObjectColor;
+void main() {
+    vec3 norm = normalize(Normal);
+    vec3 lightDir = normalize(light.position - FragPos);
+    vec3 viewDir = normalize(viewPos - FragPos);
+    float distance = length(light.position - FragPos);
+    float attenuation = 1.0 / (light.constant + light.linear * distance + 
+                              light.quadratic * (distance * distance));
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = light.diffuse * (diff * defaultObjectColor);
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(norm, halfwayDir), 0.0), material.shininess);
+    vec3 specular = light.specular * (spec * material.specular);
+    vec3 ambient = light.ambient * material.ambient;
+    ambient *= attenuation;
+    diffuse *= attenuation;
+    specular *= attenuation;
+    vec3 result = ambient + diffuse + specular;
+    FragColor = vec4(pow(result, vec3(1.0/2.2)), 1.0);     
+}
+`;
 //shader脚本 不能把头声明放在第二行会报错
 export const v_lineshader = `#version 300 es
 in vec3 aPos; 

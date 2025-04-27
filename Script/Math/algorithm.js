@@ -11,7 +11,7 @@ export class Algorithm {
         border = ((n - 1) % step !== 0);
         // 如果存在边界则增加一个采样点
         if (border) sparseWidth++;
-        return {border,sparseWidth};
+        return {sparseBorder:border,sparseSize:sparseWidth};
     }
     static getVertexCoordinates(vertices, index) {
             return glMatrix.vec3.fromValues(
@@ -101,7 +101,7 @@ export class Algorithm {
         const absMax = Math.max(maxX, maxY, maxZ);
         const pointCount = pointWidth * pointHeight; 
         const step = (pointCount > GL_CONST.ALGORITHM_MAX_POINT_SIZE) ? 2 : 1;
-        const planeModelAttribute = planeModelBuildData.planeModelAttribute;
+       const planeModelAttribute = planeModelBuildData.planeModelAttribute;
         planeModelAttribute.xincrement = xincrement;
         planeModelAttribute.yincrement = yincrement;
         planeModelAttribute.owidth = width;
@@ -112,7 +112,7 @@ export class Algorithm {
         planeModelAttribute.minZ = x3pdata.minZ;
         planeModelAttribute.absMax = absMax;
         planeModelAttribute.sparse = false;
-        planeModelBuildData.textures = new Array(pointCount * 2);
+        planeModelBuildData.textures = new Float32Array(pointCount * 2);
         let zindex = 0; //顶点数据索引
         let tindex = 0; // 贴图数据索引
         const points = [];
@@ -130,19 +130,21 @@ export class Algorithm {
         if (step > 1) {
             let xborder = false;
             let yborder = false;
-            const {sparseXBorder,sparsePointWidth} = Algorithm.getSparseSize(pointWidth, step, xborder);
-            const {sparseYBorder, sparsePointHeight} = Algorithm.getSparseSize(pointHeight, step, yborder);
-            xborder = sparseXBorder;
-            yborder = sparseYBorder;
-            pointWidth = sparsePointWidth;
-            pointHeight = sparsePointHeight;
+            const xsparse = Algorithm.getSparseSize(pointWidth, step, xborder);
+            const ysparse = Algorithm.getSparseSize(pointHeight, step, yborder);
+            xborder = xsparse.sparseBorder;
+            yborder = ysparse.sparseBorder;
+            pointWidth = xsparse.sparseSize;
+            pointHeight = ysparse.sparseSize;
+            const sparsePointHeight = pointHeight;
+            const sparsePointWidth = pointWidth;
             planeModelAttribute.owidth = pointWidth - 1;
             planeModelAttribute.oheight = pointHeight - 1;
             planeModelAttribute.width = (pointWidth - 1) * xincrement;
             planeModelAttribute.height = (pointHeight - 1) * yincrement;
             planeModelAttribute.sparse = true;
-            planeModelBuildData.flags = new Array(sparsePointHeight * sparsePointWidth);
-            planeModelBuildData.index = new Array(sparsePointHeight * sparsePointWidth);
+            planeModelBuildData.flags = new Float32Array(sparsePointHeight * sparsePointWidth);
+            planeModelBuildData.index = new Float32Array(sparsePointHeight * sparsePointWidth);
             let findex = 0;
             for (let j = 0; j < pointHeight; j++) {
                 for (let i = 0; i < pointWidth; i++) {
@@ -203,8 +205,8 @@ export class Algorithm {
             }
         } else {
             //不启用稀疏算法
-            planeModelBuildData.flags = new Array(pointHeight * pointWidth);
-            planeModelBuildData.index = new Array(pointHeight * pointWidth);
+            planeModelBuildData.flags = new Float32Array(pointHeight * pointWidth);
+            planeModelBuildData.index = new Float32Array(pointHeight * pointWidth);
             for (let j = 0; j < pointHeight; j++) {
                 for (let i = 0; i < pointWidth; i++) {
                     const point = { x: 0, y: 0, z: 0 };
@@ -253,7 +255,7 @@ export class Algorithm {
         //     CallBack.SetModelLoadingProgress(progressStep, totalProgressStep);
         // }
         
-        planeModelBuildData.vertices = new Array(points.length * 3);
+        planeModelBuildData.vertices = new Float32Array(points.length * 3);
         const amp = x3pdata.maxZ - x3pdata.minZ;
         let xSum = 0.0;
         let ySum = 0.0;
@@ -273,8 +275,8 @@ export class Algorithm {
         planeModelAttribute.unitStep = unitStep;
         planeModelAttribute.cz = cz;
         planeModelAttribute.xSpace = xSpace;
-        planeModelAttribute.restoreZ = new Array(points.length);
-        planeModelAttribute.rootZ = new Array(points.length);
+        planeModelAttribute.restoreZ = new Float32Array(points.length);
+        planeModelAttribute.rootZ = new Float32Array(points.length);
         for (let i = 0; i < points.length; i++) {
             const point = points[i];
             planeModelBuildData.vertices[i * 3 + 0] = point.x;
@@ -342,7 +344,7 @@ export class Algorithm {
             zSum / points.length
         );
         glMatrix.vec3.copy(planeModelAttribute.keyPoint.changeCenterPosition,  planeModelAttribute.keyPoint.centerPosition);
-        planeModelBuildData.indices = new Array(indices.length * 3);
+        planeModelBuildData.indices = new Uint32Array(indices.length * 3);
         for (let i = 0; i < indices.length; i++) {
             const indice = indices[i];
             planeModelBuildData.indices[i * 3 + 0] = indice[0];
@@ -354,7 +356,7 @@ export class Algorithm {
         //     CallBack.SetModelLoadingProgress(progressStep, totalProgressStep);
         // }
         //更新法线
-        planeModelBuildData.normals = new Array(planeModelBuildData.vertices.length);
+        planeModelBuildData.normals = new Float32Array(planeModelBuildData.vertices.length);
         Algorithm.updateNormals(planeModelBuildData.vertices, planeModelBuildData.vertices.length, planeModelBuildData.indices, planeModelBuildData.indices.length, planeModelBuildData.normals);
         progressStep++;
         // if (typeof CallBack !== 'undefined' && CallBack.SetModelLoadingProgress) {

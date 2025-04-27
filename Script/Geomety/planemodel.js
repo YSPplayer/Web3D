@@ -1,5 +1,6 @@
 import { Model } from "./model.js";
-import { VBOType,ImageType,v_lineshader,f_lineshader,PlaneModelType} from "../const.js";
+import { LightControl } from "./lightcontrol.js";
+import { VBOType,ImageType,v_planemodelshader,f_planemodelshader,PlaneModelType} from "../const.js";
 import { PlaneModelAttribute } from "./data.js";
 import { gl } from "../Util/util.js";
 export class Planemodel extends Model {
@@ -14,7 +15,7 @@ export class Planemodel extends Model {
         this.ptype = PlaneModelType.Surface;//模型类型
     }
     initModel(planeModelBuildData) {
-        if(!this._shader.bindShader(v_lineshader, f_lineshader)) {
+        if(!this._shader.bindShader(v_planemodelshader, f_planemodelshader)) {
             console.error("[Planemodel.initModel]着色器绑定失败");
             return false;
         }
@@ -41,7 +42,7 @@ export class Planemodel extends Model {
         
         // 确保将顶点数据转换为Float32Array
         const vertexData = new Float32Array(this._datas[VBOType.Vertex]);
-        
+        const normalData = new Float32Array(this._datas[VBOType.Normal]);
         // 确保将索引数据转换为Uint32Array
         const indicesData = new Uint32Array(this.indices);
         
@@ -60,7 +61,16 @@ export class Planemodel extends Model {
                     isize,
                     -1,
                     -1
-                )) === null ) {
+                )) === null
+            || (this._vbos[VBOType.Normal] = Model.bindBufferObject(
+                this._vbos[VBOType.Normal],
+                gl.ARRAY_BUFFER,
+                normalData, 
+                nsize,  
+                VBOType.Normal,
+                3,
+                gl.DYNAMIC_DRAW‌
+            )) === null ) {
             console.error("[Planemodel.initModel]绑定缓冲对象失败");
             return false;
         }
@@ -85,18 +95,35 @@ export class Planemodel extends Model {
         const modelAttribute = this._modelAttribute;
         const cameraAttribute = camera.cameraAttribute;
         shader.setShaderMat4(modelAttribute.keyPoint.position, "mposition");
+        shader.setShaderVec3(cameraAttribute.position, "viewPos");
         shader.setShaderMat4(cameraAttribute.view, "view");
         shader.setShaderMat4(cameraAttribute.projection, "projection");
+        const normalMatrix = glMatrix.mat3.create();
+        const modelMatrix3 = glMatrix.mat3.create();
+        glMatrix.mat3.fromMat4(modelMatrix3, modelAttribute.keyPoint.position);
+        // 计算逆矩阵
+        const inverseModelMatrix = glMatrix.mat3.create();
+        glMatrix.mat3.invert(inverseModelMatrix, modelMatrix3);
+        // 计算逆矩阵的转置，得到法线矩阵
+        glMatrix.mat3.transpose(normalMatrix, inverseModelMatrix);
+        shader.setShaderMat3(normalMatrix, "normalMatrix");
         //modelAttribute.material.diffuse
         shader.setShaderVec3([1.0, 1.0, 0.0], "defaultObjectColor");
+        //光照
+        const lightAttribute = lightControl.lightAttribute;
+        shader.setShaderVec3(lightAttribute.material.ambient, "light.ambient");
+        shader.setShaderVec3(lightAttribute.material.diffuse, "light.diffuse");
+        shader.setShaderVec3(lightAttribute.material.specular, "light.specular");
+        shader.setShaderVec3(lightAttribute.position, "light.position");
+        shader.setShaderFloat(lightAttribute.constant, "light.constant");
+        shader.setShaderFloat(lightAttribute.linear, "light.linear");
+        shader.setShaderFloat(lightAttribute.quadratic, "light.quadratic"); 
+        //材质 material
+        shader.setShaderVec3(modelAttribute.material.ambient, "material.ambient");
+        shader.setShaderVec3(modelAttribute.material.diffuse, "material.diffuse");
+        shader.setShaderVec3(modelAttribute.material.specular, "material.specular");
+        shader.setShaderFloat(modelAttribute.material.shininess, "material.shininess");
         gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_INT, 0);
-         // 再次检查WebGL错误
-        let error = gl.getError();
-        if (error !== gl.NO_ERROR) {
-            console.error('绘制后WebGL错误:', error);
-        } else {
-            console.log('正方形绘制成功');
-        }
   
     }
 }

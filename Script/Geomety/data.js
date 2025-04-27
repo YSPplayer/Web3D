@@ -37,12 +37,14 @@ export class PlaneModelKeyPoint extends  ModelKeyPoint { //平面模型关键点
 }
 export class ModelAttribute { //模型属性
     constructor() { 
+        this.material = new Material();
         this.keyPoint = new ModelKeyPoint();
     }
   
     copy() {
         const copy = new ModelAttribute();
         copy.keyPoint = this.keyPoint.copy();
+        copy.material = this.material.copy();
         return copy;
     }
 }
@@ -114,13 +116,13 @@ export class PlaneModelAttribute extends ModelAttribute {
 export class Material {
     constructor(ambient, diffuse, specular, shininess) {
         // 环境光照色
-        this.ambient = ambient !== undefined  ? glMatrix.vec3.clone(ambient) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.ambient = ambient !== undefined  ? glMatrix.vec3.clone(ambient) : glMatrix.vec3.fromValues(0.19225, 0.19225, 0.19225);
         // 漫反射颜色，控制模型表面颜色
-        this.diffuse = diffuse !== undefined  ? glMatrix.vec3.clone(diffuse) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.diffuse = diffuse !== undefined  ? glMatrix.vec3.clone(diffuse) : glMatrix.vec3.fromValues(0.50754, 0.50754, 0.50754);
         // 镜面高光的颜色，控制模型亮度
-        this.specular = specular !== undefined  ? glMatrix.vec3.clone(specular) : glMatrix.vec3.fromValues(0.0, 0.0, 0.0);
+        this.specular = specular !== undefined  ? glMatrix.vec3.clone(specular) : glMatrix.vec3.fromValues(0.508273, 0.508273, 0.508273);
         // 光的散射半径
-        this.shininess = shininess !== undefined ? shininess : 0.0;
+        this.shininess = shininess !== undefined ? shininess : 51.2;
     }
 
     equals(other) {

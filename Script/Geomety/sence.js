@@ -35,6 +35,7 @@ export class Sence {
 
     render(data) {
         const sceneColor = data.sceneColor;
+        gl.viewport(0, 0, data.width, data.height);
         gl.clearColor(sceneColor.redF(), sceneColor.greenF(), 
         sceneColor.blueF(), sceneColor.alphaF());
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
