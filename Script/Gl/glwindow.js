@@ -112,6 +112,12 @@ export class GlWindow {
             return false;
         }, false);
     }
+    clearScene() {
+        this.resetAttribute();
+        this.reSetPoisitionAttribute();
+        this.sence.clearScene();
+    }
+
     setCurrentModel(model) {
         this.sence.setCurrentModel(model);
     }

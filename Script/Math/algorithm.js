@@ -1,5 +1,6 @@
 import { PlaneModelBuildData,ModelKeyPoint} from "../Geomety/data.js";
-import { GL_CONST,PlaneModelType } from "../const.js";
+import { GL_CONST,PlaneModelType,MapColorType } from "../const.js";
+import { MapColor } from "../Geomety/colormap.js";
 export class Algorithm {
     constructor() {
 
@@ -261,7 +262,7 @@ export class Algorithm {
         let ySum = 0.0;
         let zSum = 0.0;
         // 伪彩色数据
-        //planeModelBuildData.colorMaps = Array(MapColorType.ColorMax).fill().map(() => new Array(planeModelBuildData.vertices.length));
+        planeModelBuildData.colorMaps = Array(MapColorType.ColorMax).fill().map(() => new Float32Array(planeModelBuildData.vertices.length));
         let unitStep = 0.0;
         for (let i = 3; i >= -3; i--) {
             const value = Math.abs(amp) * Math.pow(1000.0, i);
@@ -288,9 +289,7 @@ export class Algorithm {
             planeModelAttribute.restoreZ[i] = (point.z - x3pdata.minZ) / absMax;//存储还原之后的值
             planeModelAttribute.rootZ[i] = pointZ;
             //存储伪彩色数据
-            // if (typeof MapColor !== 'undefined' && MapColor.SetColorForZ) {
-            //     MapColor.SetColorForZ(planeModelBuildData.colorMaps, fraction, i);
-            // }
+            MapColor.setColorForZ(planeModelBuildData.colorMaps, fraction, i);
             planeModelBuildData.vertices[i * 3 + 2] = pointZ;
             xSum += point.x;
             ySum += point.y;

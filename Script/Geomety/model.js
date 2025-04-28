@@ -15,7 +15,7 @@ export class Model {
     
     dispose() {
         this._vbos.forEach(vbo => {
-            if (vbo !== null) gl.deleteBuffer(1,vbo);
+            if (vbo !== null) gl.deleteBuffer(vbo);
         });
         if(this._vao !== null) Util.deleteVertexArray(this._vao);
         this._empty = true;

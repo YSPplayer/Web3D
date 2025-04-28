@@ -52,8 +52,8 @@ export const MapColorType = Object.freeze({
 export const VBOType = Object.freeze({
     Vertex: 0,    // 顶点索引
     Normal: 1,    // 法线索引
-    Texture: 2,   // 贴图索引
-    Mapcolor: 3,  // 伪彩色贴图索引
+    Mapcolor: 2,  // 伪彩色贴图索引
+    Texture: 3,   // 贴图索引
     Wall: 4,      // 墙面数组
     Flag: 5,      // 存储标签位，记录丢弃点
     Index: 6,     // 存储索引位，存放每一个点的索引
@@ -66,16 +66,19 @@ export const GL_CONST = Object.freeze({
 export const v_planemodelshader = `#version 300 es
 in vec3 aPos; 
 in vec3 aNormal;
+in vec3 aColor;
 uniform mat4 mposition;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 normalMatrix;
 out vec3 Normal;
 out vec3 FragPos;
+out vec3 ColorMap;
 void main() {
 	 FragPos = vec3(mposition * vec4(aPos, 1.0)); 
     gl_Position = projection * view * vec4(FragPos, 1.0);
      Normal = normalMatrix * aNormal;
+     ColorMap = aColor;
 }
 `;
 
@@ -100,6 +103,7 @@ struct Light {
 };
 in vec3 Normal;
 in vec3 FragPos;
+in vec3 ColorMap;
 uniform Material material;
 uniform Light light;
 uniform vec3 viewPos;
@@ -112,7 +116,7 @@ void main() {
     float attenuation = 1.0 / (light.constant + light.linear * distance + 
                               light.quadratic * (distance * distance));
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * (diff * defaultObjectColor);
+    vec3 diffuse = light.diffuse * (diff * ColorMap);
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(norm, halfwayDir), 0.0), material.shininess);
     vec3 specular = light.specular * (spec * material.specular);

@@ -51,7 +51,7 @@ export class Camera {
             data.fov, 
             data.width / data.height,
             0.1,
-            3000.0
+            3000.0 
         );
         if (data.isParallelFov) {
             glMatrix.mat4.copy(this.cameraAttribute.projection, this.par_fov);

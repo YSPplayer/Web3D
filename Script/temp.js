@@ -3,7 +3,7 @@ import { Sence } from "./Geomety/sence.js"
 import { LineModel } from "./Geomety/linemodel.js"
 import { Algorithm } from "./Math/algorithm.js"
 import { Planemodel } from "./Geomety/planemodel.js"
-import { Util,canvas } from "./Util/util.js"
+import { Util,canvas,gl } from "./Util/util.js"
 import { GlWindow } from "./Gl/glwindow.js"
 function init() {
     //场景
@@ -66,11 +66,19 @@ function resizeCanvas() {
     canvas.width = window.innerWidth - 100;
     canvas.height = window.innerHeight - 100;
 }
-
+function setupHiDPICanvas() {
+    const pixelRatio = window.devicePixelRatio || 1; //css像素对应多少物理像素
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * pixelRatio;
+    canvas.height = rect.height * pixelRatio;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
 window.addEventListener('DOMContentLoaded',function(){
     //init();
     let glwindow = new GlWindow();
     glwindow.initGL();
+    setupHiDPICanvas();
+    glwindow.render();
     const selectButton = document.getElementById('selectX3pButton');
     const fileInput = document.getElementById('x3pFileInput');
     selectButton.addEventListener('click', function() {
@@ -91,7 +99,8 @@ window.addEventListener('DOMContentLoaded',function(){
             //infoDisplay.textContent = '正在加载X3P文件...';
             
             // 调用loadX3p函数处理文件
-            console.log(file)
+            console.log(file);
+            glwindow.clearScene();
             const x3pdata = await Util.loadX3p(file);
             let bdata = Algorithm.BuildPlaneModel(x3pdata);
             let model = new Planemodel();

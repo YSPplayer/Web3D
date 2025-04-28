@@ -21,6 +21,11 @@ export class Sence {
         Util.initializeGL();
         // 启用深度测试
         gl.enable(gl.DEPTH_TEST);
+        // 启用多重采样
+        const samples = gl.getParameter(gl.SAMPLES);
+        if (samples <= 1) {
+            console.warn("多重采样不可用或未启用，尝试使用其他方法提高渲染质量");
+        }
     }
 
     reSetPoisition() {
@@ -30,7 +35,9 @@ export class Sence {
     }
 
     clearScene() {
+        if(this.currentModel === null) return;
         this.currentModel.dispose();
+        this.currentModel = null;
     }
 
     render(data) {
@@ -40,7 +47,7 @@ export class Sence {
         sceneColor.blueF(), sceneColor.alphaF());
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.disable(gl.CULL_FACE);
-        if(this.currentModel.isEmpty()) return;
+        if(this.currentModel === null || this.currentModel.isEmpty()) return;
         this.camera.render(data);
         this.lightControl.render(data,this.camera);
         this.currentModel.render(data,this.lightControl,this.camera);

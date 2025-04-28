@@ -9,6 +9,7 @@ export class Planemodel extends Model {
         this._vbos = Array(VBOType.Max).fill(null); //VBO
         this.ebo = null; //EBO
         this.indices = [];//EBO数据
+        this.colorMaps = [];//伪彩色数据
         this.textures = Array(ImageType.Max).fill(null); //Texture
         this._datas = Array(VBOType.Max).fill().map(() => []);//模型数据
         this._modelAttribute = new PlaneModelAttribute();//模型属性
@@ -19,9 +20,9 @@ export class Planemodel extends Model {
             console.error("[Planemodel.initModel]着色器绑定失败");
             return false;
         }
-        //this.colormaps
         this.ptype = planeModelBuildData.ptype;
         this._modelAttribute = planeModelBuildData.planeModelAttribute;
+        this.colormaps = planeModelBuildData.colorMaps;
         this._datas[VBOType.Vertex] = planeModelBuildData.vertices;
         this._datas[VBOType.Texture] = planeModelBuildData.textures;
         this._datas[VBOType.Normal] = planeModelBuildData.normals;
@@ -29,6 +30,8 @@ export class Planemodel extends Model {
         this._datas[VBOType.Flag] = planeModelBuildData.flags;
         this._datas[VBOType.Index] = planeModelBuildData.index;
         this.indices = planeModelBuildData.indices;
+        const colorData = this.colormaps[this._modelAttribute.mtype];
+        const csize = colorData.length;
         const vsize =  this._datas[VBOType.Vertex].length;
         const isize = this.indices.length;
         const tsize = this._datas[VBOType.Texture].length;
@@ -40,12 +43,9 @@ export class Planemodel extends Model {
         this._vao = gl.createVertexArray();
         gl.bindVertexArray(this._vao);
         
-        // 确保将顶点数据转换为Float32Array
-        const vertexData = new Float32Array(this._datas[VBOType.Vertex]);
-        const normalData = new Float32Array(this._datas[VBOType.Normal]);
-        // 确保将索引数据转换为Uint32Array
-        const indicesData = new Uint32Array(this.indices);
-        
+        const vertexData = this._datas[VBOType.Vertex];
+        const normalData = this._datas[VBOType.Normal];
+        const indicesData = this.indices;
         if((this._vbos[VBOType.Vertex] = Model.bindBufferObject(
             this._vbos[VBOType.Vertex],
             gl.ARRAY_BUFFER,
@@ -70,6 +70,14 @@ export class Planemodel extends Model {
                 VBOType.Normal,
                 3,
                 gl.DYNAMIC_DRAW‌
+            )) === null ||  (this._vbos[VBOType.Mapcolor] = Model.bindBufferObject(
+                this._vbos[VBOType.Mapcolor],
+                gl.ARRAY_BUFFER,
+                colorData, 
+                csize,  
+                VBOType.Mapcolor,
+                3,
+                gl.DYNAMIC_DRAW‌
             )) === null ) {
             console.error("[Planemodel.initModel]绑定缓冲对象失败");
             return false;
@@ -78,6 +86,14 @@ export class Planemodel extends Model {
         gl.bindVertexArray(null);
         console.log("[Planemodel.initModel]平面模型创建成功.");
         return true;
+    }
+    dispose() {
+        super.dispose();  
+        if (this.ebo !== null) gl.deleteBuffer(this.ebo);
+        this.textures.forEach(texture => {
+            if(texture !== null) gl.deleteTexture(texture);   
+        });
+        
     }
 
     render(data, lightControl, camera) {
