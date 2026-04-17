@@ -1,25 +1,56 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D_TOOS</title>
-    <link rel="stylesheet" href="./Css/3dtoos.css">
-</head>
-<body>
-    <div>
-        <input type="file" id="x3pFileInput" accept=".x3p" style="display: none;">
-       <button id="selectX3pButton">打开X3P文件</button>
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Filament Tauri Lab</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
 
-    </div>
-    <div class="bg">
-        <canvas id="glwindow">
-        </canvas>
-    </div>
-    <script src="./Package/gl-matrix.js"></script>
-    <script src="./Package/jszip.min.js"></script>
-    <!-- <script type="module" src="./Script/const.js"></script>
-    <script type="module" src="./Script/Util/util.js"></script> -->
-    <script type="module" src="./Script/temp.js"></script>
-</body>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <p class="eyebrow">Tauri + Vite + TypeScript + Rust</p>
+        <h1>Filament Tauri Lab</h1>
+        <p class="intro">
+          这是一个给你接 Filament Web 渲染和 Tauri Rust 通道的最小实验壳子。
+          先把前端跑起来，再往右侧画布里放你的 Filament 初始化代码。
+        </p>
+        <div class="actions">
+          <button id="ping-rust-btn" type="button">Ping Rust</button>
+          <a href="https://google.github.io/filament/dup/intro.html" target="_blank" rel="noreferrer">
+            Filament Docs
+          </a>
+        </div>
+        <div class="status-card">
+          <div>
+            <span class="status-label">Rust Bridge</span>
+            <strong id="rust-status">等待调用</strong>
+          </div>
+          <p id="rust-message">
+            点击按钮，确认前端和 Tauri 后端可以正常通信。
+          </p>
+        </div>
+      </section>
+
+      <section class="stage-panel">
+        <div class="stage-toolbar">
+          <span>Viewport</span>
+          <span class="hint">后续在这里挂载 canvas / Filament scene</span>
+        </div>
+        <div id="filament-stage" class="stage">
+          <div class="stage-grid"></div>
+          <div class="stage-content">
+            <p class="stage-kicker">3D Stage Placeholder</p>
+            <h2>Canvas mount point ready</h2>
+            <p>
+              推荐把 Filament 的初始化逻辑放到 <code>src/main.ts</code>，
+              然后把 canvas 挂到 <code>#filament-stage</code> 下。
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
 </html>
