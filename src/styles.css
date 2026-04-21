@@ -16,4 +16,5 @@ body {
     -moz-osx-font-smoothing: grayscale;
     
     text-rendering: optimizeLegibility;     /* 提升字体渲染质量 */
+     overflow: hidden;
 }
