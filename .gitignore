@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 
+# Native module build output
+native/build
+native/cmake-build-*
+native/CMakeUserPresets.json
+
+# Java backend build output
+backend/target
+backend/.mvn/wrapper/dists
+*.class
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

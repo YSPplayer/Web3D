@@ -1,0 +1,6 @@
+server:
+  port: 8080
+
+web3d:
+  dataset:
+    root-dir: ${WEB3D_DATA_DIR:${user.home}/Web3D-data}

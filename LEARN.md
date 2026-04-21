@@ -1,84 +1,58 @@
 # 启动与学习说明
 
-## 这是什么
+当前仓库分成三块：
 
-这是一个给你学习下面几件事的实验壳子：
+- 根目录：Vue/Vite 前端工程
+- `backend/`：Java Spring Boot 后端工程
+- `native/`：独立 CMake/C++ 工程
 
-- Tauri 桌面应用结构
-- Rust 与前端的交互方式
-- 用 Vite 管理 Web 侧代码
-- 后续接入 Filament Web 渲染
-
-## 启动方法
-
-在项目根目录执行：
+## 运行前端
 
 ```bash
 npm install
-npm run tauri dev
-```
-
-如果启动成功，你会看到一个桌面窗口，左侧有 `Ping Rust` 按钮，右侧是一个预留给 3D 渲染的区域。
-
-点击 `Ping Rust` 后，如果文案变成 `Rust bridge online`，说明：
-
-- 前端 Vite 正常
-- Tauri 壳子正常
-- Rust 命令调用正常
-
-## 只运行前端
-
-```bash
 npm run dev
 ```
 
-然后在浏览器打开 Vite 输出的本地地址。
-
-这个模式适合你先调页面结构和 Filament 初始化脚本。
-
-## 生产构建
+## 运行后端
 
 ```bash
-npm run tauri build
+cd backend
+.\mvnw.cmd spring-boot:run
 ```
 
-打包产物会出现在 Tauri 默认构建目录下。
+后端会自动创建数据集目录：
 
-## 从哪里开始接 Filament
-
-最直接的做法是改这两个地方：
-
-- `index.html`
-- `src/main.ts`
-
-当前已经给你留了一个挂载区域：
-
-```html
-<div id="filament-stage" class="stage"></div>
+```text
+Web3D-data/
+  datasets/
+    mnist/
+      raw/
+      processed/
+      previews/
 ```
 
-你后续可以：
+查看后端状态：
 
-1. 创建 `canvas`
-2. 挂到 `#filament-stage`
-3. 初始化 Filament engine / scene / camera
-4. 把交互逻辑继续放在前端
+```text
+GET http://localhost:8080/api/health
+```
 
-## Rust 在这里适合做什么
+查看数据集目录：
 
-建议先不要让 Rust 直接接管 Filament 渲染层。
+```text
+GET http://localhost:8080/api/datasets/storage
+```
 
-更合理的职责分工是：
+## 构建 C++ 模块
 
-- JS/TS: Filament 初始化、canvas、渲染循环、材质和场景绑定
-- Rust: 配置、资源管理、几何计算、模型预处理、场景逻辑、工具命令
+```bash
+cmake -S native -B native/build
+cmake --build native/build
+```
 
-## 你接下来最值得做的第一步
+## 建议接入顺序
 
-把一个普通 `canvas` 放进 `#filament-stage`，先验证：
-
-- 尺寸自适应
-- 鼠标输入
-- 每帧刷新
-
-然后再替换成 Filament。
+1. 先用后端下载或导入 MNIST 原始数据到 `raw/`。
+2. 后端把 IDX 数据解析成训练输入和预览图片。
+3. 前端展示样本、标签分布、训练曲线和预测结果。
+4. 后端逐步实现展平输入、全连接层、激活函数、损失函数和反向传播。

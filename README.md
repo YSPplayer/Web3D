@@ -1,78 +1,67 @@
-# Filament Tauri Lab
+# Web3D Learning Lab
 
-一个用于学习 `Tauri + Rust + Web + Filament` 的最小实验项目。
+这个仓库现在分成三个独立部分：
 
-当前项目已经完成这些基础设施：
+- `src/`: Vue/Vite 前端工程
+- `backend/`: Java Spring Boot 后端工程
+- `native/`: 独立 CMake/C++ 模块
 
-- `Tauri 2` 桌面壳子
-- `Vite + TypeScript` 前端开发环境
-- 一个可直接替换为 Filament 渲染逻辑的前端舞台区域
-- 一个最小 Rust `invoke` 示例，确认前后端调用链正常
-
-## 启动
-
-先安装依赖：
+## Frontend
 
 ```bash
 npm install
-```
-
-开发模式运行桌面应用：
-
-```bash
-npm run tauri dev
-```
-
-如果你只想先看前端页面：
-
-```bash
 npm run dev
 ```
 
 生产构建：
 
 ```bash
-npm run tauri build
+npm run build
 ```
 
-## 项目结构
+## Backend
 
-- `src/main.ts`: 前端入口，后续可直接初始化 Filament
-- `src/styles.css`: 当前实验壳子的样式
-- `index.html`: 页面骨架，包含 `#filament-stage` 挂载点
-- `src-tauri/src/lib.rs`: Rust 端命令入口
-- `src-tauri/tauri.conf.json`: 窗口和构建配置
+后端是独立 Spring Boot 工程，入口在 `backend/`。当前机器没有全局 Maven，所以项目内置了 Maven Wrapper。
 
-## 你接 Filament 的位置
+```bash
+cd backend
+.\mvnw.cmd spring-boot:run
+```
 
-推荐从这一步开始：
+验证：
 
-1. 在 `src/main.ts` 中引入 Filament 的 JS/Wasm 资源
-2. 把 Filament 创建出来的 `canvas` 挂到 `#filament-stage`
-3. 保持渲染逻辑在前端
-4. 把计算密集、工具型、文件处理型逻辑逐步迁到 Rust 命令
+```bash
+cd backend
+.\mvnw.cmd test
+```
 
-## 建议学习路线
+当前接口：
 
-第一阶段：
+- `GET http://localhost:8080/api/health`
+- `GET http://localhost:8080/api/datasets/storage`
 
-- 跑通 Tauri 壳子
-- 在前端区域挂一个普通 `canvas`
-- 学会用 JS 控制视口、输入、动画循环
+数据集目录默认使用：
 
-第二阶段：
+```text
+${user.home}/Web3D-data
+```
 
-- 接入 Filament Web
-- 加载 glTF 或简单几何
-- 做材质和相机实验
+也可以通过环境变量覆盖：
 
-第三阶段：
+```text
+WEB3D_DATA_DIR=D:/YueShaoPu/Web3D-data
+```
 
-- 用 Rust 提供配置读取、资源索引、模型处理、数学计算或场景逻辑
-- 再通过 Tauri `invoke` 与前端交互
+## Native C++
 
-## 推荐开发环境
+C++ 模块是独立 CMake 工程，入口在 `native/CMakeLists.txt`。
 
-- VS Code
-- `rust-analyzer`
-- `Tauri` VS Code 插件
+```bash
+cmake -S native -B native/build
+cmake --build native/build
+```
+
+默认目标：
+
+- `web3d_native`: 静态库
+- `web3d_native_sandbox`: 示例程序
