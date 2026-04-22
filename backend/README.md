@@ -1,6 +1,6 @@
-# Web3D Backend
+# DeepLR Backend
 
-Spring Boot backend for the Web3D neural network learning project.
+Spring Boot backend for the DeepLR neural network learning project.
 
 ## Requirements
 
@@ -22,27 +22,18 @@ This project includes Maven Wrapper, so global Maven is not required.
 
 ## Dataset Storage
 
-The backend creates dataset folders under `WEB3D_DATA_DIR`.
+The backend creates dataset folders under `DEEPLR_DATA_DIR`.
 
 If the environment variable is not set, it defaults to:
 
 ```text
-${user.home}/Web3D-data
+${user.home}/Deeplr-data
 ```
 
-Current MNIST folders:
+Current synthetic digit dataset folder:
 
 ```text
-Web3D-data/
+Deeplr-data/
   datasets/
-    mnist/
-      raw/
-      processed/
-      previews/
-```
-
-Check storage paths:
-
-```text
-GET http://localhost:8080/api/datasets/storage
+    synthetic-digits/
 ```

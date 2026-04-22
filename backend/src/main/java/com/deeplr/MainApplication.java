@@ -1,15 +1,15 @@
-package com.yueshaopu.web3d;
+package com.deeplr;
 
-import com.yueshaopu.web3d.dataset.DatasetStorageProperties;
+import com.deeplr.dataset.DatasetStorageProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 @SpringBootApplication
 @EnableConfigurationProperties(DatasetStorageProperties.class)
-public class Web3dBackendApplication {
+public class MainApplication {
 
   public static void main(String[] args) {
-    SpringApplication.run(Web3dBackendApplication.class, args);
+    SpringApplication.run(MainApplication.class, args);
   }
 }

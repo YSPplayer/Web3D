@@ -1,6 +1,6 @@
 server:
   port: 8080
 
-web3d:
+deeplr:
   dataset:
-    root-dir: ${WEB3D_DATA_DIR:${user.home}/Web3D-data}
+    root-dir: ${DEEPLR_DATA_DIR:${user.home}/Deeplr-data}

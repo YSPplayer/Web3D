@@ -1,9 +1,9 @@
-package com.yueshaopu.web3d.dataset;
+package com.deeplr.dataset;
 
 import java.nio.file.Path;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = "web3d.dataset")
+@ConfigurationProperties(prefix = "deeplr.dataset")
 public class DatasetStorageProperties {
 
   private Path rootDir;

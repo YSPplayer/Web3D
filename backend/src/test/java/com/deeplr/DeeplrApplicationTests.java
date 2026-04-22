@@ -1,10 +1,10 @@
-package com.yueshaopu.web3d;
+package com.deeplr;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class Web3dBackendApplicationTests {
+class DeeplrApplicationTests {
 
   @Test
   void contextLoads() {
