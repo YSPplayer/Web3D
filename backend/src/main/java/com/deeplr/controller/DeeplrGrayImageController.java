@@ -16,7 +16,7 @@ public class DeeplrGrayImageController {
     }
 
     //批量生成样本数据
-    @RequestMapping(value = "/generateGrayDatas",method = RequestMethod.GET)
+    @RequestMapping(value = "/grayImage/generateGrayDatas",method = RequestMethod.GET)
     public void generateGrayDatas(int count) {
         SyntheticDigitGenerateRequest request = new SyntheticDigitGenerateRequest(); 
         request.setCount(count);

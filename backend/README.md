@@ -27,13 +27,12 @@ The backend creates dataset folders under `DEEPLR_DATA_DIR`.
 If the environment variable is not set, it defaults to:
 
 ```text
-${user.home}/Deeplr-data
+${user.dir}
 ```
 
 Current synthetic digit dataset folder:
 
 ```text
-Deeplr-data/
-  datasets/
-    synthetic-digits/
+datasets/
+  synthetic-digits/
 ```

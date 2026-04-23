@@ -7,7 +7,6 @@ public class SyntheticDigitGenerateResult {
   private final String batchId;
   private final Path outputDir;
   private final Path imagesDir;
-  private final Path labelsFile;
   private final int count;
   private final int width;
   private final int height;
@@ -18,7 +17,6 @@ public class SyntheticDigitGenerateResult {
       String batchId,
       Path outputDir,
       Path imagesDir,
-      Path labelsFile,
       int count,
       int width,
       int height,
@@ -27,7 +25,6 @@ public class SyntheticDigitGenerateResult {
     this.batchId = batchId;
     this.outputDir = outputDir;
     this.imagesDir = imagesDir;
-    this.labelsFile = labelsFile;
     this.count = count;
     this.width = width;
     this.height = height;
@@ -45,10 +42,6 @@ public class SyntheticDigitGenerateResult {
 
   public Path getImagesDir() {
     return imagesDir;
-  }
-
-  public Path getLabelsFile() {
-    return labelsFile;
   }
 
   public int getCount() {

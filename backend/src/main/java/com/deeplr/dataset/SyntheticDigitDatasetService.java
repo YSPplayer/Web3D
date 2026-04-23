@@ -11,13 +11,10 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
 import java.awt.image.WritableRaster;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -50,11 +47,10 @@ public class SyntheticDigitDatasetService {
     String batchId = resolveBatchId(normalized);
     Path outputDir = datasetStorageService.syntheticDigitRootDir().resolve(batchId).normalize();
     Path imagesDir = outputDir.resolve("images");
-    Path labelsFile = outputDir.resolve("labels.csv");
 
     try {
       Files.createDirectories(imagesDir);
-      writeDataset(normalized, random, imagesDir, labelsFile);
+      writeImages(normalized, random, imagesDir);
     } catch (IOException error) {
       throw new UncheckedIOException("Failed to generate synthetic digit dataset: " + outputDir, error);
     }
@@ -63,7 +59,6 @@ public class SyntheticDigitDatasetService {
         batchId,
         outputDir,
         imagesDir,
-        labelsFile,
         normalized.getCount(),
         normalized.getWidth(),
         normalized.getHeight(),
@@ -90,41 +85,24 @@ public class SyntheticDigitDatasetService {
     return maybeBlur(image, random);
   }
 
-  private void writeDataset(
+  private void writeImages(
       SyntheticDigitGenerateRequest request,
       Random random,
-      Path imagesDir,
-      Path labelsFile)
+      Path imagesDir)
       throws IOException {
-    BufferedWriter writer = Files.newBufferedWriter(
-        labelsFile,
-        StandardCharsets.UTF_8,
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING,
-        StandardOpenOption.WRITE);
-    try {
-      writer.write("filename,label");
-      writer.newLine();
-      for (int index = 1; index <= request.getCount(); index++) {
-        String label = randomDigitText(request.getDigitsPerImage(), random);
-        String filename = String.format(Locale.ROOT, "%06d.png", index);
-        BufferedImage image = createDigitImage(
-            label,
-            request.getWidth(),
-            request.getHeight(),
-            request.getNoiseLevel(),
-            random);
-        Path imageFile = imagesDir.resolve(filename);
-        if (!ImageIO.write(image, "png", imageFile.toFile())) {
-          throw new IOException("No ImageIO writer found for png");
-        }
-        writer.write(filename);
-        writer.write(",");
-        writer.write(label);
-        writer.newLine();
+    for (int index = 1; index <= request.getCount(); index++) {
+      String label = randomDigitText(request.getDigitsPerImage(), random);
+      String filename = String.format(Locale.ROOT, "%06d.png", index);
+      BufferedImage image = createDigitImage(
+          label,
+          request.getWidth(),
+          request.getHeight(),
+          request.getNoiseLevel(),
+          random);
+      Path imageFile = imagesDir.resolve(filename);
+      if (!ImageIO.write(image, "png", imageFile.toFile())) {
+        throw new IOException("No ImageIO writer found for png");
       }
-    } finally {
-      writer.close();
     }
   }
 

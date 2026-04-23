@@ -9,7 +9,6 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +19,7 @@ class SyntheticDigitDatasetServiceTests {
   Path tempDir;
 
   @Test
-  void generateCreatesImagesAndLabels() throws IOException {
+  void generateCreatesImagesWithoutLabelsFile() throws IOException {
     SyntheticDigitDatasetService service = new SyntheticDigitDatasetService(storageService());
     SyntheticDigitGenerateRequest request = new SyntheticDigitGenerateRequest();
     request.setBatchId("test-batch");
@@ -35,11 +34,7 @@ class SyntheticDigitDatasetServiceTests {
     assertEquals("test-batch", result.getBatchId());
     assertEquals(1, result.getDigitsPerImage());
     assertTrue(Files.isDirectory(result.getImagesDir()));
-    assertTrue(Files.isRegularFile(result.getLabelsFile()));
-
-    List<String> labels = Files.readAllLines(result.getLabelsFile());
-    assertEquals(6, labels.size());
-    assertEquals("filename,label", labels.get(0));
+    assertTrue(Files.notExists(result.getOutputDir().resolve("labels.csv")));
 
     for (int index = 1; index <= 5; index++) {
       String filename = String.format("%06d.png", index);
@@ -49,13 +44,12 @@ class SyntheticDigitDatasetServiceTests {
       BufferedImage image = ImageIO.read(imageFile.toFile());
       assertEquals(32, image.getWidth());
       assertEquals(32, image.getHeight());
-      assertTrue(labels.get(index).matches(filename + ",\\d"));
       assertImageHasContrast(image);
     }
   }
 
   @Test
-  void generateCreatesMultiDigitLabels() throws IOException {
+  void generateCreatesMultiDigitImagesWithoutLabelsFile() throws IOException {
     SyntheticDigitDatasetService service = new SyntheticDigitDatasetService(storageService());
     SyntheticDigitGenerateRequest request = new SyntheticDigitGenerateRequest();
     request.setBatchId("six-digit-batch");
@@ -69,13 +63,10 @@ class SyntheticDigitDatasetServiceTests {
     SyntheticDigitGenerateResult result = service.generate(request);
 
     assertEquals(6, result.getDigitsPerImage());
-    List<String> labels = Files.readAllLines(result.getLabelsFile());
-    assertEquals(4, labels.size());
-    assertEquals("filename,label", labels.get(0));
+    assertTrue(Files.notExists(result.getOutputDir().resolve("labels.csv")));
 
     for (int index = 1; index <= 3; index++) {
       String filename = String.format("%06d.png", index);
-      assertTrue(labels.get(index).matches(filename + ",\\d{6}"));
 
       BufferedImage image = ImageIO.read(result.getImagesDir().resolve(filename).toFile());
       assertEquals(192, image.getWidth());

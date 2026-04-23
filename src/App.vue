@@ -18,7 +18,7 @@
     </el-row>
     </div>
     <div class="right_container colflex"> 
-      <el-button class="sample-btn" type="primary">生成样本</el-button>
+      <el-button class="sample-btn" type="primary" @click="generateSample">生成样本</el-button>
       <div class="train_container"> 
         <el-table
       style="width: 100%">
@@ -37,11 +37,23 @@
         label="图像">
       </el-table-column>
     </el-table></div>
+     
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { request } from '@/api/request'
+import { onMounted } from 'vue';
+const generateSample = async () => {
+  const count = 10; //生成10条数据
+  const response = await request.get('/grayImage/generateGrayDatas', { count });
+  console.log(response);
+};
+onMounted(async () => {
+  const apiUrl = import.meta.env.VITE_SERVER_API_URL;
+  request.create(apiUrl) //初始化接口
+});
 const handleOpen = (key: string, keyPath: string[]) => {
   console.log("open", key, keyPath);
 };
@@ -90,6 +102,7 @@ h3 {
 .sample-btn {
   align-self: flex-start;
   width: auto;
+  margin: 5px;
 }
 .el-menu-vertical {
   min-height: 480px;

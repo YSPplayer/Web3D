@@ -1,6 +1,10 @@
 server:
-  port: 8080
+  port: 8083
 
 deeplr:
+  cors:
+    allowed-origins:
+      - http://localhost:5173
+      - http://localhost:5173/
   dataset:
-    root-dir: ${DEEPLR_DATA_DIR:${user.home}/Deeplr-data}
+    root-dir: ${DEEPLR_DATA_DIR:${user.dir}}
