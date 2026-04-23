@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +24,11 @@ public class DatasetStorageService implements InitializingBean {
   }
 
   public Path rootDir() {
-    return properties.getRootDir().toAbsolutePath().normalize();
+    String configuredRootDir = properties.getRootDir();
+    if (configuredRootDir == null || configuredRootDir.trim().isEmpty()) {
+      throw new IllegalStateException("Property 'deeplr.dataset.root-dir' must not be empty.");
+    }
+    return Paths.get(configuredRootDir).toAbsolutePath().normalize();
   }
 
   public Path syntheticDigitRootDir() {

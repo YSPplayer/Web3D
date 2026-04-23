@@ -6,13 +6,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "deeplr.dataset")
 public class DatasetStorageProperties {
 
-  private Path rootDir;
+  private String rootDir;
 
-  public Path getRootDir() {
+  public String getRootDir() {
     return rootDir;
   }
 
-  public void setRootDir(Path rootDir) {
+  public void setRootDir(String rootDir) {
     this.rootDir = rootDir;
+  }
+
+  public void setRootDir(Path rootDir) {
+    this.rootDir = rootDir == null ? null : rootDir.toString();
   }
 }

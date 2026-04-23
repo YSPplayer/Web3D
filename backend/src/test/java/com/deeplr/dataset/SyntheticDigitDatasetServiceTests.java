@@ -9,6 +9,9 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -36,9 +39,18 @@ class SyntheticDigitDatasetServiceTests {
     assertTrue(Files.isDirectory(result.getImagesDir()));
     assertTrue(Files.notExists(result.getOutputDir().resolve("labels.csv")));
 
-    for (int index = 1; index <= 5; index++) {
-      String filename = String.format("%06d.png", index);
-      Path imageFile = result.getImagesDir().resolve(filename);
+    List<Path> imageFiles = listPngFiles(result.getImagesDir());
+    assertEquals(5, imageFiles.size());
+
+    Set<String> filenames = imageFiles.stream()
+        .map(path -> path.getFileName().toString())
+        .collect(Collectors.toSet());
+    assertEquals(5, filenames.size());
+
+    for (Path imageFile : imageFiles) {
+      String filename = imageFile.getFileName().toString();
+      assertTrue(filename.startsWith("test-batch_"));
+      assertTrue(filename.endsWith(".png"));
       assertTrue(Files.isRegularFile(imageFile));
 
       BufferedImage image = ImageIO.read(imageFile.toFile());
@@ -65,10 +77,15 @@ class SyntheticDigitDatasetServiceTests {
     assertEquals(6, result.getDigitsPerImage());
     assertTrue(Files.notExists(result.getOutputDir().resolve("labels.csv")));
 
-    for (int index = 1; index <= 3; index++) {
-      String filename = String.format("%06d.png", index);
+    List<Path> imageFiles = listPngFiles(result.getImagesDir());
+    assertEquals(3, imageFiles.size());
 
-      BufferedImage image = ImageIO.read(result.getImagesDir().resolve(filename).toFile());
+    for (Path imageFile : imageFiles) {
+      String filename = imageFile.getFileName().toString();
+      assertTrue(filename.startsWith("six-digit-batch_"));
+      assertTrue(filename.endsWith(".png"));
+
+      BufferedImage image = ImageIO.read(imageFile.toFile());
       assertEquals(192, image.getWidth());
       assertEquals(64, image.getHeight());
       assertImageHasContrast(image);
@@ -99,6 +116,14 @@ class SyntheticDigitDatasetServiceTests {
     DatasetStorageService storageService = new DatasetStorageService(properties);
     storageService.afterPropertiesSet();
     return storageService;
+  }
+
+  private List<Path> listPngFiles(Path directory) throws IOException {
+    try (java.util.stream.Stream<Path> stream = Files.list(directory)) {
+      return stream
+          .filter(path -> Files.isRegularFile(path) && path.getFileName().toString().endsWith(".png"))
+          .collect(Collectors.toList());
+    }
   }
 
   private void assertImageHasContrast(BufferedImage image) {

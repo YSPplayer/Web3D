@@ -17,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 import java.util.Random;
 import java.util.UUID;
 import javax.imageio.ImageIO;
@@ -50,7 +49,7 @@ public class SyntheticDigitDatasetService {
 
     try {
       Files.createDirectories(imagesDir);
-      writeImages(normalized, random, imagesDir);
+      writeImages(normalized, random, batchId, imagesDir);
     } catch (IOException error) {
       throw new UncheckedIOException("Failed to generate synthetic digit dataset: " + outputDir, error);
     }
@@ -88,11 +87,12 @@ public class SyntheticDigitDatasetService {
   private void writeImages(
       SyntheticDigitGenerateRequest request,
       Random random,
+      String batchId,
       Path imagesDir)
       throws IOException {
     for (int index = 1; index <= request.getCount(); index++) {
       String label = randomDigitText(request.getDigitsPerImage(), random);
-      String filename = String.format(Locale.ROOT, "%06d.png", index);
+      String filename = createUniqueFilename(batchId);
       BufferedImage image = createDigitImage(
           label,
           request.getWidth(),
@@ -104,6 +104,10 @@ public class SyntheticDigitDatasetService {
         throw new IOException("No ImageIO writer found for png");
       }
     }
+  }
+
+  private String createUniqueFilename(String batchId) {
+    return batchId + "_" + UUID.randomUUID().toString().replace("-", "") + ".png";
   }
 
   private SyntheticDigitGenerateRequest normalize(SyntheticDigitGenerateRequest request) {
