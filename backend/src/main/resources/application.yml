@@ -7,6 +7,9 @@ spring:
     password: jindun3d@
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+
 deeplr:
   datasource:
     initialization-mode: always 

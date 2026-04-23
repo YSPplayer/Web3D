@@ -7,12 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
+import com.deeplr.entity.GrayImage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -23,7 +26,8 @@ class SyntheticDigitDatasetServiceTests {
 
   @Test
   void generateCreatesImagesWithoutLabelsFile() throws IOException {
-    SyntheticDigitDatasetService service = new SyntheticDigitDatasetService(storageService());
+    DatasetStorageService storageService = storageService();
+    SyntheticDigitDatasetService service = new SyntheticDigitDatasetService(storageService);
     SyntheticDigitGenerateRequest request = new SyntheticDigitGenerateRequest();
     request.setBatchId("test-batch");
     request.setCount(5);
@@ -32,25 +36,30 @@ class SyntheticDigitDatasetServiceTests {
     request.setNoiseLevel(0.25);
     request.setSeed(123L);
 
-    SyntheticDigitGenerateResult result = service.generate(request);
+    List<GrayImage> result = service.generate(request);
+    Path outputDir = storageService.syntheticDigitRootDir().resolve("test-batch").normalize();
+    Path imagesDir = outputDir.resolve("images");
 
-    assertEquals("test-batch", result.getBatchId());
-    assertEquals(1, result.getDigitsPerImage());
-    assertTrue(Files.isDirectory(result.getImagesDir()));
-    assertTrue(Files.notExists(result.getOutputDir().resolve("labels.csv")));
+    assertTrue(Files.isDirectory(imagesDir));
+    assertTrue(Files.notExists(outputDir.resolve("labels.csv")));
+    assertEquals(5, result.size());
 
-    List<Path> imageFiles = listPngFiles(result.getImagesDir());
-    assertEquals(5, imageFiles.size());
-
-    Set<String> filenames = imageFiles.stream()
-        .map(path -> path.getFileName().toString())
+    Set<String> imgKeys = result.stream()
+        .map(GrayImage::getImgKey)
         .collect(Collectors.toSet());
-    assertEquals(5, filenames.size());
+    assertEquals(5, imgKeys.size());
 
-    for (Path imageFile : imageFiles) {
+    for (GrayImage grayImage : result) {
+      Path imageFile = Paths.get(grayImage.getImgPath());
       String filename = imageFile.getFileName().toString();
+      assertTrue(grayImage.getImgKey().startsWith("test-batch_"));
       assertTrue(filename.startsWith("test-batch_"));
       assertTrue(filename.endsWith(".png"));
+      assertEquals(grayImage.getImgKey() + ".png", filename);
+      assertEquals(Integer.valueOf(32), grayImage.getWidth());
+      assertEquals(Integer.valueOf(32), grayImage.getHeight());
+      assertEquals(BigDecimal.valueOf(0.25), grayImage.getInterferenceStrength());
+      assertEquals(Long.valueOf(0L), grayImage.getImgStatus());
       assertTrue(Files.isRegularFile(imageFile));
 
       BufferedImage image = ImageIO.read(imageFile.toFile());
@@ -62,7 +71,8 @@ class SyntheticDigitDatasetServiceTests {
 
   @Test
   void generateCreatesMultiDigitImagesWithoutLabelsFile() throws IOException {
-    SyntheticDigitDatasetService service = new SyntheticDigitDatasetService(storageService());
+    DatasetStorageService storageService = storageService();
+    SyntheticDigitDatasetService service = new SyntheticDigitDatasetService(storageService);
     SyntheticDigitGenerateRequest request = new SyntheticDigitGenerateRequest();
     request.setBatchId("six-digit-batch");
     request.setCount(3);
@@ -72,18 +82,23 @@ class SyntheticDigitDatasetServiceTests {
     request.setDigitsPerImage(6);
     request.setSeed(456L);
 
-    SyntheticDigitGenerateResult result = service.generate(request);
+    List<GrayImage> result = service.generate(request);
+    Path outputDir = storageService.syntheticDigitRootDir().resolve("six-digit-batch").normalize();
 
-    assertEquals(6, result.getDigitsPerImage());
-    assertTrue(Files.notExists(result.getOutputDir().resolve("labels.csv")));
+    assertTrue(Files.notExists(outputDir.resolve("labels.csv")));
+    assertEquals(3, result.size());
 
-    List<Path> imageFiles = listPngFiles(result.getImagesDir());
-    assertEquals(3, imageFiles.size());
-
-    for (Path imageFile : imageFiles) {
+    for (GrayImage grayImage : result) {
+      Path imageFile = Paths.get(grayImage.getImgPath());
       String filename = imageFile.getFileName().toString();
+      assertTrue(grayImage.getImgKey().startsWith("six-digit-batch_"));
       assertTrue(filename.startsWith("six-digit-batch_"));
       assertTrue(filename.endsWith(".png"));
+      assertEquals(grayImage.getImgKey() + ".png", filename);
+      assertEquals(Integer.valueOf(192), grayImage.getWidth());
+      assertEquals(Integer.valueOf(64), grayImage.getHeight());
+      assertEquals(BigDecimal.valueOf(0.35), grayImage.getInterferenceStrength());
+      assertEquals(Long.valueOf(0L), grayImage.getImgStatus());
 
       BufferedImage image = ImageIO.read(imageFile.toFile());
       assertEquals(192, image.getWidth());
@@ -116,14 +131,6 @@ class SyntheticDigitDatasetServiceTests {
     DatasetStorageService storageService = new DatasetStorageService(properties);
     storageService.afterPropertiesSet();
     return storageService;
-  }
-
-  private List<Path> listPngFiles(Path directory) throws IOException {
-    try (java.util.stream.Stream<Path> stream = Files.list(directory)) {
-      return stream
-          .filter(path -> Files.isRegularFile(path) && path.getFileName().toString().endsWith(".png"))
-          .collect(Collectors.toList());
-    }
   }
 
   private void assertImageHasContrast(BufferedImage image) {

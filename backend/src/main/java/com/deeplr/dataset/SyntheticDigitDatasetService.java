@@ -13,13 +13,17 @@ import java.awt.image.Kernel;
 import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import javax.imageio.ImageIO;
+import com.deeplr.entity.GrayImage;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -40,7 +44,7 @@ public class SyntheticDigitDatasetService {
     this.datasetStorageService = datasetStorageService;
   }
 
-  public SyntheticDigitGenerateResult generate(SyntheticDigitGenerateRequest request) {
+  public List<GrayImage> generate(SyntheticDigitGenerateRequest request) {
     SyntheticDigitGenerateRequest normalized = normalize(request);
     Random random = normalized.getSeed() == null ? new Random() : new Random(normalized.getSeed());
     String batchId = resolveBatchId(normalized);
@@ -49,20 +53,10 @@ public class SyntheticDigitDatasetService {
 
     try {
       Files.createDirectories(imagesDir);
-      writeImages(normalized, random, batchId, imagesDir);
+      return writeImages(normalized, random, batchId, imagesDir);
     } catch (IOException error) {
       throw new UncheckedIOException("Failed to generate synthetic digit dataset: " + outputDir, error);
     }
-
-    return new SyntheticDigitGenerateResult(
-        batchId,
-        outputDir,
-        imagesDir,
-        normalized.getCount(),
-        normalized.getWidth(),
-        normalized.getHeight(),
-        normalized.getNoiseLevel(),
-        normalized.getDigitsPerImage());
   }
 
   BufferedImage createDigitImage(
@@ -84,12 +78,13 @@ public class SyntheticDigitDatasetService {
     return maybeBlur(image, random);
   }
 
-  private void writeImages(
+  private List<GrayImage> writeImages(
       SyntheticDigitGenerateRequest request,
       Random random,
       String batchId,
       Path imagesDir)
       throws IOException {
+    List<GrayImage> grayImages = new ArrayList<>(request.getCount());
     for (int index = 1; index <= request.getCount(); index++) {
       String label = randomDigitText(request.getDigitsPerImage(), random);
       String filename = createUniqueFilename(batchId);
@@ -103,11 +98,30 @@ public class SyntheticDigitDatasetService {
       if (!ImageIO.write(image, "png", imageFile.toFile())) {
         throw new IOException("No ImageIO writer found for png");
       }
+      grayImages.add(createGrayImage(request, label, filename, imageFile));
     }
+    return grayImages;
   }
 
   private String createUniqueFilename(String batchId) {
     return batchId + "_" + UUID.randomUUID().toString().replace("-", "") + ".png";
+  }
+
+  private GrayImage createGrayImage(
+      SyntheticDigitGenerateRequest request,
+      String label,
+      String filename,
+      Path imageFile) {
+    String imgKey = filename.substring(0, filename.length() - ".png".length());
+    GrayImage grayImage = new GrayImage();
+    grayImage.setImgKey(imgKey);
+    grayImage.setImgPath(imageFile.toAbsolutePath().normalize().toString());
+    grayImage.setImgValue(Long.valueOf(label));
+    grayImage.setWidth(request.getWidth());
+    grayImage.setHeight(request.getHeight());
+    grayImage.setInterferenceStrength(BigDecimal.valueOf(request.getNoiseLevel()));
+    grayImage.setImgStatus(0L);
+    return grayImage;
   }
 
   private SyntheticDigitGenerateRequest normalize(SyntheticDigitGenerateRequest request) {
