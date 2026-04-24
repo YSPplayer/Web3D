@@ -18,3 +18,17 @@ body {
     text-rendering: optimizeLegibility;     /* 提升字体渲染质量 */
      overflow: hidden;
 }
+/* 水平 */
+.rowflex {
+  display: flex;
+   /* justify-content: center;
+   align-items: center;   */
+   flex-direction: row; 
+}
+/*垂直 */
+.colflex {
+  display: flex;
+   /* justify-content: center;
+   align-items: center;   */
+   flex-direction: column; 
+}

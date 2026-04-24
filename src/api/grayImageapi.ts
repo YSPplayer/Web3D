@@ -1,6 +1,7 @@
-import {request} from './request'
+import { request } from './request'
+
 export const grayImageApi = {
-    async generateGrayDatas(count:number) :Promise<any> {
-        return await request.get('/grayImage/generateGrayDatas', { count })
-    }
+  async generateGrayDatas(count: number): Promise<any> {
+    return await request.post('/grayImage/generateGrayDatas', { count })
+  }
 }

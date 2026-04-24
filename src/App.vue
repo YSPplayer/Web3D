@@ -7,8 +7,6 @@
         <el-menu
           default-active="2"
           class="el-menu-vertical"
-          @open="handleOpen"
-          @close="handleClose"
         >
        <el-menu-item index="1">
           <span>导航一</span>
@@ -17,68 +15,26 @@
       </el-col>
     </el-row>
     </div>
-    <div class="right_container colflex"> 
-      <el-button class="sample-btn" type="primary" @click="generateSample">生成样本</el-button>
-      <div class="train_container"> 
-        <el-table
-      style="width: 100%">
-      <el-table-column
-        prop="date"
-        label="序号"
-        width="180">
-      </el-table-column>
-      <el-table-column
-        prop="name"
-        label="数值"
-        width="180">
-      </el-table-column>
-      <el-table-column
-        prop="address"
-        label="图像">
-      </el-table-column>
-    </el-table></div>
-     
+    <div class="mid_container">
+      <GrayImage />
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { request } from '@/api/request'
 import { onMounted } from 'vue';
-const generateSample = async () => {
-  const count = 10; //生成10条数据
-  const response = await request.get('/grayImage/generateGrayDatas', { count });
-  console.log(response);
-};
+import GrayImage from '@/module/grayImage.vue'
+
+
 onMounted(async () => {
   const apiUrl = import.meta.env.VITE_SERVER_API_URL;
   request.create(apiUrl) //初始化接口
 });
-const handleOpen = (key: string, keyPath: string[]) => {
-  console.log("open", key, keyPath);
-};
-
-const handleClose = (key: string, keyPath: string[]) => {
-  console.log("close", key, keyPath);
-};
 </script>
 
 <style scoped>
-/* 水平 */
-.rowflex {
-  display: flex;
-   /* justify-content: center;
-   align-items: center;   */
-   flex-direction: row; 
-  gap: 20px; 
-}
-/*垂直 */
-.colflex {
-  display: flex;
-   /* justify-content: center;
-   align-items: center;   */
-   flex-direction: column; 
-}
 .app {
   position: relative;
   width: 100vw;
@@ -91,6 +47,10 @@ h3 {
   width: 95%;
   height: 100%;
 }
+.mid_container {
+  margin :10px;
+}
+
 .left_container {
   width: clamp(180px, 20vw, 320px);
   min-width: 180px;
@@ -98,11 +58,6 @@ h3 {
   height: 100%;
   border-right: 1px solid #cac8c8;
   /* border: 1px solid #2e2d2d; */
-}
-.sample-btn {
-  align-self: flex-start;
-  width: auto;
-  margin: 5px;
 }
 .el-menu-vertical {
   min-height: 480px;
