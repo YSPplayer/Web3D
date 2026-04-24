@@ -3,8 +3,8 @@ package com.deeplr.controller;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.deeplr.common.ApiResponse;
 import com.deeplr.entity.GrayImage;
@@ -19,9 +19,8 @@ public class DeeplrGrayImageController {
         this.grayImageService = grayImageService;
     }
 
-    //批量生成样本数据
-    @RequestMapping(value = "/grayImage/generateGrayDatas",method = RequestMethod.GET)
+    @RequestMapping(value = "/grayImage/generateGrayDatas", method = RequestMethod.GET)
     public ApiResponse<List<GrayImage>> generateGrayDatas(int count) {
         return ApiResponse.success(grayImageService.generateDefaultGrayImages(count));
-    }   
+    }
 }

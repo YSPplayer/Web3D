@@ -30,6 +30,7 @@ import org.springframework.util.StringUtils;
 @Service
 public class SyntheticDigitDatasetService {
 
+  private static final String PUBLIC_IMAGE_PREFIX = "/dataset-files/";
   private static final DateTimeFormatter BATCH_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
   private static final Font[] DIGIT_FONTS = new Font[] {
@@ -85,6 +86,7 @@ public class SyntheticDigitDatasetService {
       Path imagesDir)
       throws IOException {
     List<GrayImage> grayImages = new ArrayList<>(request.getCount());
+    LocalDateTime createdAt = LocalDateTime.now();
     for (int index = 1; index <= request.getCount(); index++) {
       String label = randomDigitText(request.getDigitsPerImage(), random);
       String filename = createUniqueFilename(batchId);
@@ -98,7 +100,7 @@ public class SyntheticDigitDatasetService {
       if (!ImageIO.write(image, "png", imageFile.toFile())) {
         throw new IOException("No ImageIO writer found for png");
       }
-      grayImages.add(createGrayImage(request, label, filename, imageFile));
+      grayImages.add(createGrayImage(request, label, filename, imageFile, createdAt));
     }
     return grayImages;
   }
@@ -111,16 +113,18 @@ public class SyntheticDigitDatasetService {
       SyntheticDigitGenerateRequest request,
       String label,
       String filename,
-      Path imageFile) {
+      Path imageFile,
+      LocalDateTime createdAt) {
     String imgKey = filename.substring(0, filename.length() - ".png".length());
     GrayImage grayImage = new GrayImage();
     grayImage.setImgKey(imgKey);
-    grayImage.setImgPath(imageFile.toAbsolutePath().normalize().toString());
-    grayImage.setImgValue(Long.valueOf(label));
+    grayImage.setImgPath(buildPublicImagePath(imageFile));
+    grayImage.setImgValue(label);
     grayImage.setWidth(request.getWidth());
     grayImage.setHeight(request.getHeight());
     grayImage.setInterferenceStrength(BigDecimal.valueOf(request.getNoiseLevel()));
     grayImage.setImgStatus(0L);
+    grayImage.setCreateTime(createdAt);
     return grayImage;
   }
 
@@ -155,6 +159,12 @@ public class SyntheticDigitDatasetService {
     String timestamp = LocalDateTime.now().format(BATCH_TIME_FORMATTER);
     String suffix = UUID.randomUUID().toString().substring(0, 8);
     return timestamp + "-" + suffix;
+  }
+
+  private String buildPublicImagePath(Path imageFile) {
+    Path relativePath = datasetStorageService.rootDir()
+        .relativize(imageFile.toAbsolutePath().normalize());
+    return PUBLIC_IMAGE_PREFIX + relativePath.toString().replace("\\", "/");
   }
 
   private String randomDigitText(int digitsPerImage, Random random) {

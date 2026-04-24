@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS gray_image (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
     img_key VARCHAR(500) NOT NULL COMMENT '图片键',
     img_path VARCHAR(500) NOT NULL COMMENT '图片路径',
-    img_value BIGINT NOT NULL COMMENT '图片值',
+    img_value VARCHAR(8) NOT NULL COMMENT '图片值',
     width INT NOT NULL COMMENT '图片宽度',
     height INT NOT NULL COMMENT '图片高度',
     interference_strength DECIMAL(5,2) NOT NULL COMMENT '干扰强度',
