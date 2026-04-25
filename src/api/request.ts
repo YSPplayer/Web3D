@@ -20,7 +20,7 @@ export class Request {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
         try {
-            const response = await this.axios.get<T>(url, { params: params })
+            const response = await this.axios.get<T>(url, params)
             return response.data
         } catch (error) {
             const message = this.getErrorMessage(error)

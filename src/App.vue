@@ -23,14 +23,11 @@
 </template>
 
 <script setup lang="ts">
-import { request } from '@/api/request'
 import { onMounted } from 'vue';
 import GrayImage from '@/module/grayImage.vue'
 
 
 onMounted(async () => {
-  const apiUrl = import.meta.env.VITE_SERVER_API_URL;
-  request.create(apiUrl) //初始化接口
 });
 </script>
 

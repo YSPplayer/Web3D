@@ -2,6 +2,7 @@ package com.deeplr.service;
 
 import java.util.List;
 
+import org.omg.CORBA.PUBLIC_MEMBER;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -34,12 +35,14 @@ public class GrayImageService {
         if (!images.isEmpty()) {
             grayImageMapper.insertBatch(images);
         }
+        return formatImages(images);
+    }
+    private List<GrayImage> formatImages(List<GrayImage> images) {
         for (GrayImage image : images) {
             image.setImgPath(toAbsoluteUrl(image.getImgPath()));
         }
         return images;
     }
-
     private String toAbsoluteUrl(String path) {
         if (path == null || path.trim().isEmpty()) {
             return path;
@@ -50,5 +53,17 @@ public class GrayImageService {
         return ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path(path.startsWith("/") ? path : "/" + path)
                 .toUriString();
+    }
+
+    public List<GrayImage> getAllGrayImagesByPage(int pageNum,int pageSzie) {
+        if (pageNum <= 0 || pageSzie <= 0) {
+            throw new IllegalArgumentException("分页参数不合法: pageNum=" + pageNum + ", pageSize=" + pageSzie);
+        }
+        int offset = (pageNum - 1) * pageSzie;
+        return formatImages(grayImageMapper.selectAllByPage(offset, pageSzie));
+    }
+
+    public Integer getAllGrayImagesCount() {
+        return grayImageMapper.selectAllCount();
     }
 }
