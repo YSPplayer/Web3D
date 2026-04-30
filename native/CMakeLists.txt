@@ -20,6 +20,10 @@ add_executable(deep_lr
     src/Web/websocket.h
     src/log.h
     src/Web/websocket.cpp
+    src/Web/webprocess.h
+    src/Web/webprocess.cpp
+    src/define.h
+    src/data.h
 )
 
 target_compile_features(deep_lr PRIVATE cxx_std_20)

@@ -1,4 +1,4 @@
-#include <Poco/Net/HTTPServer.h>
+ï»¿#include <Poco/Net/HTTPServer.h>
 #include <Poco/Net/HTTPRequestHandler.h>
 #include <Poco/Net/HTTPRequestHandlerFactory.h>
 #include <Poco/Net/HTTPServerRequest.h>
@@ -23,17 +23,17 @@ namespace DeepLr::Web {
 		}
 		void Close();
 	private:
-		std::vector<std::shared_ptr<WebSocket>> clinets;//µ±Ç°Á¬½ÓµÄ¿Í»§¶Ë
+		std::vector<std::shared_ptr<WebSocket>> clinets;//å½“å‰è¿æ¥çš„å®¢æˆ·ç«¯
 		std::mutex socketmtx;
 		void BindReceiveAsync(const std::shared_ptr<WebSocket>& client);
 		std::string GetClientIp(const std::shared_ptr<WebSocket>& client);
 		std::string NormalizeIpText(std::string ip);
-		int port;//¶Ë¿ÚºÅ
+		int port;//ç«¯å£å·
 		bool isConnect;
-		ServerSocket socket;//Ì×½Ó×Ö
+		ServerSocket socket;//å¥—æ¥å­—
 		std::unique_ptr<HTTPServer> srv;
 	};
-	//ÇëÇó´¦Àí¹¤³§
+	//è¯·æ±‚å¤„ç†å·¥å‚
 	class RequestHandlerFactory : public HTTPRequestHandlerFactory {
 	public:
 		HTTPRequestHandler* createRequestHandler(const HTTPServerRequest& request) {

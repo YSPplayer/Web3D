@@ -1,9 +1,10 @@
-#include <iostream>
+﻿#include <iostream>
 #include <atomic>
 #include <conio.h> 
 #include "Web/websocket.h"
 using namespace DeepLr::Web;
-std::atomic<bool> isRunning(true);
+//std::atomic<bool> isRunning(true);
+WebServer* server = nullptr;
 void keyboardListener() {
     while (true) {
         if (_kbhit()) {
@@ -11,17 +12,18 @@ void keyboardListener() {
             if (key == 27)  // ESC
             {
                 std::cout << "stop server,esc quit." << std::endl;
-                isRunning.store(false);
+                //isRunning.store(false);
+                if(server) server->Close();
                 break;
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 int main() {
-    std::thread listener(keyboardListener);
-    WebServer* server = new WebServer(9958);
+    server = new WebServer(9958);
     server->Start();
+    std::thread listener(keyboardListener);
     if (listener.joinable()) listener.join();
     return 0;
 }

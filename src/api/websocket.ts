@@ -1,4 +1,4 @@
-import { ElMessage } from 'element-plus'
+import { ElMessage, Message } from 'element-plus'
 export default class WebSocketClient {
     private url:string
     private socket: WebSocket | null
@@ -15,9 +15,11 @@ export default class WebSocketClient {
             this.backFunctions.get("onopen")?.(event);
         }
    }
-   onmessage(event: Event) {
-        if(this.backFunctions.has("onmessage")) {
-            this.backFunctions.get("onmessage")?.(event);
+   onmessage(event: MessageEvent) {
+        if(event.data instanceof Blob) {
+            if(this.backFunctions.has("onmessage")) {
+                this.backFunctions.get("onmessage")?.(event);
+            }
         }
    }
    onclose(event: Event) {
@@ -39,6 +41,7 @@ export default class WebSocketClient {
    connect() {
     try {
         this.socket = new WebSocket(this.url);
+        this.socket.binaryType = "arraybuffer"; //设置二进制数据类型
         this.socket.onopen = this.onopen.bind(this);
         this.socket.onmessage = this.onmessage.bind(this);
         this.socket.onclose = this.onclose.bind(this);
