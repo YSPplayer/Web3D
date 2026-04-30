@@ -15,7 +15,7 @@
         <el-table-column prop="image" label="图像" width="180" align="center">
           <template #default="{ row }">
             <div class="image-cell">
-              <img :src="row.image"  class="table-image" />
+              <img :src="row.image" class="table-image" />
             </div>
           </template>
         </el-table-column>
@@ -98,11 +98,9 @@ const setTableData = (data: any) => {
 
 .table-image {
   display: block;
-  width: auto;
-  height: auto;
-  max-width: 160px;
-  max-height: 120px;
-  object-fit: contain;
+  width: 160px;
+  height: 64px;
+  object-fit: fill;
   border-radius: 6px;
 }
 </style>

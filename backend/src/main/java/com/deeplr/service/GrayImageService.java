@@ -27,8 +27,8 @@ public class GrayImageService {
         }
         SyntheticDigitGenerateRequest request = new SyntheticDigitGenerateRequest();
         request.setCount(count);
-        request.setWidth(160);
-        request.setHeight(64);
+        request.setWidth(128);
+        request.setHeight(128);
         request.setDigitsPerImage(4);
         request.setNoiseLevel(0.2);
         List<GrayImage> images = syntheticDigitDatasetService.generate(request);
