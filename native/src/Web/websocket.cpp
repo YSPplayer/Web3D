@@ -37,8 +37,8 @@ namespace DeepLr::Web {
 						if (n <= 0) {
 							break;
 						}
-						int frameType = flags & Poco::Net::WebSocket::FRAME_OP_BITMASK;
-						WebProcess::HandelMessage(frameType,client, full_data);
+						//int frameType = flags & Poco::Net::WebSocket::FRAME_OP_BITMASK;
+						WebProcess::HandelMessage(flags,client, full_data);
 					}
 					catch (Poco::TimeoutException& e) {
 						Log::Debug(std::format("client reveive timeout.ip:{}", WebSocketHandler::GetClientIp(client)));

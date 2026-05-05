@@ -21,6 +21,7 @@ export default class WebProcess {
         // };
         switch(data.code) { 
             case SocketType.SERVER_TO_CLIENT_HEART_BEAT:{
+                console.log('已接收到服务器心跳机制的回复')
             }
             break;
             default:

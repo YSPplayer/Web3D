@@ -15,7 +15,7 @@ export default class WebSocketClient {
       this.intervalId = 0;
    }
    onopen(event: Event) {
-        console.log("WebSocket连接成功:", event);
+        console.log("WebSocket连接成功");
         ElMessage.success("WebSocket连接成功");
         this.startHeartbeat();//启动心跳机制
         if(this.backFunctions.has("onopen")) {
@@ -24,10 +24,11 @@ export default class WebSocketClient {
    }
    onmessage(event: MessageEvent) {
         if(event.data instanceof Blob) {
-            if(this.backFunctions.has("onmessage")) {
-                WebProcess.handleBinaryMessage(event.data)
-               // this.backFunctions.get("onmessage")?.(event);
-            }
+             WebProcess.handleBinaryMessage(event.data)
+            // if(this.backFunctions.has("onmessage")) {
+               
+            //    // this.backFunctions.get("onmessage")?.(event);
+            // }
         }
    }
    onclose(event: Event) {
@@ -81,7 +82,7 @@ export default class WebSocketClient {
    connect() {
     try {
         this.socket = new WebSocket(this.url);
-        this.socket.binaryType = "arraybuffer"; //设置二进制数据类型
+        this.socket.binaryType = "blob"; //设置二进制数据类型
         this.socket.onopen = this.onopen.bind(this);
         this.socket.onmessage = this.onmessage.bind(this);
         this.socket.onclose = this.onclose.bind(this);
