@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(deep_lr LANGUAGES CXX)
 
-set(PACKAGE_ROOT "D:/full-cylinder-acquisition-end/Package" CACHE PATH "Third-party package root")
+set(PACKAGE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Package" CACHE PATH "Third-party package root")
 
 if(NOT EXISTS "${PACKAGE_ROOT}")
     message(FATAL_ERROR "PACKAGE_ROOT does not exist: ${PACKAGE_ROOT}")
