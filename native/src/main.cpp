@@ -1,5 +1,7 @@
 ﻿#include <iostream>
 #include <atomic>
+#include <thread>
+#include <chrono>
 #include <conio.h> 
 #include "Web/websocket.h"
 using namespace DeepLr::Web;

@@ -1,24 +1,26 @@
 ﻿#include <string>
 #include <format>
+#include <algorithm>
+#include <thread>
+#include <utility>
 #include "websocket.h"
 #include "../log.h"
 #include "webprocess.h"
 namespace DeepLr::Web {
-	void WebServer::BindReceiveAsync(const std::shared_ptr<WebSocket>& client) {
+	WebSocketHandler::WebSocketHandler(std::shared_ptr<WebSocketContext> context):context(std::move(context)) {
+
+	}
+
+	void WebSocketHandler::BindReceiveAsync(const std::shared_ptr<WebSocket>& client) {
 		if (!client) return;
-		std::thread([client,this] {
+		auto ctx = context;
+		std::thread([ctx, client] {
 			while (true) {
-				bool hasclinet = false;
-				{
-					std::lock_guard<std::mutex> lock(socketmtx);
-					auto it = std::find(clinets.begin(), clinets.end(), client);
-					hasclinet = it != clinets.end();
-				}
-				if (hasclinet) {
+				if (WebSocketHandler::HasClient(ctx, client)) {
 					try {
 						std::vector<char> full_data;
 						char buffer[1024];
-						int flags;
+						int flags = 0;
 						int n;
 						do {
 							n = client->receiveFrame(buffer, sizeof(buffer), flags);//客户端返回消息的时候才触发，默认为阻塞状态
@@ -27,23 +29,27 @@ namespace DeepLr::Web {
 								full_data.insert(full_data.end(), buffer, buffer + n);
 							}
 							else if (n == 0) { //客户端断开连接
-								Log::Debug(std::format("client closed,ip:{}", GetClientIp(client)));
+								Log::Debug(std::format("client closed,ip:{}", WebSocketHandler::GetClientIp(client)));
 								break;
 							}
 
 						} while (n > 0 && !(flags & Poco::Net::WebSocket::FRAME_FLAG_FIN));
-						WebProcess::SendBinaryMessage(client, SERVER_TO_CLIENT_HEART_BEAT);
+						if (n <= 0) {
+							break;
+						}
+						int frameType = flags & Poco::Net::WebSocket::FRAME_OP_BITMASK;
+						WebProcess::HandelMessage(frameType,client, full_data);
 					}
 					catch (Poco::TimeoutException& e) {
-						Log::Debug(std::format("client reveive timeout.ip:{}", GetClientIp(client)));
+						Log::Debug(std::format("client reveive timeout.ip:{}", WebSocketHandler::GetClientIp(client)));
 						break;
 					}
 					catch (Poco::Net::WebSocketException& e) {
-						Log::Debug(std::format("websocket error:{},ip:{}", e.what(), GetClientIp(client)));
+						Log::Debug(std::format("websocket error:{},ip:{}", e.what(), WebSocketHandler::GetClientIp(client)));
 						break;
 					}
 					catch (std::exception& e) {
-						Log::Debug(std::format("websocket error:{},ip:{}", e.what(), GetClientIp(client)));
+						Log::Debug(std::format("websocket error:{},ip:{}", e.what(), WebSocketHandler::GetClientIp(client)));
 						break;
 					}
 				}
@@ -52,20 +58,29 @@ namespace DeepLr::Web {
 					break;
 				}
 			}
-			{
-				std::lock_guard<std::mutex> lock(socketmtx);
-				//移除当前错误的客户端
-				clinets.erase(std::remove(clinets.begin(), clinets.end(), client), clinets.end());
-			}
+			WebSocketHandler::RemoveClient(ctx, client);
 			}).detach();
 	}
+
+	bool WebSocketHandler::HasClient(const std::shared_ptr<WebSocketContext>& context, const std::shared_ptr<WebSocket>& client) {
+		if (!context || !client) return false;
+		std::lock_guard<std::mutex> lock(context->clientsMutex);
+		return std::find(context->clients.begin(), context->clients.end(), client) != context->clients.end();
+	}
+
+	void WebSocketHandler::RemoveClient(const std::shared_ptr<WebSocketContext>& context, const std::shared_ptr<WebSocket>& client) {
+		if (!context || !client) return;
+		std::lock_guard<std::mutex> lock(context->clientsMutex);
+		context->clients.erase(std::remove(context->clients.begin(), context->clients.end(), client), context->clients.end());
+	}
+
 	//获取到当前的ip地址
-	std::string WebServer::GetClientIp(const std::shared_ptr<WebSocket>& client) {
+	std::string WebSocketHandler::GetClientIp(const std::shared_ptr<WebSocket>& client) {
 		if (client == nullptr) return "";
 		//std::string serverIp = NormalizeIpText(client->address().host().toString());
 		return NormalizeIpText(client->peerAddress().host().toString());
 	}
-	std::string WebServer::NormalizeIpText(std::string ip) {
+	std::string WebSocketHandler::NormalizeIpText(std::string ip) {
 		const std::string mappedPrefix = "::ffff:";
 		if (ip.rfind(mappedPrefix, 0) == 0 && ip.size() > mappedPrefix.size()) {
 			ip = ip.substr(mappedPrefix.size());
@@ -75,18 +90,18 @@ namespace DeepLr::Web {
 		}
 		return ip;
 	}
-	void WebServer::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) {
+	void WebSocketHandler::handleRequest(HTTPServerRequest& request, HTTPServerResponse& response) {
 		std::string error = "";
 		bool success = false;
 		try {
+			//新的连接来的时候触发,创建新的链接
+			std::shared_ptr<WebSocket> client = std::make_shared<WebSocket>(request, response);
+			Log::Debug(std::format("client connect success,ip:{}", GetClientIp(client)));
 			{
-				std::lock_guard<std::mutex> lock(socketmtx);
-				//新的连接来的时候触发,创建新的链接
-				std::shared_ptr<WebSocket> client = std::make_shared<WebSocket>(request, response);
-				Log::Debug(std::format("client connect success,ip:{}", GetClientIp(client)));
-				clinets.push_back(client);
-				BindReceiveAsync(client);
+				std::lock_guard<std::mutex> lock(context->clientsMutex);
+				context->clients.push_back(client);
 			}
+			BindReceiveAsync(client);
 			success = true;
 		}
 		catch (WebSocketException& exc) {
@@ -97,7 +112,16 @@ namespace DeepLr::Web {
 		}
 		if (!success) Log::Debug(std::format("Client connect error: {}", error));
 	}
-	WebServer::WebServer(int port):port(port), isConnect(false), srv(nullptr){
+
+	RequestHandlerFactory::RequestHandlerFactory(std::shared_ptr<WebSocketContext> context):context(std::move(context)) {
+
+	}
+
+	HTTPRequestHandler* RequestHandlerFactory::createRequestHandler(const HTTPServerRequest& request) {
+		return new WebSocketHandler(context);
+	}
+
+	WebServer::WebServer(int port):port(port), isConnect(false), srv(nullptr), context(std::make_shared<WebSocketContext>()){
 			
 	}
 	//开始
@@ -106,7 +130,7 @@ namespace DeepLr::Web {
 		isConnect = false;
 		try {
 			socket = ServerSocket(port);
-			srv = std::make_unique<HTTPServer>(new RequestHandlerFactory, socket, new HTTPServerParams);
+			srv = std::make_unique<HTTPServer>(new RequestHandlerFactory(context), socket, new HTTPServerParams);
 			srv->start();
 			isConnect = true;
 		}
@@ -123,7 +147,10 @@ namespace DeepLr::Web {
 		return isConnect;
 	}
 	void WebServer::Close() {
-		if (isConnect) srv->stop();
+		if (isConnect && srv) {
+			srv->stop();
+			isConnect = false;
+		}
 	}
 
 
