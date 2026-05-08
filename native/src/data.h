@@ -2,6 +2,29 @@
 #include <stdint.h>
 #include <algorithm>
 namespace DeepLr {
+	struct Kernel {
+		int32_t k{0};//卷积核尺寸
+		int32_t pad{0};//填充
+		int32_t stride{0};//步长
+		float** data{nullptr};//卷积核数据
+		Kernel(int32_t k, int32_t pad, int32_t stride):k(k), pad(pad), stride(stride){
+			data = new float*[k];
+			for (int i = 0; i < k; ++i) {
+				data[i] = new float[k]();
+			}
+		}
+		Kernel() {}
+		~Kernel() {
+			if (data) {
+				for (int i = 0; i < k; ++i) {
+					delete[] data[i];
+					data[i] = nullptr;
+				}
+				delete[] data;
+				data = nullptr;
+			}
+		}
+	};
 	struct WebSocketPackage {
 		int32_t version;//版本号
 		int32_t code;//信息类型

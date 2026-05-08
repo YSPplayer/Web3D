@@ -22,6 +22,14 @@ add_executable(deep_lr
     src/Web/websocket.cpp
     src/Web/webprocess.h
     src/Web/webprocess.cpp
+    src/Neural/sample.h
+    src/Neural/sample.cpp
+    src/Neural/tensor.h
+    src/Neural/tensor.cpp
+    src/Neural/layer.h
+    src/Neural/layer.cpp
+    src/Neural/conv2d.h
+    src/Neural/conv2d.cpp
     src/define.h
     src/data.h
 )
