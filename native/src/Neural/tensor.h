@@ -11,6 +11,9 @@ namespace DeepLr::Neural {
 		Tensor3D(Tensor3D&& tensor3D);
 		Tensor3D& operator=(const Tensor3D& tensor3D);
 		Tensor3D& operator=(Tensor3D&& tensor3D) noexcept;
+		Tensor3D operator*(const Tensor3D& other);
+		std::vector<float> GetW(int32_t y) const;
+		std::vector<float> GetH(int32_t x) const;
 		float Get(int32_t c, int32_t y, int32_t x) const {
 			if (y < 0 || y >= h) return 0.0f;
 			if(x < 0 || x >= w) return 0.0f;
@@ -32,7 +35,10 @@ namespace DeepLr::Neural {
 		const float& At(int32_t c, int32_t y, int32_t x) const {
 			return data[(c * h + y) * w + x];
 		}
-		void ReShape(int32_t c, int32_t w, int32_t h);
+		int32_t inline Shape() {
+			return c * h * w;
+		}
+		bool ReShape(int32_t c, int32_t w, int32_t h);
 		static Tensor3D Load(const std::string& path);
 		inline int32_t Count() const {
 			return data.size();
@@ -47,6 +53,7 @@ namespace DeepLr::Neural {
 			return c;
 		}
 	private:
+		static float Dot(const std::vector<float>& a, const std::vector<float>& b);
 		int32_t h;//高度
 		int32_t w;//宽度
 		int32_t c;//通道

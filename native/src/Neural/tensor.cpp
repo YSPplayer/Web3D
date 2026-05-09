@@ -50,12 +50,55 @@ namespace DeepLr::Neural {
 		return *this;
 	}
 
-	void Tensor3D::ReShape(int32_t c, int32_t w, int32_t h) {
+	Tensor3D Tensor3D::operator*(const Tensor3D& other) {
+		if (Channel() != 1 || other.Channel() != 1) {
+			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
+		}
+		if (this->w != other.h) {
+			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{},b shape:{} ",
+				this->w, other.h));
+		}
+		Tensor3D tensor3D(1, other.w ,this->h);
+		for (int32_t y = 0; y < tensor3D.h; ++y) {
+			for (int32_t x = 0; x < tensor3D.w; ++x) {
+				float sum = 0;
+				for (int32_t k = 0; k < this->w; ++k) {
+					sum += this->At(0, y, k) * other.At(0,k, x);
+				}
+				tensor3D.At(0, y, x) = sum;
+			}
+		}
+		return tensor3D;
+	}
+
+	std::vector<float> Tensor3D::GetW(int32_t y) const {
+		if(c != 1) return std::vector<float>();
+		std::vector<float> result;
+		result.resize(w);
+		for (int32_t x = 0; x < w; ++x) {
+			result[x] = Get(0, y, x);
+		}
+		return result;
+	}
+
+	std::vector<float> Tensor3D::GetH(int32_t x) const {
+		if (c != 1) return std::vector<float>();
+		std::vector<float> result;
+		result.resize(h);
+		for (int32_t y = 0; y < h; ++y) {
+			result[y] = Get(0, y, x);
+		}
+		return result;
+	}
+
+	bool Tensor3D::ReShape(int32_t c, int32_t w, int32_t h) {
 		if (this->c * this->w * this->h == c * w * h) {
 			this->c = c;
 			this->w = w;
 			this->h = h;
+			return true;
 		}
+		return false;
 	}
 
 	Tensor3D Tensor3D::Load(const std::string& path) {
@@ -77,5 +120,18 @@ namespace DeepLr::Neural {
 		}
 		return tensor3D;
 		
+	}
+	float Tensor3D::Dot(const std::vector<float>& a, const std::vector<float>& b) {
+		if (a.size() != b.size()) {
+			throw std::invalid_argument("vector sizes must match");
+		}
+		if (a.empty()) {
+			throw std::invalid_argument("vectors cannot be empty");
+		}
+		float result = 0.0f;
+		for (int32_t i = 0; i < a.size(); ++i) {
+			result += a[i] * b[i];
+		}
+		return result;
 	}
 }
