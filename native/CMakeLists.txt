@@ -30,6 +30,12 @@ add_executable(deep_lr
     src/Neural/layer.cpp
     src/Neural/conv2d.h
     src/Neural/conv2d.cpp
+    src/Neural/relu.h
+    src/Neural/relu.cpp
+    src/Neural/maxpool.h
+    src/Neural/maxpool.cpp
+    src/Neural/flatten.h
+    src/Neural/flatten.cpp
     src/define.h
     src/data.h
 )

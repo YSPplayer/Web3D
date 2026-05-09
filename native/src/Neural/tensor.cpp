@@ -50,6 +50,14 @@ namespace DeepLr::Neural {
 		return *this;
 	}
 
+	void Tensor3D::ReShape(int32_t c, int32_t w, int32_t h) {
+		if (this->c * this->w * this->h == c * w * h) {
+			this->c = c;
+			this->w = w;
+			this->h = h;
+		}
+	}
+
 	Tensor3D Tensor3D::Load(const std::string& path) {
 		cv::Mat img = cv::imread(path, cv::IMREAD_GRAYSCALE);
 		Tensor3D tensor3D;

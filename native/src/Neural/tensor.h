@@ -12,8 +12,18 @@ namespace DeepLr::Neural {
 		Tensor3D& operator=(const Tensor3D& tensor3D);
 		Tensor3D& operator=(Tensor3D&& tensor3D) noexcept;
 		float Get(int32_t c, int32_t y, int32_t x) const {
-			int32_t index = (c * h + y) * w + x;
+			if (y < 0 || y >= h) return 0.0f;
+			if(x < 0 || x >= w) return 0.0f;
+			return data[(c * h + y) * w + x];
+		}
+		float Get(int32_t index) const {
 			if (index < 0 || index >= data.size()) return 0.0f;
+			return data[index];
+		}
+		float& At(int32_t index) {
+			return data[index];
+		}
+		const float& At(int32_t index) const {
 			return data[index];
 		}
 		float& At(int32_t c, int32_t y, int32_t x) { 
@@ -22,7 +32,11 @@ namespace DeepLr::Neural {
 		const float& At(int32_t c, int32_t y, int32_t x) const {
 			return data[(c * h + y) * w + x];
 		}
+		void ReShape(int32_t c, int32_t w, int32_t h);
 		static Tensor3D Load(const std::string& path);
+		inline int32_t Count() const {
+			return data.size();
+		}
 		inline int32_t Height() const {
 			return h;
 		}
