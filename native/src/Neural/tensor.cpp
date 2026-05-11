@@ -71,6 +71,24 @@ namespace DeepLr::Neural {
 		return tensor3D;
 	}
 
+	Tensor3D Tensor3D::operator+(const Tensor3D& other) {
+
+		if (Channel() != 1 || other.Channel() != 1) {
+			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
+		}
+		if (this->w != other.w || this->h != other.h) {
+			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {} ",
+				this->w, this->h, other.w, other.h));
+		}
+		Tensor3D tensor3D(1, other.w, other.h);
+		for (int32_t y = 0; y < tensor3D.h; ++y) {
+			for (int32_t x = 0; x < tensor3D.w; ++x) {
+				tensor3D.At(0, y, x) = this->Get(0,y,x) + other.Get(0,y,x);
+			}
+		}
+		return tensor3D;
+	}
+
 	std::vector<float> Tensor3D::GetW(int32_t y) const {
 		if(c != 1) return std::vector<float>();
 		std::vector<float> result;

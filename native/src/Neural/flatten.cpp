@@ -6,7 +6,7 @@ namespace DeepLr::Neural {
         int32_t c = input.Channel();
         int32_t flattenWidth = w * h * c;
         Tensor3D tensor3D = input;
-        tensor3D.ReShape(1, flattenWidth, 1);
+        tensor3D.ReShape(1, 1, flattenWidth);
         return tensor3D;
     }
 }

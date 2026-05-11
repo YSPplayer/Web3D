@@ -12,6 +12,7 @@ namespace DeepLr::Neural {
 		Tensor3D& operator=(const Tensor3D& tensor3D);
 		Tensor3D& operator=(Tensor3D&& tensor3D) noexcept;
 		Tensor3D operator*(const Tensor3D& other);
+		Tensor3D operator+(const Tensor3D& other);
 		std::vector<float> GetW(int32_t y) const;
 		std::vector<float> GetH(int32_t x) const;
 		float Get(int32_t c, int32_t y, int32_t x) const {
