@@ -1,6 +1,9 @@
 #include <algorithm>
 #include "relu.h"
 namespace DeepLr::Neural {
+	Relu::Relu() {
+		ntype = NeuralType::RelU;
+	}
 	Tensor3D Relu::Forward(const Tensor3D& input) {
 		oldx = input;
 		Tensor3D tensor3D(input.Channel(), input.Width(), input.Height());

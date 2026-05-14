@@ -1,6 +1,8 @@
 #include "linear.h"
 namespace DeepLr::Neural {
-    
+    Linear::Linear(int32_t length):length(length){
+        ntype = NeuralType::Linear;
+    }
     Tensor3D Linear::Forward(const Tensor3D& input) {
         this->oldx = input;
         this->oldy = w * input + b;

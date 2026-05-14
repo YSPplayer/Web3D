@@ -2,6 +2,34 @@
 #include <stdint.h>
 #include <algorithm>
 namespace DeepLr {
+	enum NeuralType {
+		Null,
+		Conv2D,//卷积
+		RelU,
+		MaxPool,//池化
+		Flatten,//展平
+		Linear,//线性
+		SoftMax
+	};
+	struct NeuralBuild {
+		NeuralType type{ NeuralType::Null};
+		int32_t c{-1};
+		int32_t w{-1};
+		int32_t h{-1};
+		NeuralBuild(NeuralType type) {
+			this->type = type;
+		}
+		NeuralBuild(NeuralType type, int32_t c) {
+			this->type = type;
+			this->c = c;
+		}
+		NeuralBuild(NeuralType type, int32_t c, int32_t w, int32_t h) {
+			this->type = type;
+			this->c = c;
+			this->w = w;
+			this->h = h;
+		}
+	};
 	struct Point2D {
 		int32_t x;
 		int32_t y;
@@ -67,10 +95,59 @@ namespace DeepLr {
 			}
 			return *this;
 		}
+		void Rot180() { //反卷积
+			if (data == nullptr || k <= 0) return;
+			// 先转置，再逐行反转
+			// 步骤1：转置 (y,x) -> (x,y)
+			for (int32_t y = 0; y < k; ++y) {
+				for (int32_t x = y + 1; x < k; ++x) {
+					std::swap(data[y][x], data[x][y]);
+				}
+			}
+			// 步骤2：每行反转
+			for (int32_t y = 0; y < k; ++y) {
+				for (int32_t x = 0; x < k / 2; ++x) {
+					std::swap(data[y][x], data[y][k - 1 - x]);
+				}
+			}
+		}
 		Kernel(int32_t k, int32_t pad, int32_t stride) noexcept :k(k), pad(pad), stride(stride) {
 			data = new float*[k];
 			for (int32_t i = 0; i < k; ++i) {
 				data[i] = new float[k]();
+			}
+		}
+		Kernel(const Kernel& other) {
+			float** newData = nullptr;
+			try {
+				if (other.data != nullptr) {
+					newData = new float* [other.k];
+					for (int32_t i = 0; i < other.k; ++i) {
+						newData[i] = new float[other.k]();
+						for (int32_t j = 0; j < other.k; ++j) {
+							newData[i][j] = other.data[i][j];
+						}
+					}
+				}
+				if (data != nullptr) {
+					for (int32_t i = 0; i < k; ++i) {
+						delete[] data[i];
+					}
+					delete[] data;
+				}
+				k = other.k;
+				pad = other.pad;
+				stride = other.stride;
+				data = newData;
+			}
+			catch (...) {
+				if (newData != nullptr) {
+					for (int32_t i = 0; i < other.k; ++i) {
+						delete[] newData[i];
+					}
+					delete[] newData;
+				}
+				throw;
 			}
 		}
 		Kernel() noexcept {}

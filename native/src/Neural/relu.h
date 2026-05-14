@@ -1,9 +1,9 @@
 #pragma once
 #include "layer.h"
 namespace DeepLr::Neural {
-	class Relu : Layer {
+	class Relu :public Layer {
 	public:
-		Relu() = default;
+		Relu();
 		~Relu() = default;
 		Tensor3D Forward(const Tensor3D& input) override;
 		Tensor3D Backward(const Tensor3D& output) override;

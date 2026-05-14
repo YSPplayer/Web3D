@@ -1,5 +1,8 @@
 #include "flatten.h"
 namespace DeepLr::Neural {
+    Flatten::Flatten() {
+        ntype = NeuralType::Flatten;
+    }
     Tensor3D Flatten::Forward(const Tensor3D& input) {
         oldw = input.Width();
         oldh = input.Height();

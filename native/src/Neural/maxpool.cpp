@@ -1,6 +1,7 @@
 #include "maxpool.h"
 namespace DeepLr::Neural {
 	MaxPool::MaxPool():Layer() {
+		ntype = NeuralType::MaxPool;
 	}
 	Tensor3D MaxPool::Forward(const Tensor3D& input) {
 		Tensor3D tensor3D(input.Channel(), input.Width() / 2, input.Height() / 2);

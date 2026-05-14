@@ -2,6 +2,9 @@
 #include "softmax.h"
 #include <cmath>
 namespace DeepLr::Neural {
+	SoftMax::SoftMax() {
+		ntype = NeuralType::Softmax;
+	}
 	Tensor3D SoftMax::Forward(const Tensor3D& input) {
 		Tensor3D result(1,10,4);//shape [4,10]
 		int32_t h = result.Height();
