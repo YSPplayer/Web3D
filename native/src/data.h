@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <algorithm>
 namespace DeepLr {
+	struct Point2D {
+		int32_t x;
+		int32_t y;
+	};
 	struct Kernel {
 		int32_t k{0};//¾í»ýºË³ß´ç
 		int32_t pad{0};//Ìî³ä

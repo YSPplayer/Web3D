@@ -5,5 +5,10 @@ namespace DeepLr::Neural {
 	public:
 		Flatten() = default;
 		Tensor3D Forward(const Tensor3D& input) override;
+		Tensor3D Backward(const Tensor3D& output) override;
+	private:
+		int32_t oldc;
+		int32_t oldh;
+		int32_t oldw;
 	};
 }
