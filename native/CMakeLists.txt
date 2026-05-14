@@ -40,6 +40,8 @@ add_executable(deep_lr
     src/Neural/linear.cpp
     src/Neural/softmax.h
     src/Neural/softmax.cpp
+    src/Neural/loss.h
+    src/Neural/loss.cpp
     src/define.h
     src/data.h
 )

@@ -5,5 +5,6 @@ namespace DeepLr::Neural {
 	public:
 		SoftMax() = default;
 		Tensor3D Forward(const Tensor3D& input) override;
+		Tensor3D Backward(const Tensor3D& output)override;
 	};
 }

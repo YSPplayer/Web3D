@@ -21,4 +21,15 @@ namespace DeepLr::Neural {
 		}
 		return result;
 	}
+	Tensor3D SoftMax::Backward(const Tensor3D& output) { // [4,10]
+		Tensor3D result(1, output.Width(), output.Height());
+		for (int32_t y = 0; y < output.Height(); ++y) {
+			const std::array<float, 10>& array = ToOneHot(this->target[y]);
+			for (int32_t x = 0; x < output.Width(); ++x) {
+				result.At(0, y, x) = (output.Get(0, y, x) - array[x]) / output.Height();
+			}
+			
+		}
+		return result;
+	}
 }

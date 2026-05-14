@@ -6,8 +6,13 @@ namespace DeepLr::Neural {
 	public:
 		Linear() = default;
 		Tensor3D Forward(const Tensor3D& input) override;
+		Tensor3D Backward(const Tensor3D& output) override;
 	private:
 		Tensor3D w;
 		Tensor3D b;
+		Tensor3D dw;
+		Tensor3D db;
+		Tensor3D oldx;//反向传播的时候更新时需要用到
+		Tensor3D oldy;//反向传播的时候更新时需要用到
 	};
 }

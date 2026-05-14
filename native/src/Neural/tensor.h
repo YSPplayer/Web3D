@@ -36,9 +36,10 @@ namespace DeepLr::Neural {
 		const float& At(int32_t c, int32_t y, int32_t x) const {
 			return data[(c * h + y) * w + x];
 		}
-		int32_t inline Shape() {
+		int32_t inline Shape() const {
 			return c * h * w;
 		}
+		bool Transpose();
 		bool ReShape(int32_t c, int32_t w, int32_t h);
 		static Tensor3D Load(const std::string& path);
 		inline int32_t Count() const {

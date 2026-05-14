@@ -49,7 +49,6 @@ namespace DeepLr::Neural {
 		this->data = std::move(tensor3D.data);
 		return *this;
 	}
-
 	Tensor3D Tensor3D::operator*(const Tensor3D& other) {
 		if (Channel() != 1 || other.Channel() != 1) {
 			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
@@ -107,6 +106,29 @@ namespace DeepLr::Neural {
 			result[y] = Get(0, y, x);
 		}
 		return result;
+	}
+
+	bool Tensor3D::Transpose() {
+		if (c != 1) {
+			return false;
+		}
+		int32_t oldW = w;
+		int32_t oldH = h;
+		std::vector<float> newData(oldW * oldH);
+		for (int32_t y = 0; y < oldH; ++y) {
+			for (int32_t x = 0; x < oldW; ++x) {
+				int32_t oldIndex = y * oldW + x;
+				int32_t newY = x;
+				int32_t newX = y;
+				int32_t newW = oldH;
+				int32_t newIndex = newY * newW + newX;
+				newData[newIndex] = data[oldIndex];
+			}
+		}
+		data = std::move(newData);
+		w = oldH;
+		h = oldW;
+		return true;
 	}
 
 	bool Tensor3D::ReShape(int32_t c, int32_t w, int32_t h) {
