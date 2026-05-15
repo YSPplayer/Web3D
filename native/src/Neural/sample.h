@@ -7,6 +7,12 @@ namespace DeepLr::Neural {
 	public:
 		Sample();
 		static Sample Load(const std::string& path, const std::string& imgValue);
+		inline const Tensor3D* Data() const {
+			return &input;
+		}
+		inline const std::array<int32_t, 4>* Target() const {
+			return &target;
+		}
 	private:
 		static std::array<int32_t, 4> ParseLabel(const std::string& imgValue);
 		Tensor3D input;//Ñù±¾Öµ

@@ -9,7 +9,7 @@ namespace DeepLr::Neural {
 		bias = Tensor3D(ksize,1,1);
 	}
 
-	Tensor3D Conv2D::Forward(const Tensor3D& input) {
+	Tensor3D Conv2D::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
 		Tensor3D tensor3D(kernels.size(), input.Width(), input.Height());
 		for (int32_t i = 0; i < kernels.size(); ++i) {
 			const Kernel& kernel = kernels[i];
@@ -35,7 +35,7 @@ namespace DeepLr::Neural {
 		}
 		return tensor3D;
 	}
-	Tensor3D Conv2D::Backward(const Tensor3D& output) {
+	Tensor3D Conv2D::Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) {
 		Tensor3D tensor3D(1, output.Width(), output.Height());
 		dbias = bias;
 		for (int32_t i = 0; i < tensor3D.Channel(); ++i) {

@@ -1,7 +1,7 @@
 #include "loss.h"
 #include <cmath>
 namespace DeepLr::Neural {
-    float Loss::Forward(const Tensor3D& input) {
+    float Loss::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
         float sum = 0.0;
         float eps = 1e-7;
         for (int32_t i = 0; i < target.size(); ++i) {

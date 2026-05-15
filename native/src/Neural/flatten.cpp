@@ -3,7 +3,7 @@ namespace DeepLr::Neural {
     Flatten::Flatten() {
         ntype = NeuralType::Flatten;
     }
-    Tensor3D Flatten::Forward(const Tensor3D& input) {
+    Tensor3D Flatten::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
         oldw = input.Width();
         oldh = input.Height();
         oldc = input.Channel();
@@ -12,7 +12,7 @@ namespace DeepLr::Neural {
         tensor3D.ReShape(1, 1, flattenWidth);
         return tensor3D;
     }
-    Tensor3D Flatten::Backward(const Tensor3D& output) {
+    Tensor3D Flatten::Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) {
         Tensor3D tensor3D = output;
         tensor3D.ReShape(oldc, oldw, oldh);
         return tensor3D;

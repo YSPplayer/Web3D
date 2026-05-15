@@ -3,7 +3,7 @@ namespace DeepLr::Neural {
 	MaxPool::MaxPool():Layer() {
 		ntype = NeuralType::MaxPool;
 	}
-	Tensor3D MaxPool::Forward(const Tensor3D& input) {
+	Tensor3D MaxPool::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
 		Tensor3D tensor3D(input.Channel(), input.Width() / 2, input.Height() / 2);
 		int32_t c = input.Channel();
 		int32_t h = input.Height();
@@ -30,7 +30,7 @@ namespace DeepLr::Neural {
 		}
 		return tensor3D;
 	}
-	Tensor3D MaxPool::Backward(const Tensor3D& output) {
+	Tensor3D MaxPool::Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) {
 		Tensor3D tensor3D(output.Channel(), output.Width() * 2, output.Height() * 2);
 		int32_t c = output.Channel();
 		int32_t h = output.Height();

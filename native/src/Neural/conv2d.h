@@ -6,8 +6,8 @@ namespace DeepLr::Neural {
 	class Conv2D :public Layer {
 	public:
 		Conv2D(int32_t ksize);
-		Tensor3D Forward(const Tensor3D& input) override;
-		Tensor3D Backward(const Tensor3D& output)override;
+		Tensor3D Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) override;
+		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target)override;
 
 	private:
 		std::vector<Kernel> kernels;//¾í»ýºË

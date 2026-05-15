@@ -3,9 +3,9 @@
 #include <cmath>
 namespace DeepLr::Neural {
 	SoftMax::SoftMax() {
-		ntype = NeuralType::Softmax;
+		ntype = NeuralType::SoftMax;
 	}
-	Tensor3D SoftMax::Forward(const Tensor3D& input) {
+	Tensor3D SoftMax::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
 		Tensor3D result(1,10,4);//shape [4,10]
 		int32_t h = result.Height();
 		int32_t w = result.Width();
@@ -24,10 +24,10 @@ namespace DeepLr::Neural {
 		}
 		return result;
 	}
-	Tensor3D SoftMax::Backward(const Tensor3D& output) { // [4,10]
+	Tensor3D SoftMax::Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) { // [4,10]
 		Tensor3D result(1, output.Width(), output.Height());
 		for (int32_t y = 0; y < output.Height(); ++y) {
-			const std::array<float, 10>& array = ToOneHot(this->target[y]);
+			const std::array<float, 10>& array = ToOneHot(target[y]);
 			for (int32_t x = 0; x < output.Width(); ++x) {
 				result.At(0, y, x) = (output.Get(0, y, x) - array[x]) / output.Height();
 			}

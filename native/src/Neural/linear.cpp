@@ -3,12 +3,12 @@ namespace DeepLr::Neural {
     Linear::Linear(int32_t length):length(length){
         ntype = NeuralType::Linear;
     }
-    Tensor3D Linear::Forward(const Tensor3D& input) {
+    Tensor3D Linear::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
         this->oldx = input;
         this->oldy = w * input + b;
         return this->oldy;
     }
-    Tensor3D Linear::Backward(const Tensor3D& output) { 
+    Tensor3D Linear::Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) {
         Tensor3D temp = output;
         temp.ReShape(1,1, output.Shape());//shape (40,1)
         Tensor3D tempw(this->w); //y = wx + b -> y = w
