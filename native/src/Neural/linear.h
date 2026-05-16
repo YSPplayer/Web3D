@@ -7,6 +7,7 @@ namespace DeepLr::Neural {
 		Linear(int32_t length);
 		Tensor3D Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) override;
 		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
+		void Update(float lr) override {};
 	private:
 		int32_t length;
 		Tensor3D w;

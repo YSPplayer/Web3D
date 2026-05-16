@@ -12,49 +12,52 @@ namespace DeepLr::Neural {
 	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
 	Neural::Neural(const std::vector<NeuralBuild>& builds) {
 		neural.resize(builds.size());
+		int32_t lastC = 1;
 		for (int32_t i = 0; i < builds.size(); ++i) {
 			auto& build = builds[i];
 			neural[i] = nullptr;
-			if (build.type == NeuralType::Conv2D) neural[i] = new Conv2D(build.c);
+			if (build.type == NeuralType::Conv2D) neural[i] = new Conv2D(build.c, lastC);
 			else if(build.type == NeuralType::RelU)neural[i] = new Relu();
 			else if (build.type == NeuralType::MaxPool)neural[i] = new MaxPool();
 			else if (build.type == NeuralType::Flatten)neural[i] = new Flatten();
 			else if (build.type == NeuralType::Linear)neural[i] = new Linear();
 			else if (build.type == NeuralType::SoftMax)neural[i] = new SoftMax();
+			lastC = build.c;
 		}
 	}
 	void Neural::BuildNeural() {
 		Neural* n = new Neural({ 
-			NeuralBuild(NeuralType::Conv2D, 8),
-			NeuralBuild(NeuralType::RelU),
-			NeuralBuild(NeuralType::MaxPool),
-			NeuralBuild(NeuralType::Conv2D,16),
-			NeuralBuild(NeuralType::RelU),
-			NeuralBuild(NeuralType::MaxPool),
-			NeuralBuild(NeuralType::Conv2D,24),
-			NeuralBuild(NeuralType::RelU),
-			NeuralBuild(NeuralType::MaxPool),
-			NeuralBuild(NeuralType::Conv2D,32),
-			NeuralBuild(NeuralType::RelU),
-			NeuralBuild(NeuralType::MaxPool),
-			NeuralBuild(NeuralType::Flatten),
-			NeuralBuild(NeuralType::Linear,64),
-			NeuralBuild(NeuralType::RelU),
-			NeuralBuild(NeuralType::Linear,40),
-			NeuralBuild(NeuralType::SoftMax),
+			NeuralBuild(NeuralType::Conv2D, 8,128,128),
+			NeuralBuild(NeuralType::RelU,8,128,128),
+			NeuralBuild(NeuralType::MaxPool,8,64,64),
+			NeuralBuild(NeuralType::Conv2D,16,64,64),
+			NeuralBuild(NeuralType::RelU,16,64,64),
+			NeuralBuild(NeuralType::MaxPool,16,32,32),
+			NeuralBuild(NeuralType::Conv2D,24,32,32),
+			NeuralBuild(NeuralType::RelU,24,32,32),
+			NeuralBuild(NeuralType::MaxPool,24,16,16),
+			NeuralBuild(NeuralType::Conv2D,32,16,16),
+			NeuralBuild(NeuralType::RelU,32,16,16),
+			NeuralBuild(NeuralType::MaxPool,32,8,8),
+			NeuralBuild(NeuralType::Flatten,1,1,2048),
+			NeuralBuild(NeuralType::Linear,1,1,64),
+			NeuralBuild(NeuralType::RelU,1,1,64),
+			NeuralBuild(NeuralType::Linear,1,1,40),
+			NeuralBuild(NeuralType::SoftMax,1,10,4),
 		});
 	}
 	float Neural::TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples, float lr) {
 		if (samples.size() <= 0) return 0.0f;
 		float totalLoss = 0.0f;
 		float batchLoss = 0.0f;
-		//向前传播
+
 		for (int32_t i = 0; i < samples.size(); ++i) { //批量训练
 			const auto& sample = samples.at(i);
 			Tensor3D tensor3d = *sample->Data();
 			for (int32_t j = 0; j < neural.size(); ++j) {
 				Layer* layer = neural[j];
 				if (!layer) continue;
+				//向前传播
 				tensor3d = layer->Forward(tensor3d, *sample->Target());
 			}
 			totalLoss += loss.Forward(tensor3d, *sample->Target());
