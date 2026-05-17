@@ -10,33 +10,8 @@
 #include "../log.h"
 #include <thread>
 #include <chrono>
-#include <limits>
 namespace DeepLr::Neural {
-	namespace {
-		float TensorMin(const Tensor3D& tensor) {
-			float result = std::numeric_limits<float>::max();
-			for (int32_t i = 0; i < tensor.Count(); ++i) {
-				result = std::min(result, tensor.Get(i));
-			}
-			return result;
-		}
-
-		float TensorMax(const Tensor3D& tensor) {
-			float result = std::numeric_limits<float>::lowest();
-			for (int32_t i = 0; i < tensor.Count(); ++i) {
-				result = std::max(result, tensor.Get(i));
-			}
-			return result;
-		}
-
-		float TargetProbMean(const Tensor3D& tensor, const std::array<int32_t, 4>& target) {
-			float sum = 0.0f;
-			for (int32_t i = 0; i < target.size(); ++i) {
-				sum += tensor.Get(0, i, target[i]);
-			}
-			return sum / (float)target.size();
-		}
-	}	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
+	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
 	Neural::Neural(const std::vector<NeuralBuild>& builds) {
 		neural.resize(builds.size());
 		int32_t lastC = 1;
@@ -91,7 +66,7 @@ namespace DeepLr::Neural {
 					i,
 					(*sample->Target())[0], (*sample->Target())[1], (*sample->Target())[2], (*sample->Target())[3],
 					tensor3d.Channel(), tensor3d.Width(), tensor3d.Height(),
-					TensorMin(tensor3d), TensorMax(tensor3d)));
+					tensor3d.Min(), tensor3d.Max()));
 			}
 			for (int32_t j = 0; j < neural.size(); ++j) {
 				Layer* layer = neural[j];
@@ -107,8 +82,8 @@ namespace DeepLr::Neural {
 					i,
 					sampleLoss,
 					tensor3d.Channel(), tensor3d.Width(), tensor3d.Height(),
-					TensorMin(tensor3d), TensorMax(tensor3d),
-					TargetProbMean(tensor3d, *sample->Target())));
+					tensor3d.Min(), tensor3d.Max(),
+					tensor3d.TargetProbMean(*sample->Target())));
 			}
 			//Ïòºó´«²¥
 			for (int32_t j = neural.size() - 1; j >= 0; --j) {

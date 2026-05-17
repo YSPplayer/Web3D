@@ -3,6 +3,7 @@
 #include <utility>
 #include "../log.h"
 #include "sample.h"
+#include <limits>
 /*
 rows = h
 cols = w
@@ -116,6 +117,44 @@ namespace DeepLr::Neural {
 		return tensor3D;
 	}
 
+	float Tensor3D::Min() const {
+		float result = std::numeric_limits<float>::max();
+		for (int32_t i = 0; i < Count(); ++i) {
+			result = std::min(result, Get(i));
+		}
+		return result;
+	}
+
+	float Tensor3D::Max() const {
+		float result = std::numeric_limits<float>::lowest();
+		for (int32_t i = 0; i < Count(); ++i) {
+			result = std::max(result, Get(i));
+		}
+		return result;
+	}
+
+	float Tensor3D::SumAbs() const {
+		float sum = 0.0f;
+		for (int32_t i = 0; i < Count(); ++i) {
+			sum += std::fabs(Get(i));
+		}
+		return sum;
+	}
+
+	float Tensor3D::SumAbs(const std::vector<Tensor3D>& tensors) {
+		float sum = 0.0f;
+		for (const Tensor3D& tensor : tensors) {
+			sum += tensor.SumAbs();
+		}
+		return sum;
+	}
+	float Tensor3D::TargetProbMean(const std::array<int32_t, 4>& target) const {
+		float sum = 0.0f;
+		for (int32_t i = 0; i < target.size(); ++i) {
+			sum += Get(0, i, target[i]);
+		}
+		return sum / (float)target.size();
+	}
 	std::vector<float> Tensor3D::GetW(int32_t y) const {
 		if(c != 1) return std::vector<float>();
 		std::vector<float> result;
@@ -197,18 +236,5 @@ namespace DeepLr::Neural {
 		}
 		return tensor3D;
 		
-	}
-	float Tensor3D::Dot(const std::vector<float>& a, const std::vector<float>& b) {
-		if (a.size() != b.size()) {
-			throw std::invalid_argument("vector sizes must match");
-		}
-		if (a.empty()) {
-			throw std::invalid_argument("vectors cannot be empty");
-		}
-		float result = 0.0f;
-		for (int32_t i = 0; i < a.size(); ++i) {
-			result += a[i] * b[i];
-		}
-		return result;
 	}
 }

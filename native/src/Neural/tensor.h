@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <random>
+#include <array>
 namespace DeepLr::Neural {
 	class Tensor3D {
 	public:
@@ -16,6 +17,10 @@ namespace DeepLr::Neural {
 		Tensor3D operator*(float other);
 		Tensor3D operator+(const Tensor3D& other);
 		Tensor3D operator-(const Tensor3D& other);
+		float Min() const;
+		float Max() const;
+		float SumAbs() const;
+		float TargetProbMean(const std::array<int32_t, 4>& target) const;
 		std::vector<float> GetW(int32_t y) const;
 		std::vector<float> GetH(int32_t x) const;
 		float Get(int32_t c, int32_t y, int32_t x) const {
@@ -46,6 +51,7 @@ namespace DeepLr::Neural {
 		bool Transpose();
 		bool ReShape(int32_t c, int32_t w, int32_t h);
 		static Tensor3D Load(const std::string& path);
+		static float SumAbs(const std::vector<Tensor3D>& tensors);
 		inline int32_t Count() const {
 			return data.size();
 		}
@@ -59,8 +65,6 @@ namespace DeepLr::Neural {
 			return c;
 		}
 	private:
-		
-		static float Dot(const std::vector<float>& a, const std::vector<float>& b);
 		static std::random_device rd;
 		static std::mt19937 gen;
 		int32_t h;//¸ß¶È
