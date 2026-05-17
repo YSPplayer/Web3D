@@ -51,6 +51,12 @@ namespace DeepLr::Neural {
 		this->data = std::move(tensor3D.data);
 		return *this;
 	}
+	Tensor3D Tensor3D::operator*(float other) {
+		Tensor3D result = *this;
+		std::transform(result.data.begin(), result.data.end(), result.data.begin(),
+			[other](float x) { return x * other; });
+		return result;
+	}
 	Tensor3D Tensor3D::operator*(const Tensor3D& other) {
 		if (Channel() != 1 || other.Channel() != 1) {
 			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
@@ -73,18 +79,38 @@ namespace DeepLr::Neural {
 	}
 
 	Tensor3D Tensor3D::operator+(const Tensor3D& other) {
-
-		if (Channel() != 1 || other.Channel() != 1) {
+		if (Channel() != other.Channel()) {
 			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
 		}
 		if (this->w != other.w || this->h != other.h) {
 			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {} ",
 				this->w, this->h, other.w, other.h));
 		}
-		Tensor3D tensor3D(1, other.w, other.h);
-		for (int32_t y = 0; y < tensor3D.h; ++y) {
-			for (int32_t x = 0; x < tensor3D.w; ++x) {
-				tensor3D.At(0, y, x) = this->Get(0,y,x) + other.Get(0,y,x);
+		Tensor3D tensor3D(other.c, other.w, other.h);
+		for (int32_t c = 0; c < tensor3D.c; ++c) {
+			for (int32_t y = 0; y < tensor3D.h; ++y) {
+				for (int32_t x = 0; x < tensor3D.w; ++x) {
+					tensor3D.At(c, y, x) = this->Get(c, y, x) + other.Get(c, y, x);
+				}
+			}
+		}
+		return tensor3D;
+	}
+
+	Tensor3D Tensor3D::operator-(const Tensor3D& other) {
+		if (Channel() != other.Channel()) {
+			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
+		}
+		if (this->w != other.w || this->h != other.h) {
+			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {} ",
+				this->w, this->h, other.w, other.h));
+		}
+		Tensor3D tensor3D(other.c, other.w, other.h);
+		for (int32_t c = 0; c < tensor3D.c; ++c) {
+			for (int32_t y = 0; y < tensor3D.h; ++y) {
+				for (int32_t x = 0; x < tensor3D.w; ++x) {
+					tensor3D.At(c, y, x) = this->Get(c, y, x) - other.Get(c, y, x);
+				}
 			}
 		}
 		return tensor3D;
@@ -119,7 +145,6 @@ namespace DeepLr::Neural {
 			At(i) = dist(gen);
 		}
 	}
-
 	bool Tensor3D::Transpose() {
 		if (c != 1) {
 			return false;

@@ -15,7 +15,7 @@ namespace DeepLr::Neural {
 		}
 		virtual Tensor3D Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) = 0;
 		virtual Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) = 0;
-		virtual void Update(float lr) = 0;
+		virtual void Update(float lr, int32_t batchSize) = 0;
 		static std::array<float, 10> ToOneHot(int32_t number);
 	protected:
 		NeuralType ntype;

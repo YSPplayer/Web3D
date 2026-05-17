@@ -5,6 +5,8 @@ namespace DeepLr::Neural {
         w = Tensor3D(1, lasth, h);
         w.HeUniform(lasth);
         b = Tensor3D(1, 1, h);
+        dw  = Tensor3D(1, lasth, h);
+        db = Tensor3D(1, 1, h);
     }
     Tensor3D Linear::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
         this->oldx = input;
@@ -19,8 +21,14 @@ namespace DeepLr::Neural {
         Tensor3D tempOldx = this->oldx;
         tempOldx.Transpose();
         //´æ´¢WºÍB
-        this->dw = temp * tempOldx;
-        this->db = temp;
+        this->dw = dw + temp * tempOldx;
+        this->db = db + temp;
         return tempw * temp;
+    }
+    void Linear::Update(float lr, int32_t batchSize) {
+        w = w - dw * (lr / (float)batchSize);
+        b = b - db * (lr / (float)batchSize);
+        dw = Tensor3D(1, lasth, h);
+        db = Tensor3D(1, 1, h);
     }
 }

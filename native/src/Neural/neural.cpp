@@ -75,7 +75,7 @@ namespace DeepLr::Neural {
 		for (int32_t i = 0; i < neural.size(); ++i) {
 			Layer* layer = neural[i];
 			if (!layer) continue;
-			layer->Update(lr);
+			layer->Update(lr, samples.size());
 		}
 		return batchLoss;
 	}
