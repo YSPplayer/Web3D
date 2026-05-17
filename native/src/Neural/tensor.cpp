@@ -8,6 +8,8 @@ rows = h
 cols = w
 */
 namespace DeepLr::Neural {
+	std::random_device Tensor3D::rd;
+	std::mt19937 Tensor3D::gen(rd());
 	Tensor3D::Tensor3D():c(1),w(NEURAL_W),h(NEURAL_H),data(1 * NEURAL_W * NEURAL_H,0.0f) {}
 	Tensor3D::Tensor3D(int32_t c, int32_t w, int32_t h){
 		this->c = c;
@@ -106,6 +108,16 @@ namespace DeepLr::Neural {
 			result[y] = Get(0, y, x);
 		}
 		return result;
+	}
+	/// <summary>
+	/// Ëæ»ú³õÊ¼»¯
+	/// </summary>
+	void Tensor3D::HeUniform(int32_t shape) {
+		float limit = std::sqrt(6.0f / (float)shape);
+		std::uniform_real_distribution<float> dist(-limit, limit);
+		for (int32_t i = 0; i < Shape(); ++i) {
+			At(i) = dist(gen);
+		}
 	}
 
 	bool Tensor3D::Transpose() {

@@ -2,6 +2,7 @@
 #include "../define.h"
 #include <vector>
 #include <string>
+#include <random>
 namespace DeepLr::Neural {
 	class Tensor3D {
 	public:
@@ -39,6 +40,7 @@ namespace DeepLr::Neural {
 		int32_t inline Shape() const {
 			return c * h * w;
 		}
+		void HeUniform(int32_t shape);
 		bool Transpose();
 		bool ReShape(int32_t c, int32_t w, int32_t h);
 		static Tensor3D Load(const std::string& path);
@@ -55,7 +57,10 @@ namespace DeepLr::Neural {
 			return c;
 		}
 	private:
+		
 		static float Dot(const std::vector<float>& a, const std::vector<float>& b);
+		static std::random_device rd;
+		static std::mt19937 gen;
 		int32_t h;//高度
 		int32_t w;//宽度
 		int32_t c;//通道

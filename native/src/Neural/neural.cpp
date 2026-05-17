@@ -13,6 +13,7 @@ namespace DeepLr::Neural {
 	Neural::Neural(const std::vector<NeuralBuild>& builds) {
 		neural.resize(builds.size());
 		int32_t lastC = 1;
+		int32_t lastH = 1;
 		for (int32_t i = 0; i < builds.size(); ++i) {
 			auto& build = builds[i];
 			neural[i] = nullptr;
@@ -20,9 +21,10 @@ namespace DeepLr::Neural {
 			else if(build.type == NeuralType::RelU)neural[i] = new Relu();
 			else if (build.type == NeuralType::MaxPool)neural[i] = new MaxPool();
 			else if (build.type == NeuralType::Flatten)neural[i] = new Flatten();
-			else if (build.type == NeuralType::Linear)neural[i] = new Linear();
-			else if (build.type == NeuralType::SoftMax)neural[i] = new SoftMax();
+			else if (build.type == NeuralType::Linear)neural[i] = new Linear(lastH,build.h);
+			else if (build.type == NeuralType::SoftMax)neural[i] = new SoftMax(build.w,build.h);
 			lastC = build.c;
+			lastH = build.h;
 		}
 	}
 	void Neural::BuildNeural() {
