@@ -4,7 +4,10 @@
 #include <chrono>
 #include <conio.h> 
 #include "Web/websocket.h"
+#include "Neural/neural.h"
+#include "Neural/sample.h"
 using namespace DeepLr::Web;
+using namespace DeepLr::Neural;
 //std::atomic<bool> isRunning(true);
 WebServer* server = nullptr;
 void keyboardListener() {
@@ -22,10 +25,16 @@ void keyboardListener() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
+void TestTrain() {
+    std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg");
+    const std::shared_ptr<Neural>& neural = Neural::BuildDefaultNeural();
+    neural->Train(samples,10);
+}
 int main() {
     server = new WebServer(9958);
     server->Start();
     std::thread listener(keyboardListener);
+    TestTrain();
     if (listener.joinable()) listener.join();
     return 0;
 }

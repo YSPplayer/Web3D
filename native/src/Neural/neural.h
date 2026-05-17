@@ -10,12 +10,12 @@ namespace DeepLr::Neural {
 	class Neural {
 	public:
 		Neural(const std::vector<NeuralBuild> & builds);
+		static std::shared_ptr<Neural> BuildDefaultNeural();
+		void Train(std::vector<std::shared_ptr<Sample>>& samples, int32_t maxEpoch);
 	private:
 		std::vector<Layer*> neural;
 		Loss loss;
-		static void BuildNeural();
 		float TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples,float lr);
-		void Train(std::vector<std::shared_ptr<Sample>>& samples,int32_t maxEpoch);
 		static std::shared_ptr<std::mt19937> g;
 	};
 }

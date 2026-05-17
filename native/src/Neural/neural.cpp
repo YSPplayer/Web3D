@@ -8,6 +8,8 @@
 #include "linear.h"
 #include "softmax.h"
 #include "../log.h"
+#include <thread>
+#include <chrono>
 namespace DeepLr::Neural {
 	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
 	Neural::Neural(const std::vector<NeuralBuild>& builds) {
@@ -27,26 +29,27 @@ namespace DeepLr::Neural {
 			lastH = build.h;
 		}
 	}
-	void Neural::BuildNeural() {
-		Neural* n = new Neural({ 
-			NeuralBuild(NeuralType::Conv2D, 8,128,128),
-			NeuralBuild(NeuralType::RelU,8,128,128),
-			NeuralBuild(NeuralType::MaxPool,8,64,64),
-			NeuralBuild(NeuralType::Conv2D,16,64,64),
-			NeuralBuild(NeuralType::RelU,16,64,64),
-			NeuralBuild(NeuralType::MaxPool,16,32,32),
-			NeuralBuild(NeuralType::Conv2D,24,32,32),
-			NeuralBuild(NeuralType::RelU,24,32,32),
-			NeuralBuild(NeuralType::MaxPool,24,16,16),
-			NeuralBuild(NeuralType::Conv2D,32,16,16),
-			NeuralBuild(NeuralType::RelU,32,16,16),
-			NeuralBuild(NeuralType::MaxPool,32,8,8),
-			NeuralBuild(NeuralType::Flatten,1,1,2048),
-			NeuralBuild(NeuralType::Linear,1,1,64),
-			NeuralBuild(NeuralType::RelU,1,1,64),
-			NeuralBuild(NeuralType::Linear,1,1,40),
-			NeuralBuild(NeuralType::SoftMax,1,10,4),
-		});
+	std::shared_ptr<Neural> Neural::BuildDefaultNeural() {
+		std::vector<NeuralBuild> builds = {
+			NeuralBuild(NeuralType::Conv2D, 8, 128, 128),
+				NeuralBuild(NeuralType::RelU, 8, 128, 128),
+				NeuralBuild(NeuralType::MaxPool, 8, 64, 64),
+				NeuralBuild(NeuralType::Conv2D, 16, 64, 64),
+				NeuralBuild(NeuralType::RelU, 16, 64, 64),
+				NeuralBuild(NeuralType::MaxPool, 16, 32, 32),
+				NeuralBuild(NeuralType::Conv2D, 24, 32, 32),
+				NeuralBuild(NeuralType::RelU, 24, 32, 32),
+				NeuralBuild(NeuralType::MaxPool, 24, 16, 16),
+				NeuralBuild(NeuralType::Conv2D, 32, 16, 16),
+				NeuralBuild(NeuralType::RelU, 32, 16, 16),
+				NeuralBuild(NeuralType::MaxPool, 32, 8, 8),
+				NeuralBuild(NeuralType::Flatten, 1, 1, 2048),
+				NeuralBuild(NeuralType::Linear, 1, 1, 64),
+				NeuralBuild(NeuralType::RelU, 1, 1, 64),
+				NeuralBuild(NeuralType::Linear, 1, 1, 40),
+				NeuralBuild(NeuralType::SoftMax, 1, 10, 4),
+		};
+		return std::make_shared<Neural>(builds);
 	}
 	float Neural::TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples, float lr) {
 		if (samples.size() <= 0) return 0.0f;
@@ -94,6 +97,7 @@ namespace DeepLr::Neural {
 				float batchloss = TrainBatch(batchSamples,lr);
 				epochLoss += batchloss;
 				Log::Debug(std::format("epoch={}/{},step={}/{},batch={},lr={},batchloss={}", epoch, maxEpoch, step, steps, batchSamples.size(), lr, batchloss));
+				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 			}
 			epochLoss = epochLoss / steps;
 			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch, maxEpoch, lr,epochLoss));
