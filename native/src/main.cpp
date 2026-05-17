@@ -26,9 +26,9 @@ void keyboardListener() {
     }
 }
 void TestTrain() {
-    std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg");
+    std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg2");
     const std::shared_ptr<Neural>& neural = Neural::BuildDefaultNeural();
-    neural->Train(samples,10);
+    neural->Train(samples,150);
 }
 int main() {
     server = new WebServer(9958);

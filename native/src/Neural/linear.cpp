@@ -1,5 +1,17 @@
 #include "linear.h"
+#include "../log.h"
+#include <cmath>
+#include <format>
 namespace DeepLr::Neural {
+    namespace {
+        float SumAbs(const Tensor3D& tensor) {
+            float sum = 0.0f;
+            for (int32_t i = 0; i < tensor.Count(); ++i) {
+                sum += std::fabs(tensor.Get(i));
+            }
+            return sum;
+        }
+    }
     Linear::Linear(int32_t lasth, int32_t h):lasth(lasth), h(h){
         ntype = NeuralType::Linear;
         w = Tensor3D(1, lasth, h);
@@ -26,8 +38,19 @@ namespace DeepLr::Neural {
         return tempw * temp;
     }
     void Linear::Update(float lr, int32_t batchSize) {
+        float oldW0 = w.Count() > 0 ? w.At(0) : 0.0f;
+        float oldB0 = b.Count() > 0 ? b.At(0) : 0.0f;
+        float dwAbs = SumAbs(dw);
+        float dbAbs = SumAbs(db);
         w = w - dw * (lr / (float)batchSize);
         b = b - db * (lr / (float)batchSize);
+        if (batchSize <= 8) {
+            float newW0 = w.Count() > 0 ? w.At(0) : 0.0f;
+            float newB0 = b.Count() > 0 ? b.At(0) : 0.0f;
+            Log::Debug(std::format(
+                "debug Linear update in={},out={},batch={},dwAbs={},dbAbs={},w0Before={},w0After={},b0Before={},b0After={}",
+                lasth, h, batchSize, dwAbs, dbAbs, oldW0, newW0, oldB0, newB0));
+        }
         dw = Tensor3D(1, lasth, h);
         db = Tensor3D(1, 1, h);
     }

@@ -20,6 +20,7 @@ add_executable(deep_lr
     src/main.cpp
     src/Web/websocket.h
     src/log.h
+    src/log.cpp
     src/Web/websocket.cpp
     src/Web/webprocess.h
     src/Web/webprocess.cpp

@@ -1,5 +1,25 @@
 #include "conv2d.h"
+#include "../log.h"
+#include <cmath>
+#include <format>
 namespace DeepLr::Neural {
+	namespace {
+		float SumAbs(const Tensor3D& tensor) {
+			float sum = 0.0f;
+			for (int32_t i = 0; i < tensor.Count(); ++i) {
+				sum += std::fabs(tensor.Get(i));
+			}
+			return sum;
+		}
+
+		float SumAbs(const std::vector<Tensor3D>& tensors) {
+			float sum = 0.0f;
+			for (const Tensor3D& tensor : tensors) {
+				sum += SumAbs(tensor);
+			}
+			return sum;
+		}
+	}
 	Conv2D::Conv2D(int32_t ksize,int32_t shape):Layer(), ksize(ksize), shape(shape){
 		ntype = NeuralType::Conv2D;
 		kernels.resize(ksize);
@@ -96,11 +116,23 @@ namespace DeepLr::Neural {
 		return tensor3D;
 	}
 	void Conv2D::Update(float lr, int32_t batchSize) {
+		float oldK0 = (!kernels.empty() && kernels[0].Count() > 0) ? kernels[0].At(0) : 0.0f;
+		float oldB0 = bias.Count() > 0 ? bias.At(0) : 0.0f;
+		float dkAbs = SumAbs(dkernels);
+		float dbAbs = SumAbs(dbias);
+		float scale = lr / (float)batchSize;
 		for (int32_t i = 0; i < ksize; ++i) {
-			kernels[i] = kernels[i] - dkernels[i] * (lr / (float)batchSize);
+			kernels[i] = kernels[i] - dkernels[i] * scale;
 			dkernels[i] = Tensor3D(shape, 3, 3);
 		}
-		bias = bias - dbias * (lr / (float)batchSize);
+		bias = bias - dbias * scale;
+		if (batchSize <= 8) {
+			float newK0 = (!kernels.empty() && kernels[0].Count() > 0) ? kernels[0].At(0) : 0.0f;
+			float newB0 = bias.Count() > 0 ? bias.At(0) : 0.0f;
+			Log::Debug(std::format(
+				"debug Conv2D update inC={},outC={},batch={},dkAbs={},dbAbs={},k0Before={},k0After={},b0Before={},b0After={}",
+				shape, ksize, batchSize, dkAbs, dbAbs, oldK0, newK0, oldB0, newB0));
+		}
 		dbias = Tensor3D(ksize, 1, 1);
 	}
 }

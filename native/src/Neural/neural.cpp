@@ -10,8 +10,33 @@
 #include "../log.h"
 #include <thread>
 #include <chrono>
+#include <limits>
 namespace DeepLr::Neural {
-	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
+	namespace {
+		float TensorMin(const Tensor3D& tensor) {
+			float result = std::numeric_limits<float>::max();
+			for (int32_t i = 0; i < tensor.Count(); ++i) {
+				result = std::min(result, tensor.Get(i));
+			}
+			return result;
+		}
+
+		float TensorMax(const Tensor3D& tensor) {
+			float result = std::numeric_limits<float>::lowest();
+			for (int32_t i = 0; i < tensor.Count(); ++i) {
+				result = std::max(result, tensor.Get(i));
+			}
+			return result;
+		}
+
+		float TargetProbMean(const Tensor3D& tensor, const std::array<int32_t, 4>& target) {
+			float sum = 0.0f;
+			for (int32_t i = 0; i < target.size(); ++i) {
+				sum += tensor.Get(0, i, target[i]);
+			}
+			return sum / (float)target.size();
+		}
+	}	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
 	Neural::Neural(const std::vector<NeuralBuild>& builds) {
 		neural.resize(builds.size());
 		int32_t lastC = 1;
@@ -55,17 +80,36 @@ namespace DeepLr::Neural {
 		if (samples.size() <= 0) return 0.0f;
 		float totalLoss = 0.0f;
 		float batchLoss = 0.0f;
+		bool debugBatch = samples.size() <= 8;
 
 		for (int32_t i = 0; i < samples.size(); ++i) { //批量训练
 			const auto& sample = samples.at(i);
 			Tensor3D tensor3d = *sample->Data();
+			if (debugBatch) {
+				Log::Debug(std::format(
+					"debug input sample={},target={}{}{}{},shape=[{},{},{}],min={},max={}",
+					i,
+					(*sample->Target())[0], (*sample->Target())[1], (*sample->Target())[2], (*sample->Target())[3],
+					tensor3d.Channel(), tensor3d.Width(), tensor3d.Height(),
+					TensorMin(tensor3d), TensorMax(tensor3d)));
+			}
 			for (int32_t j = 0; j < neural.size(); ++j) {
 				Layer* layer = neural[j];
 				if (!layer) continue;
 				//向前传播
 				tensor3d = layer->Forward(tensor3d, *sample->Target());
 			}
-			totalLoss += loss.Forward(tensor3d, *sample->Target());
+			float sampleLoss = loss.Forward(tensor3d, *sample->Target());
+			totalLoss += sampleLoss;
+			if (debugBatch) {
+				Log::Debug(std::format(
+					"debug forward sample={},loss={},outShape=[{},{},{}],probMin={},probMax={},targetProbMean={}",
+					i,
+					sampleLoss,
+					tensor3d.Channel(), tensor3d.Width(), tensor3d.Height(),
+					TensorMin(tensor3d), TensorMax(tensor3d),
+					TargetProbMean(tensor3d, *sample->Target())));
+			}
 			//向后传播
 			for (int32_t j = neural.size() - 1; j >= 0; --j) {
 				Layer* layer = neural[j];
@@ -83,7 +127,7 @@ namespace DeepLr::Neural {
 		return batchLoss;
 	}
 	void Neural::Train(std::vector<std::shared_ptr<Sample>>& samples, int32_t maxEpoch) {
-		int32_t batch = 32;
+		int32_t batch = 16;//32;
 		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(samples.size()) / batch));
 		float lr = 0.03f;
 		for (int32_t epoch = 0; epoch < maxEpoch; ++epoch) {
@@ -96,11 +140,11 @@ namespace DeepLr::Neural {
 					> samples.size() ? samples.size() : end));
 				float batchloss = TrainBatch(batchSamples,lr);
 				epochLoss += batchloss;
-				Log::Debug(std::format("epoch={}/{},step={}/{},batch={},lr={},batchloss={}", epoch, maxEpoch, step, steps, batchSamples.size(), lr, batchloss));
+				Log::Debug(std::format("epoch={}/{},step={}/{},batch={},lr={},batchloss={}", epoch + 1, maxEpoch, step + 1, steps, batchSamples.size(), lr, batchloss));
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 			}
 			epochLoss = epochLoss / steps;
-			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch, maxEpoch, lr,epochLoss));
+			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch + 1, maxEpoch, lr,epochLoss));
 		}
 
 	}
