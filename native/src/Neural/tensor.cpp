@@ -80,12 +80,9 @@ namespace DeepLr::Neural {
 	}
 
 	Tensor3D Tensor3D::operator+(const Tensor3D& other) {
-		if (Channel() != other.Channel()) {
-			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
-		}
-		if (this->w != other.w || this->h != other.h) {
-			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {} ",
-				this->w, this->h, other.w, other.h));
+		if (this->c != other.c  || this->w != other.w || this->h != other.h) {
+			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {},c shape:{}*{}",
+				this->w, this->h, other.w, other.h, this->c, other.c));
 		}
 		Tensor3D tensor3D(other.c, other.w, other.h);
 		for (int32_t c = 0; c < tensor3D.c; ++c) {
@@ -99,12 +96,9 @@ namespace DeepLr::Neural {
 	}
 
 	Tensor3D Tensor3D::operator-(const Tensor3D& other) {
-		if (Channel() != other.Channel()) {
-			throw std::invalid_argument("Matrix dimension error: dimension is not 1");
-		}
-		if (this->w != other.w || this->h != other.h) {
-			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {} ",
-				this->w, this->h, other.w, other.h));
+		if (this->c != other.c || this->w != other.w || this->h != other.h) {
+			throw std::invalid_argument(std::format("Matrix dimension error: Dimensions cannot be multiplied.a shape:{} * {},b shape:{} * {},c shape:{}*{}",
+				this->w, this->h, other.w, other.h, this->c, other.c));
 		}
 		Tensor3D tensor3D(other.c, other.w, other.h);
 		for (int32_t c = 0; c < tensor3D.c; ++c) {

@@ -1,9 +1,9 @@
 #include "flatten.h"
 namespace DeepLr::Neural {
-    Flatten::Flatten() {
+    Flatten::Flatten() :Layer() {
         ntype = NeuralType::Flatten;
     }
-    Tensor3D Flatten::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
+    Tensor3D Flatten::Forward(const Tensor3D& input) {
         oldw = input.Width();
         oldh = input.Height();
         oldc = input.Channel();

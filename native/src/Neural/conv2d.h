@@ -5,10 +5,13 @@
 namespace DeepLr::Neural {
 	class Conv2D :public Layer {
 	public:
-		Conv2D(int32_t ksize, int32_t shape);
-		Tensor3D Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) override;
+		Conv2D();
+		void SetShape(const TensorShape& lastshape, const TensorShape& shape) override;
+		Tensor3D Forward(const Tensor3D& input) override;
 		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target)override;
 		void Update(float lr, int32_t batchSize) override;
+		void SetKernels(const std::vector<Tensor3D>& kernels);
+		void SetBias(const Tensor3D& bias);
 	private:
 		std::vector<Tensor3D> kernels;//卷积核
 		std::vector<Tensor3D> dkernels;//反卷积核
@@ -16,7 +19,5 @@ namespace DeepLr::Neural {
 		Tensor3D oldx;
 		Tensor3D bias; //超参偏置B
 		Tensor3D dbias;//超参偏置B 偏导后
-		int32_t ksize;
-		int32_t shape;
 	};
 }

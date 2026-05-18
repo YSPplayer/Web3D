@@ -11,6 +11,17 @@ namespace DeepLr {
 		Linear,//Япад
 		SoftMax
 	};
+	struct ModelMeta {
+		char magic[8];// "DLRMODL"
+		int32_t version{1};
+		int32_t fileType;//model checkpoint	
+
+	};
+	struct TensorShape {
+		int32_t c{ 0 };
+		int32_t w{ 0 };
+		int32_t h{ 0 };
+	};
 	struct NeuralBuild {
 		NeuralType type{ NeuralType::Null};
 		int32_t c{-1};

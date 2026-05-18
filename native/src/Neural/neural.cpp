@@ -1,5 +1,6 @@
 #include <cmath>
 #include <format>
+#include <fstream>
 #include "neural.h"
 #include "conv2d.h"
 #include "relu.h"
@@ -12,21 +13,21 @@
 #include <chrono>
 namespace DeepLr::Neural {
 	std::shared_ptr<std::mt19937> Neural::g = std::make_shared<std::mt19937>(42);
-	Neural::Neural(const std::vector<NeuralBuild>& builds) {
+	Neural::Neural(TensorShape tensorShape, const std::vector<NeuralBuild>& builds) {
 		neural.resize(builds.size());
-		int32_t lastC = 1;
-		int32_t lastH = 1;
+		TensorShape lastshape = tensorShape;
 		for (int32_t i = 0; i < builds.size(); ++i) {
 			auto& build = builds[i];
 			neural[i] = nullptr;
-			if (build.type == NeuralType::Conv2D) neural[i] = new Conv2D(build.c, lastC);
-			else if(build.type == NeuralType::RelU)neural[i] = new Relu();
-			else if (build.type == NeuralType::MaxPool)neural[i] = new MaxPool();
-			else if (build.type == NeuralType::Flatten)neural[i] = new Flatten();
-			else if (build.type == NeuralType::Linear)neural[i] = new Linear(lastH,build.h);
-			else if (build.type == NeuralType::SoftMax)neural[i] = new SoftMax(build.w,build.h);
-			lastC = build.c;
-			lastH = build.h;
+			TensorShape shape = { build.c,build.w,build.h };
+			if (build.type == NeuralType::Conv2D) neural[i] = new Conv2D();
+			else if(build.type == NeuralType::RelU) neural[i] = new Relu();
+			else if (build.type == NeuralType::MaxPool) neural[i] = new MaxPool();
+			else if (build.type == NeuralType::Flatten) neural[i] = new Flatten();
+			else if (build.type == NeuralType::Linear) neural[i] = new Linear();
+			else if (build.type == NeuralType::SoftMax) neural[i] = new SoftMax();
+			neural[i]->SetShape(lastshape, shape);
+			lastshape = shape;
 		}
 	}
 	std::shared_ptr<Neural> Neural::BuildDefaultNeural() {
@@ -49,7 +50,39 @@ namespace DeepLr::Neural {
 				NeuralBuild(NeuralType::Linear, 1, 1, 40),
 				NeuralBuild(NeuralType::SoftMax, 1, 10, 4),
 		};
-		return std::make_shared<Neural>(builds);
+		TensorShape shape = { 1,128,128 };
+		return std::make_shared<Neural>(shape, builds);
+	}
+	Tensor3D Neural::Predict(const Tensor3D& input) {
+		Tensor3D tensor3d = input;
+		for (int32_t j = 0; j < neural.size(); ++j) {
+			Layer* layer = neural[j];
+			if (!layer) continue;
+			//向前传播
+			tensor3d = layer->Forward(tensor3d);
+		}
+		return tensor3d;
+	}
+	Tensor3D Neural::Predict(const Tensor3D& input,const std::vector<NeuralBuild>& builds, const std::vector<std::any>& cores) {
+		Neural* n = new Neural({ input.Channel(),input.Width(),input.Height() }, builds);
+		const std::vector<Layer*>& neural = n->neural;
+		for (int32_t i = 0; i < neural.size(); ++i) {
+			Layer* layer = neural[i];
+			if (layer->GetNeuralType() == NeuralType::Conv2D) {
+				const auto& data = std::any_cast<std::pair<std::vector<Tensor3D>, Tensor3D>>(cores[i]);
+				Conv2D* conv2d =  dynamic_cast<Conv2D*>(layer);
+				conv2d->SetKernels(data.first);
+				conv2d->SetBias(data.second);
+
+			}
+			else if (layer->GetNeuralType() == NeuralType::Linear) {
+				const auto& data = std::any_cast<std::pair<Tensor3D, Tensor3D>>(cores[i]);
+				Linear* linear = dynamic_cast<Linear*>(layer);
+				linear->SetW(data.first);
+				linear->SetB(data.second);
+			}
+		}
+		return n->Predict(input);
 	}
 	float Neural::TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples, float lr) {
 		if (samples.size() <= 0) return 0.0f;
@@ -72,7 +105,7 @@ namespace DeepLr::Neural {
 				Layer* layer = neural[j];
 				if (!layer) continue;
 				//向前传播
-				tensor3d = layer->Forward(tensor3d, *sample->Target());
+				tensor3d = layer->Forward(tensor3d);
 			}
 			float sampleLoss = loss.Forward(tensor3d, *sample->Target());
 			totalLoss += sampleLoss;
@@ -101,8 +134,22 @@ namespace DeepLr::Neural {
 		}
 		return batchLoss;
 	}
+	bool Neural::WriteToBinaryFile(const std::string& filename, const std::vector<char>& buffer) {
+		std::ofstream ofs(filename, std::ios::binary);
+		if (!ofs) {
+			Log::Debug("Failed to open file: " + filename);
+			return false;
+		}
+		ofs.write(buffer.data(), buffer.size());
+		if (!ofs) {
+			Log::Debug("Failed to write data to file");
+			return false;
+		}
+		Log::Debug("Successfully wrote " + std::to_string(buffer.size()) + " bytes to " + filename);
+		return true;
+	}
 	void Neural::Train(std::vector<std::shared_ptr<Sample>>& samples, int32_t maxEpoch) {
-		int32_t batch = 16;//32;
+		int32_t batch = 32;
 		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(samples.size()) / batch));
 		float lr = 0.03f;
 		for (int32_t epoch = 0; epoch < maxEpoch; ++epoch) {
@@ -116,11 +163,14 @@ namespace DeepLr::Neural {
 				float batchloss = TrainBatch(batchSamples,lr);
 				epochLoss += batchloss;
 				Log::Debug(std::format("epoch={}/{},step={}/{},batch={},lr={},batchloss={}", epoch + 1, maxEpoch, step + 1, steps, batchSamples.size(), lr, batchloss));
-				std::this_thread::sleep_for(std::chrono::milliseconds(30));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
 			epochLoss = epochLoss / steps;
 			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch + 1, maxEpoch, lr,epochLoss));
 		}
 
+	}
+	void Neural::SaveModel(const std::string& filename) {
+		//*.dlm
 	}
 }

@@ -2,13 +2,13 @@
 #include "softmax.h"
 #include <cmath>
 namespace DeepLr::Neural {
-	SoftMax::SoftMax(int32_t w, int32_t h):w(w),h(h) {
+	SoftMax::SoftMax() :Layer() {
 		ntype = NeuralType::SoftMax;
 	}
-	Tensor3D SoftMax::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
+	Tensor3D SoftMax::Forward(const Tensor3D& input) {
 		Tensor3D reinput = input;
-		reinput.ReShape(1, w, h);
-		Tensor3D result(1, w, h);//shape [4,10]
+		reinput.ReShape(shape.c, shape.w, shape.h);
+		Tensor3D result(shape.c, shape.w, shape.h);//shape [4,10]
 		int32_t h = result.Height();
 		int32_t w = result.Width();
 		for (int32_t y = 0; y < h; ++y) {

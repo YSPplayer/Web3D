@@ -4,13 +4,14 @@ namespace DeepLr::Neural {
 	//行高(row) 列宽(col) 行向量：单行向量 列向量：单列向量
 	class Linear : public Layer {
 	public:
-		Linear(int32_t lasth, int32_t h);
-		Tensor3D Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) override;
+		Linear();
+		void SetShape(const TensorShape& lastshape, const TensorShape& shape) override;
+		Tensor3D Forward(const Tensor3D& input) override;
 		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
 		void Update(float lr, int32_t batchSize) override;
+		void SetW(const Tensor3D& w);
+		void SetB(const Tensor3D& b);
 	private:
-		int32_t lasth;
-		int32_t h;
 		Tensor3D w;
 		Tensor3D b;
 		Tensor3D dw;
