@@ -49,6 +49,16 @@ namespace DeepLr::Neural {
         dw = Tensor3D(1, lastshape.c * lastshape.w * lastshape.h, shape.c * shape.w * shape.h);
         db = Tensor3D(1, 1, shape.c * shape.w * shape.h);
     }
+    void Linear::ClearGrad() {
+        dw = Tensor3D(1, lastshape.c * lastshape.w * lastshape.h, shape.c * shape.w * shape.h);
+        db = Tensor3D(1, 1, shape.c * shape.w * shape.h);
+    }
+    void Linear::AccumulateGrad(const Layer& other) {
+        const Linear* linear = dynamic_cast<const Linear*>(&other);
+        if (!linear) return;
+        dw = dw + linear->dw;
+        db = db + linear->db;
+    }
     void Linear::SetW(const Tensor3D& w) {
         this->w = w;
     }

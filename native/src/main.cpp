@@ -36,7 +36,7 @@ void Train() {
     std::vector<std::string> files = Sample::GetPngFiles("D:/YueShaoPu/trainimg");
     const std::shared_ptr<Neural>& neural = std::make_shared<Neural>();
     neural->InitFromModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
-    neural->Train(files);
+    neural->Train(files,5,64);
     neural->SaveModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
 }
 int main() {

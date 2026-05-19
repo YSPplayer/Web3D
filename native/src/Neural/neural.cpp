@@ -1,6 +1,7 @@
 #include <cmath>
 #include <format>
 #include <fstream>
+#include <algorithm>
 #include "neural.h"
 #include "conv2d.h"
 #include "relu.h"
@@ -11,6 +12,8 @@
 #include "../log.h"
 #include <thread>
 #include <chrono>
+#include <exception>
+#include <stdexcept>
 #define WRITE_TO_BUFFER(buf, obj) \
     buf.insert(buf.end(), \
         reinterpret_cast<const char*>(&(obj)), \
@@ -92,12 +95,10 @@ namespace DeepLr::Neural {
 		}
 		std::vector<NeuralBuild> builds;
 		std::vector<std::any> cores;
-		//网络层数
 		int32_t buildSize = 0;
 		PARSE_BUFFER(buffer, offset, buildSize);
 		builds.resize(buildSize);
 		cores.resize(buildSize);
-		//输入层数
 		TensorShape shape;
 		PARSE_BUFFER(buffer, offset, shape.c);
 		PARSE_BUFFER(buffer, offset, shape.w);
@@ -172,18 +173,95 @@ namespace DeepLr::Neural {
 		for (int32_t j = 0; j < neural.size(); ++j) {
 			Layer* layer = neural[j];
 			if (!layer) continue;
-			//向前传播
 			tensor3d = layer->Forward(tensor3d);
 		}
 		return tensor3d;
 	}
 	float Neural::TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples, float lr) {
 		if (samples.size() <= 0) return 0.0f;
-		float totalLoss = 0.0f;
-		float batchLoss = 0.0f;
-		bool debugBatch = samples.size() <= 8;
+		float totalLoss = TrainBatchNoUpdate(samples, samples.size() <= 8);
+		float batchLoss = totalLoss / (float)samples.size();
+		for (int32_t i = 0; i < neural.size(); ++i) {
+			Layer* layer = neural[i];
+			if (!layer) continue;
+			layer->Update(lr, samples.size());
+		}
+		return batchLoss;
+	}
+	float Neural::TrainBatchParallel(const std::vector<std::shared_ptr<Sample>>& samples, float lr, int32_t threadCount) {
+		if (samples.size() <= 0) return 0.0f;
+		if (threadCount <= 1 || samples.size() == 1) return TrainBatch(samples, lr);
+		int32_t workerCount = std::min(threadCount, static_cast<int32_t>(samples.size()));
+		if (workerCount <= 1) return TrainBatch(samples, lr);
 
-		for (int32_t i = 0; i < samples.size(); ++i) { //批量训练
+		std::vector<NeuralBuild> builds;
+		std::vector<std::any> cores;
+		GetNeural(builds, cores);
+
+		std::vector<std::vector<std::shared_ptr<Sample>>> chunks(workerCount);
+		size_t begin = 0;
+		size_t baseSize = samples.size() / workerCount;
+		size_t remainder = samples.size() % workerCount;
+		for (int32_t i = 0; i < workerCount; ++i) {
+			size_t chunkSize = baseSize + (i < remainder ? 1 : 0);
+			chunks[i].insert(chunks[i].end(), samples.begin() + begin, samples.begin() + begin + chunkSize);
+			begin += chunkSize;
+		}
+
+		std::vector<std::unique_ptr<Neural>> workers(workerCount);
+		for (int32_t i = 0; i < workerCount; ++i) {
+			workers[i] = std::make_unique<Neural>(inputShape, builds);
+			workers[i]->SetCores(cores);
+		}
+
+		std::vector<float> totalLosses(workerCount, 0.0f);
+		std::vector<std::exception_ptr> exceptions(workerCount, nullptr);
+		std::vector<std::thread> threads;
+		threads.reserve(workerCount);
+		for (int32_t i = 0; i < workerCount; ++i) {
+			threads.emplace_back([&, i]() {
+				try {
+					totalLosses[i] = workers[i]->TrainBatchNoUpdate(chunks[i], false);
+				}
+				catch (...) {
+					exceptions[i] = std::current_exception();
+				}
+			});
+		}
+		for (std::thread& thread : threads) {
+			thread.join();
+		}
+		for (int32_t i = 0; i < workerCount; ++i) {
+			if (exceptions[i]) {
+				for (auto& worker : workers) {
+					if (worker) worker->Crear();
+				}
+				std::rethrow_exception(exceptions[i]);
+			}
+		}
+
+		ClearGrad();
+		for (const auto& worker : workers) {
+			AccumulateGradFrom(*worker);
+		}
+		for (int32_t i = 0; i < neural.size(); ++i) {
+			Layer* layer = neural[i];
+			if (!layer) continue;
+			layer->Update(lr, samples.size());
+		}
+		for (auto& worker : workers) {
+			if (worker) worker->Crear();
+		}
+
+		float totalLoss = 0.0f;
+		for (float value : totalLosses) {
+			totalLoss += value;
+		}
+		return totalLoss / (float)samples.size();
+	}
+	float Neural::TrainBatchNoUpdate(const std::vector<std::shared_ptr<Sample>>& samples, bool debugBatch) {
+		float totalLoss = 0.0f;
+		for (int32_t i = 0; i < samples.size(); ++i) {
 			const auto& sample = samples.at(i);
 			Tensor3D tensor3d = *sample->Data();
 			if (debugBatch) {
@@ -197,7 +275,6 @@ namespace DeepLr::Neural {
 			for (int32_t j = 0; j < neural.size(); ++j) {
 				Layer* layer = neural[j];
 				if (!layer) continue;
-				//向前传播
 				tensor3d = layer->Forward(tensor3d);
 			}
 			float sampleLoss = loss.Forward(tensor3d, *sample->Target());
@@ -211,21 +288,13 @@ namespace DeepLr::Neural {
 					tensor3d.Min(), tensor3d.Max(),
 					tensor3d.TargetProbMean(*sample->Target())));
 			}
-			//向后传播
 			for (int32_t j = neural.size() - 1; j >= 0; --j) {
 				Layer* layer = neural[j];
 				if (!layer) continue;
 				tensor3d = layer->Backward(tensor3d, *sample->Target());
 			}
 		}
-		batchLoss = totalLoss / (float)samples.size();
-		//更新梯度
-		for (int32_t i = 0; i < neural.size(); ++i) {
-			Layer* layer = neural[i];
-			if (!layer) continue;
-			layer->Update(lr, samples.size());
-		}
-		return batchLoss;
+		return totalLoss;
 	}
 	void Neural::Crear() {
 		for (int32_t i = 0; i < neural.size(); ++i) {
@@ -254,16 +323,53 @@ namespace DeepLr::Neural {
 			lastshape = shape;
 		}
 	}
+	void Neural::SetCores(const std::vector<std::any>& cores) {
+		for (int32_t i = 0; i < neural.size() && i < cores.size(); ++i) {
+			Layer* layer = neural[i];
+			if (!layer) continue;
+			if (layer->GetNeuralType() == NeuralType::Conv2D) {
+				const auto& data = std::any_cast<const std::pair<std::vector<Tensor3D>, Tensor3D>&>(cores[i]);
+				Conv2D* conv2d = dynamic_cast<Conv2D*>(layer);
+				conv2d->SetKernels(data.first);
+				conv2d->SetBias(data.second);
+			}
+			else if (layer->GetNeuralType() == NeuralType::Linear) {
+				const auto& data = std::any_cast<const std::pair<Tensor3D, Tensor3D>&>(cores[i]);
+				Linear* linear = dynamic_cast<Linear*>(layer);
+				linear->SetW(data.first);
+				linear->SetB(data.second);
+			}
+		}
+	}
+	void Neural::ClearGrad() {
+		for (int32_t i = 0; i < neural.size(); ++i) {
+			Layer* layer = neural[i];
+			if (!layer) continue;
+			layer->ClearGrad();
+		}
+	}
+	void Neural::AccumulateGradFrom(const Neural& other) {
+		if (neural.size() != other.neural.size()) {
+			throw std::invalid_argument("Neural layer size mismatch when accumulating gradients.");
+		}
+		for (int32_t i = 0; i < neural.size(); ++i) {
+			Layer* layer = neural[i];
+			Layer* otherLayer = other.neural[i];
+			if (!layer || !otherLayer) continue;
+			if (layer->GetNeuralType() != otherLayer->GetNeuralType()) {
+				throw std::invalid_argument("Neural layer type mismatch when accumulating gradients.");
+			}
+			layer->AccumulateGrad(*otherLayer);
+		}
+	}
 	void Neural::WriteTensor3D(const Tensor3D& tensor, std::vector<char>& buffer) {
 		const std::vector<float>& tdata = tensor.Data();
 		int32_t c = tensor.Channel();
 		int32_t w = tensor.Width();
 		int32_t h = tensor.Height();
-		//先写入shape，最后写值
 		WRITE_TO_BUFFER(buffer, c);
 		WRITE_TO_BUFFER(buffer, w);
 		WRITE_TO_BUFFER(buffer, h);
-		//写入整体数据
 		buffer.insert(buffer.end(),
 			reinterpret_cast<const char*>(tdata.data()),
 			reinterpret_cast<const char*>(tdata.data()) + tdata.size() * sizeof(float));
@@ -334,7 +440,7 @@ namespace DeepLr::Neural {
 				std::vector<std::string> batchFiles(files.begin() + start, files.begin() + (end
 					> files.size() ? files.size() : end));
 				std::vector<std::shared_ptr<Sample>> batchSamples = Sample::Load(batchFiles);
-				float batchloss = TrainBatch(batchSamples,lr);
+				float batchloss = TrainBatchParallel(batchSamples, lr);
 				epochLoss += batchloss * batchSamples.size();
 				epochSampleCount += batchSamples.size();
 				Log::Debug(std::format("epoch={}/{},step={}/{},batch={},lr={},batchloss={}", epoch + 1, maxEpoch, step + 1, steps, batchSamples.size(), lr, batchloss));
@@ -372,26 +478,23 @@ namespace DeepLr::Neural {
 			return false;
 		}
 		std::vector<char> buffer;
-		ModelHeader header;//写入模型的头数据
+		ModelHeader header;
 		WRITE_TO_BUFFER(buffer, header);
 		int32_t buildSize = builds.size();
 		WRITE_TO_BUFFER(buffer, buildSize);
 		WRITE_TO_BUFFER(buffer, inputShape);
-		//写入模型文件
 		for (int32_t i = 0; i < builds.size(); ++i) {
 			const NeuralBuild& build = builds[i];
 			const std::any& core = cores[i];
 			int32_t type = static_cast<int32_t>(build.type);
-			//先写入类别
+
 			WRITE_TO_BUFFER(buffer, type);
 			WRITE_TO_BUFFER(buffer, build.c);
 			WRITE_TO_BUFFER(buffer, build.w);
 			WRITE_TO_BUFFER(buffer, build.h);
 			//bias kernels
-			//判断需要写入超参的网络
 			if (build.type == NeuralType::Conv2D) {
 				const auto& data = std::any_cast<std::pair<std::vector<Tensor3D>, Tensor3D>>(core);
-				//先存储卷积核
 				const std::vector<Tensor3D>& kernels = data.first;// N , M , 3 ,3 
 				int32_t ksize = kernels.size();
 				WRITE_TO_BUFFER(buffer, ksize);

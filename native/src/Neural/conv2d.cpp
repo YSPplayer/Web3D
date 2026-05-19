@@ -120,6 +120,22 @@ namespace DeepLr::Neural {
 		}
 		dbias = Tensor3D(shape.c, 1, 1);
 	}
+	void Conv2D::ClearGrad() {
+		dkernels.resize(shape.c);
+		for (int32_t i = 0; i < shape.c; ++i) {
+			dkernels[i] = Tensor3D(lastshape.c, 3, 3);
+		}
+		dbias = Tensor3D(shape.c, 1, 1);
+	}
+	void Conv2D::AccumulateGrad(const Layer& other) {
+		const Conv2D* conv2d = dynamic_cast<const Conv2D*>(&other);
+		if (!conv2d) return;
+		if (dkernels.size() != conv2d->dkernels.size()) return;
+		for (int32_t i = 0; i < dkernels.size(); ++i) {
+			dkernels[i] = dkernels[i] + conv2d->dkernels[i];
+		}
+		dbias = dbias + conv2d->dbias;
+	}
 	void Conv2D::SetKernels(const std::vector<Tensor3D>& kernels) {
 		this->kernels = kernels;
 	}

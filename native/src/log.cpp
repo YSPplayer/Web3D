@@ -126,7 +126,8 @@ namespace DeepLr {
 	}
 
 	void Log::Debug(const std::string& msg) {
-		Writer().Write(msg);
+		//Writer().Write(msg);
+		std::cout << msg << std::endl;
 	}
 
 	void Log::Shutdown() {

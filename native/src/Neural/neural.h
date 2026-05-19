@@ -24,8 +24,13 @@ namespace DeepLr::Neural {
 		Loss loss;
 		Tensor3D Predict(const Tensor3D& input);//推理模型
 		float TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples,float lr);
+		float TrainBatchParallel(const std::vector<std::shared_ptr<Sample>>& samples, float lr, int32_t threadCount = 8);
+		float TrainBatchNoUpdate(const std::vector<std::shared_ptr<Sample>>& samples, bool debugBatch);
 		void Crear();
 		void SetBuilds(const std::vector<NeuralBuild>& builds);
+		void SetCores(const std::vector<std::any>& cores);
+		void ClearGrad();
+		void AccumulateGradFrom(const Neural& other);
 		void WriteTensor3D(const Tensor3D& tensor, std::vector<char>& buffer);
 		Tensor3D ReadTensor3D(const std::vector<char>& buffer, int32_t& offset);
 		bool WriteToBinaryFile(const std::string& filename, const std::vector<char>& buffer);
