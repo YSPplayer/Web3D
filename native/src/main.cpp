@@ -29,6 +29,7 @@ void TestTrain() {
     std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg2");
     const std::shared_ptr<Neural>& neural = Neural::BuildDefaultNeural();
     neural->Train(samples,150);
+    neural->SaveModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
 }
 int main() {
     server = new WebServer(9958);

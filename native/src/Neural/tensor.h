@@ -47,6 +47,9 @@ namespace DeepLr::Neural {
 		int32_t inline Shape() const {
 			return c * h * w;
 		}
+		const std::vector<float>& Data() const {
+			return data;
+		}
 		void HeUniform(int32_t shape);
 		bool Transpose();
 		bool ReShape(int32_t c, int32_t w, int32_t h);
@@ -64,6 +67,7 @@ namespace DeepLr::Neural {
 		inline int32_t Channel() const {
 			return c;
 		}
+		std::string ToString() const;
 	private:
 		static std::random_device rd;
 		static std::mt19937 gen;

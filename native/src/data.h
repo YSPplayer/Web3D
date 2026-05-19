@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <algorithm>
 namespace DeepLr {
+#define KEY_MAGIC "DLRMODL"
+#define KEY_VERSION 1
+#define KEY_TYPE_MODEL 0
+#define KEY_TYPE_CHECKPOINT 1
 	enum NeuralType {
 		Null,
 		Conv2D,//卷积
@@ -11,12 +15,13 @@ namespace DeepLr {
 		Linear,//线性
 		SoftMax
 	};
-	struct ModelMeta {
-		char magic[8];// "DLRMODL"
-		int32_t version{1};
-		int32_t fileType;//model checkpoint	
-
+#pragma pack(push, 1) 
+	struct ModelHeader {
+		char magic[8]{ KEY_MAGIC };// "DLRMODL"
+		int32_t version{ KEY_VERSION };
+		int32_t fileType{ KEY_TYPE_MODEL };//model checkpoint	
 	};
+#pragma pack(pop)
 	struct TensorShape {
 		int32_t c{ 0 };
 		int32_t w{ 0 };
@@ -27,9 +32,33 @@ namespace DeepLr {
 		int32_t c{-1};
 		int32_t w{-1};
 		int32_t h{-1};
+		NeuralBuild& operator=(const NeuralBuild& other) {
+			if (this == &other) {
+				return *this;
+			}
+			type = other.type;
+			c = other.c;
+			w = other.w;
+			h = other.h;
+			return *this;
+		}
+		NeuralBuild& operator=(NeuralBuild&& other) noexcept {
+			if (this == &other) {
+				return *this;
+			}
+			type = other.type;
+			c = other.c;
+			w = other.w;
+			h = other.h;
+			return *this;
+		}
+		NeuralBuild() = default;
+		NeuralBuild(const NeuralBuild& other) = default;
+		NeuralBuild(NeuralBuild&& other) noexcept = default;
 		NeuralBuild(NeuralType type) {
 			this->type = type;
 		}
+
 		NeuralBuild(NeuralType type, int32_t c) {
 			this->type = type;
 			this->c = c;
@@ -45,134 +74,7 @@ namespace DeepLr {
 		int32_t x;
 		int32_t y;
 	};
-	struct Kernel {
-		int32_t k{0};//卷积核尺寸
-		int32_t pad{0};//填充
-		int32_t stride{0};//步长
-		float** data{nullptr};//卷积核数据
-		Kernel& operator=(Kernel&& other) noexcept {
-			if (this != &other) {
-				//释放当前资源
-				if (data != nullptr) {
-					for (int32_t i = 0; i < k; ++i) {
-						delete[] data[i];
-					}
-					delete[] data;
-				}
-				k = other.k;
-				pad = other.pad;
-				stride = other.stride;
-				data = other.data;
-				other.k = 0;
-				other.pad = 0;
-				other.stride = 0;
-				other.data = nullptr;
-			}
-			return *this;
-		}
-		Kernel& operator=(const Kernel& other) {
-			if (this != &other) {
-				float** newData = nullptr;
-				try {
-					if (other.data != nullptr) {
-						newData = new float* [other.k];
-						for (int32_t i = 0; i < other.k; ++i) {
-							newData[i] = new float[other.k]();
-							for (int32_t j = 0; j < other.k; ++j) {
-								newData[i][j] = other.data[i][j];
-							}
-						}
-					}
-					if (data != nullptr) {
-						for (int32_t i = 0; i < k; ++i) {
-							delete[] data[i];
-						}
-						delete[] data;
-					}
-					k = other.k;
-					pad = other.pad;
-					stride = other.stride;
-					data = newData;
-				}
-				catch (...) {
-					if (newData != nullptr) {
-						for (int32_t i = 0; i < other.k; ++i) {
-							delete[] newData[i];
-						}
-						delete[] newData;
-					}
-					throw; 
-				}
-			}
-			return *this;
-		}
-		void Rot180() { //反卷积
-			if (data == nullptr || k <= 0) return;
-			// 先转置，再逐行反转
-			// 步骤1：转置 (y,x) -> (x,y)
-			for (int32_t y = 0; y < k; ++y) {
-				for (int32_t x = y + 1; x < k; ++x) {
-					std::swap(data[y][x], data[x][y]);
-				}
-			}
-			// 步骤2：每行反转
-			for (int32_t y = 0; y < k; ++y) {
-				for (int32_t x = 0; x < k / 2; ++x) {
-					std::swap(data[y][x], data[y][k - 1 - x]);
-				}
-			}
-		}
-		Kernel(int32_t k, int32_t pad, int32_t stride) noexcept :k(k), pad(pad), stride(stride) {
-			data = new float*[k];
-			for (int32_t i = 0; i < k; ++i) {
-				data[i] = new float[k]();
-			}
-		}
-		Kernel(const Kernel& other) {
-			float** newData = nullptr;
-			try {
-				if (other.data != nullptr) {
-					newData = new float* [other.k];
-					for (int32_t i = 0; i < other.k; ++i) {
-						newData[i] = new float[other.k]();
-						for (int32_t j = 0; j < other.k; ++j) {
-							newData[i][j] = other.data[i][j];
-						}
-					}
-				}
-				if (data != nullptr) {
-					for (int32_t i = 0; i < k; ++i) {
-						delete[] data[i];
-					}
-					delete[] data;
-				}
-				k = other.k;
-				pad = other.pad;
-				stride = other.stride;
-				data = newData;
-			}
-			catch (...) {
-				if (newData != nullptr) {
-					for (int32_t i = 0; i < other.k; ++i) {
-						delete[] newData[i];
-					}
-					delete[] newData;
-				}
-				throw;
-			}
-		}
-		Kernel() noexcept {}
-		~Kernel() {
-			if (data) {
-				for (int32_t i = 0; i < k; ++i) {
-					delete[] data[i];
-					data[i] = nullptr;
-				}
-				delete[] data;
-				data = nullptr;
-			}
-		}
-	};
+
 	struct WebSocketPackage {
 		int32_t version;//版本号
 		int32_t code;//信息类型

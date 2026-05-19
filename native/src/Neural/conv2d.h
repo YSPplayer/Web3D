@@ -11,6 +11,12 @@ namespace DeepLr::Neural {
 		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target)override;
 		void Update(float lr, int32_t batchSize) override;
 		void SetKernels(const std::vector<Tensor3D>& kernels);
+		inline std::vector<Tensor3D> GetKernels() {
+			return kernels;
+		}
+		inline Tensor3D GetBias() {
+			return bias;
+		}
 		void SetBias(const Tensor3D& bias);
 	private:
 		std::vector<Tensor3D> kernels;//¾í»ýºË

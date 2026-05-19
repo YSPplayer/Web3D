@@ -9,6 +9,12 @@ namespace DeepLr::Neural {
 		Tensor3D Forward(const Tensor3D& input) override;
 		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
 		void Update(float lr, int32_t batchSize) override;
+		inline Tensor3D GetW() {
+			return w;
+		}
+		inline Tensor3D GetB() {
+			return b;
+		}
 		void SetW(const Tensor3D& w);
 		void SetB(const Tensor3D& b);
 	private:

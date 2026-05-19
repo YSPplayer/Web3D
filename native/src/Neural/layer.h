@@ -5,14 +5,13 @@
 namespace DeepLr::Neural {
 	class Layer {
 	public:
-		template<typename T>
-		static T* Transform(Layer* layer) {
-			return dynamic_cast<T*>(layer);
-		}
 		Layer();
 		inline NeuralType GetNeuralType() const {
 			return ntype;
 		}
+		NeuralBuild GetNeuralBuild() {
+			return NeuralBuild(ntype, shape.c, shape.w, shape.h);
+		};
 		virtual void SetShape(const TensorShape& lastshape, const TensorShape& shape);
 		virtual Tensor3D Forward(const Tensor3D& input) = 0;
 		virtual Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) = 0;

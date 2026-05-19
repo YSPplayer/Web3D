@@ -142,6 +142,23 @@ namespace DeepLr::Neural {
 		}
 		return sum;
 	}
+	std::string Tensor3D::ToString() const {
+		std::stringstream ss;
+		ss << "Tensor3D[shape=(" << c << "," << h << "," << w << ")]\n";
+		for (int32_t ch = 0; ch < c; ++ch) {
+			ss << "Channel[" << ch << "]:\n";
+			for (int32_t y = 0; y < h; ++y) {
+				ss << "[";
+				for (int32_t x = 0; x < w; ++x) {
+					ss << std::fixed << std::setprecision(2) << Get(ch, y, x);
+					if (x != w - 1) ss << ", ";
+				}
+				ss << "]\n";
+			}
+			if (ch != c - 1) ss << "\n";
+		}
+		return ss.str();
+	}
 	float Tensor3D::TargetProbMean(const std::array<int32_t, 4>& target) const {
 		float sum = 0.0f;
 		for (int32_t i = 0; i < target.size(); ++i) {
