@@ -51,16 +51,28 @@ namespace DeepLr::Neural {
 		TensorShape shape = { 1,128,128 };
 		return std::make_shared<Neural>(shape, builds);
 	}
-	bool Neural::Predict(const Tensor3D& input, std::array<int32_t, 4>& array,const std::string& filename) {
+	bool Neural::Predict(const Tensor3D& input, std::array<int32_t, 4>& array) {
+		if (inputShape.c != input.Channel() || inputShape.w != input.Width() || inputShape.h != input.Height()) {
+			Log::Debug(std::format("Model parameter mismatch.model shape:[{},{},{}],input shape:[{},{},{}].",
+				inputShape.c, inputShape.w, inputShape.h, input.Channel(), input.Width(), input.Height()));
+			return false;
+		}
+		Tensor3D tensor3D = Predict(input);
+		Log::Debug("predict success,data:\n" + tensor3D.ToString());
+		array = TensorToLabel(tensor3D);
+		Log::Debug(std::format("predict result[{},{},{},{}]:", array[0], array[1], array[2], array[3]));
+		return true;
+	}
+	bool Neural::InitFromModel(const std::string& filename) {
 		Tensor3D tensor3D;
 		std::vector<char> buffer;
 		if (!ReadFromBinaryFile(filename, buffer)) {
 			Log::Debug("Failed to load the binary file.");
 			return false;
-		} 
+		}
 		int32_t offset = 0;
 		ModelHeader header;
-		PARSE_BUFFER(buffer,offset,header.magic);
+		PARSE_BUFFER(buffer, offset, header.magic);
 		const char* keyMagic = KEY_MAGIC;
 		for (int32_t i = 0; i < 8; ++i) {
 			if (header.magic[i] != keyMagic[i]) {
@@ -90,11 +102,6 @@ namespace DeepLr::Neural {
 		PARSE_BUFFER(buffer, offset, shape.c);
 		PARSE_BUFFER(buffer, offset, shape.w);
 		PARSE_BUFFER(buffer, offset, shape.h);
-		if (shape.c != input.Channel() || shape.w != input.Width() || shape.h != input.Height()) {
-			Log::Debug(std::format("Model parameter mismatch.model shape:[{},{},{}],input shape:[{},{},{}].",
-				shape.c, shape.w, shape.h, input.Channel(), input.Width(), input.Height()));
-			return false;
-		}
 		for (int32_t i = 0; i < buildSize; ++i) {
 			int32_t type = 0;
 			int32_t c = 0;
@@ -104,7 +111,7 @@ namespace DeepLr::Neural {
 			PARSE_BUFFER(buffer, offset, c);
 			PARSE_BUFFER(buffer, offset, w);
 			PARSE_BUFFER(buffer, offset, h);
-			builds[i] = NeuralBuild((NeuralType)type,c,w,h);
+			builds[i] = NeuralBuild((NeuralType)type, c, w, h);
 			if (type == NeuralType::Conv2D) {
 				std::pair<std::vector<Tensor3D>, Tensor3D> coreData;
 				int32_t ksize = 0;
@@ -122,10 +129,24 @@ namespace DeepLr::Neural {
 				cores[i] = std::move(coreData);
 			}
 		}
-		tensor3D = Predict(input,builds,cores);
-		Log::Debug("predict success,data:\n" + tensor3D.ToString());
-		array = TensorToLabel(tensor3D);
-		Log::Debug(std::format("predict result[{},{},{},{}]:", array[0], array[1], array[2], array[3]));
+		inputShape = shape;
+		SetBuilds(builds);
+		for (int32_t i = 0; i < neural.size(); ++i) {
+			Layer* layer = neural[i];
+			if (layer->GetNeuralType() == NeuralType::Conv2D) {
+				const auto& data = std::any_cast<std::pair<std::vector<Tensor3D>, Tensor3D>>(cores[i]);
+				Conv2D* conv2d = dynamic_cast<Conv2D*>(layer);
+				conv2d->SetKernels(data.first);
+				conv2d->SetBias(data.second);
+
+			}
+			else if (layer->GetNeuralType() == NeuralType::Linear) {
+				const auto& data = std::any_cast<std::pair<Tensor3D, Tensor3D>>(cores[i]);
+				Linear* linear = dynamic_cast<Linear*>(layer);
+				linear->SetW(data.first);
+				linear->SetB(data.second);
+			}
+		}
 		return true;
 	}
 	std::array<int32_t, 4> Neural::TensorToLabel(const Tensor3D& input) {
@@ -144,7 +165,7 @@ namespace DeepLr::Neural {
 				}
 			}
 		}
-		return  array;
+		return array;
 	}
 	Tensor3D Neural::Predict(const Tensor3D& input) {
 		Tensor3D tensor3d = input;
@@ -155,27 +176,6 @@ namespace DeepLr::Neural {
 			tensor3d = layer->Forward(tensor3d);
 		}
 		return tensor3d;
-	}
-	Tensor3D Neural::Predict(const Tensor3D& input,const std::vector<NeuralBuild>& builds, const std::vector<std::any>& cores) {
-		inputShape = { input.Channel(),input.Width(),input.Height() };
-		SetBuilds(builds);
-		for (int32_t i = 0; i < neural.size(); ++i) {
-			Layer* layer = neural[i];
-			if (layer->GetNeuralType() == NeuralType::Conv2D) {
-				const auto& data = std::any_cast<std::pair<std::vector<Tensor3D>, Tensor3D>>(cores[i]);
-				Conv2D* conv2d =  dynamic_cast<Conv2D*>(layer);
-				conv2d->SetKernels(data.first);
-				conv2d->SetBias(data.second);
-
-			}
-			else if (layer->GetNeuralType() == NeuralType::Linear) {
-				const auto& data = std::any_cast<std::pair<Tensor3D, Tensor3D>>(cores[i]);
-				Linear* linear = dynamic_cast<Linear*>(layer);
-				linear->SetW(data.first);
-				linear->SetB(data.second);
-			}
-		}
-		return Predict(input);
 	}
 	float Neural::TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples, float lr) {
 		if (samples.size() <= 0) return 0.0f;
@@ -218,7 +218,7 @@ namespace DeepLr::Neural {
 				tensor3d = layer->Backward(tensor3d, *sample->Target());
 			}
 		}
-		batchLoss = totalLoss / samples.size();
+		batchLoss = totalLoss / (float)samples.size();
 		//更新梯度
 		for (int32_t i = 0; i < neural.size(); ++i) {
 			Layer* layer = neural[i];
@@ -321,24 +321,26 @@ namespace DeepLr::Neural {
 		Log::Debug("Successfully read " + std::to_string(size) + " bytes from " + filename);
 		return true;
 	}
-	void Neural::Train(std::vector<std::shared_ptr<Sample>>& samples, int32_t maxEpoch) {
-		int32_t batch = 16;//32;
-		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(samples.size()) / batch));
-		float lr = 0.03f;
+	void Neural::Train(std::vector<std::string>& files, int32_t maxEpoch, int32_t batch, float lr) {
+		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(files.size()) / batch));
 		for (int32_t epoch = 0; epoch < maxEpoch; ++epoch) {
-			std::shuffle(samples.begin(), samples.end(), *g.get());
+			std::shuffle(files.begin(), files.end(), *g.get());
 			float epochLoss = 0.0f;
+			int32_t epochSampleCount = 0;
 			for (int32_t step = 0; step < steps; ++step) {
 				int32_t start = step * batch;
 				int32_t end = (step + 1) * batch;
-				std::vector<std::shared_ptr<Sample>> batchSamples(samples.begin() + start, samples.begin() + (end
-					> samples.size() ? samples.size() : end));
+				
+				std::vector<std::string> batchFiles(files.begin() + start, files.begin() + (end
+					> files.size() ? files.size() : end));
+				std::vector<std::shared_ptr<Sample>> batchSamples = Sample::Load(batchFiles);
 				float batchloss = TrainBatch(batchSamples,lr);
-				epochLoss += batchloss;
+				epochLoss += batchloss * batchSamples.size();
+				epochSampleCount += batchSamples.size();
 				Log::Debug(std::format("epoch={}/{},step={}/{},batch={},lr={},batchloss={}", epoch + 1, maxEpoch, step + 1, steps, batchSamples.size(), lr, batchloss));
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			}
-			epochLoss = epochLoss / steps;
+			epochLoss = epochSampleCount > 0 ? epochLoss / epochSampleCount : 0.0f;
 			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch + 1, maxEpoch, lr,epochLoss));
 		}
 

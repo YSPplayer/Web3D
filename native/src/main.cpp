@@ -25,21 +25,25 @@ void keyboardListener() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
-void TestTrain() {
-  /*  std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg2");
-    const std::shared_ptr<Neural>& neural = Neural::BuildDefaultNeural();
-    neural->Train(samples,150);
-    neural->SaveModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");*/
-    std::shared_ptr<Sample> sample = Sample::Load("D:/YueShaoPu/trainimg2/8382.png","8382");
+void Predict() {
     const std::shared_ptr<Neural>& neural = std::make_shared<Neural>();
+    neural->InitFromModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
     std::array<int32_t, 4> array;
-    neural->Predict(*sample->Data(), array, "D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
+    std::shared_ptr<Sample> sample = Sample::Load("D:/YueShaoPu/trainimg2/8382.png", "8382");
+    neural->Predict(*sample->Data(), array);
+}
+void Train() {
+    std::vector<std::string> files = Sample::GetPngFiles("D:/YueShaoPu/trainimg");
+    const std::shared_ptr<Neural>& neural = std::make_shared<Neural>();
+    neural->InitFromModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
+    neural->Train(files);
+    neural->SaveModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
 }
 int main() {
     server = new WebServer(9958);
     server->Start();
     std::thread listener(keyboardListener);
-    TestTrain();
+    Train();
     if (listener.joinable()) listener.join();
     return 0;
 }

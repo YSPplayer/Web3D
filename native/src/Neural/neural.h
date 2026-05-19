@@ -13,16 +13,16 @@ namespace DeepLr::Neural {
 		Neural(TensorShape tensorShape,const std::vector<NeuralBuild>& builds);
 		Neural();
 		static std::shared_ptr<Neural> BuildDefaultNeural();
-		void Train(std::vector<std::shared_ptr<Sample>>& samples, int32_t maxEpoch);
+		void Train(std::vector<std::string>& files, int32_t maxEpoch = 5, int32_t batch = 32,float lr = 0.01f);
 		void GetNeural(std::vector<NeuralBuild>& builds, std::vector<std::any> &cores);
 		bool SaveModel(const std::string& filename);
-		bool Predict(const Tensor3D& input, std::array<int32_t, 4>& array, const std::string& filename);
+		bool Predict(const Tensor3D& input, std::array<int32_t, 4>& array);
+		bool InitFromModel(const std::string& filename);
 	private:
 		std::array<int32_t, 4> TensorToLabel(const Tensor3D& input);
 		std::vector<Layer*> neural;
 		Loss loss;
-		Tensor3D Predict(const Tensor3D& input);
-		Tensor3D Predict(const Tensor3D& input,const std::vector<NeuralBuild>& builds, const std::vector<std::any>& cores);//推理模型
+		Tensor3D Predict(const Tensor3D& input);//推理模型
 		float TrainBatch(const std::vector<std::shared_ptr<Sample>>& samples,float lr);
 		void Crear();
 		void SetBuilds(const std::vector<NeuralBuild>& builds);

@@ -9,7 +9,9 @@ namespace DeepLr::Neural {
 	public:
 		Sample();
 		static std::shared_ptr<Sample> Load(const std::string& path, const std::string& imgValue);
+		static std::vector<std::string> GetPngFiles(const std::string& path);
 		static std::vector<std::shared_ptr<Sample>> Load(const std::string& path);
+		static std::vector<std::shared_ptr<Sample>> Load(const std::vector<std::string>& filepaths);
 		inline const Tensor3D* Data() const {
 			return &input;
 		}
