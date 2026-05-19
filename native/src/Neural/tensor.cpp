@@ -4,6 +4,8 @@
 #include "../log.h"
 #include "sample.h"
 #include <limits>
+#include <iomanip>
+#include <sstream>
 /*
 rows = h
 cols = w
@@ -150,7 +152,7 @@ namespace DeepLr::Neural {
 			for (int32_t y = 0; y < h; ++y) {
 				ss << "[";
 				for (int32_t x = 0; x < w; ++x) {
-					ss << std::fixed << std::setprecision(2) << Get(ch, y, x);
+					ss << std::defaultfloat << std::setprecision(std::numeric_limits<float>::max_digits10) << Get(ch, y, x);
 					if (x != w - 1) ss << ", ";
 				}
 				ss << "]\n";

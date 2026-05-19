@@ -51,7 +51,8 @@ namespace DeepLr::Neural {
 		TensorShape shape = { 1,128,128 };
 		return std::make_shared<Neural>(shape, builds);
 	}
-	bool Neural::Predict(const Tensor3D& input, Tensor3D& output,const std::string& filename) {
+	bool Neural::Predict(const Tensor3D& input, std::array<int32_t, 4>& array,const std::string& filename) {
+		Tensor3D tensor3D;
 		std::vector<char> buffer;
 		if (!ReadFromBinaryFile(filename, buffer)) {
 			Log::Debug("Failed to load the binary file.");
@@ -121,8 +122,29 @@ namespace DeepLr::Neural {
 				cores[i] = std::move(coreData);
 			}
 		}
-		output = Predict(input,builds,cores);
+		tensor3D = Predict(input,builds,cores);
+		Log::Debug("predict success,data:\n" + tensor3D.ToString());
+		array = TensorToLabel(tensor3D);
+		Log::Debug(std::format("predict result[{},{},{},{}]:", array[0], array[1], array[2], array[3]));
 		return true;
+	}
+	std::array<int32_t, 4> Neural::TensorToLabel(const Tensor3D& input) {
+		if (input.Channel() != 1 || input.Width() != 10 || input.Height() != 4) {
+			Log::Debug("tensor to label parse error.");
+			return std::array<int32_t, 4>();
+		}
+		std::array<int32_t, 4> array;
+		for (int32_t y = 0; y < input.Height(); ++y) {
+			float max = std::numeric_limits<float>::lowest();
+			for (int32_t x = 0; x < input.Width(); ++x) {
+				float value = input.Get(0,y,x);
+				if (value > max) {
+					array[y] = x;
+					max = value;
+				}
+			}
+		}
+		return  array;
 	}
 	Tensor3D Neural::Predict(const Tensor3D& input) {
 		Tensor3D tensor3d = input;

@@ -26,10 +26,14 @@ void keyboardListener() {
     }
 }
 void TestTrain() {
-    std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg2");
+  /*  std::vector<std::shared_ptr<Sample>> samples = Sample::Load("D:/YueShaoPu/trainimg2");
     const std::shared_ptr<Neural>& neural = Neural::BuildDefaultNeural();
     neural->Train(samples,150);
-    neural->SaveModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
+    neural->SaveModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");*/
+    std::shared_ptr<Sample> sample = Sample::Load("D:/YueShaoPu/trainimg2/8382.png","8382");
+    const std::shared_ptr<Neural>& neural = std::make_shared<Neural>();
+    std::array<int32_t, 4> array;
+    neural->Predict(*sample->Data(), array, "D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
 }
 int main() {
     server = new WebServer(9958);
