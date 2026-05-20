@@ -1,4 +1,4 @@
-#include <cmath>
+﻿#include <cmath>
 #include <format>
 #include <fstream>
 #include <algorithm>
@@ -30,6 +30,11 @@ namespace DeepLr::Neural {
 		SetBuilds(builds);
 	}
 	Neural::Neural() {
+		bestValLoss = 1.0f;
+		bestCharAcc = 0.0f;
+		bestLabelAcc = 0.0f;
+		bestEpoch = 0;
+		noImproveEpoch = 0;
 	}
 	std::shared_ptr<Neural> Neural::BuildDefaultNeural() {
 		std::vector<NeuralBuild> builds = {
@@ -62,9 +67,7 @@ namespace DeepLr::Neural {
 		}
 		Tensor3D tensor3D = Predict(input);
 		output = tensor3D;
-		Log::Debug("predict success,data:\n" + tensor3D.ToString());
 		array = TensorToLabel(tensor3D);
-		Log::Debug(std::format("predict result[{},{},{},{}]:", array[0], array[1], array[2], array[3]));
 		return true;
 	}
 	bool Neural::InitFromModel(const std::string& filename) {
@@ -428,18 +431,27 @@ namespace DeepLr::Neural {
 		Log::Debug("Successfully read " + std::to_string(size) + " bytes from " + filename);
 		return true;
 	}
-	void Neural::Train(std::vector<std::string>& files, int32_t maxEpoch, int32_t batch, float lr) {
-		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(files.size()) / batch));
+	void Neural::Train(const std::string& modelPath,std::vector<std::string>& files, int32_t maxEpoch, int32_t batch, float lr) {
+		if (files.size() <= 0) {
+			Log::Debug("No training samples provided.");
+			return;
+		}
+		std::shuffle(files.begin(), files.end(), *g.get());
+		int32_t size20 = static_cast<size_t>(files.size() * 0.2);
+		if (size20 == 0 && !files.empty()) size20 = 1;
+		std::vector<std::string> validates(files.begin(), files.begin() + size20);
+    	std::vector<std::string> trains(files.begin() + size20, files.end());
+		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(trains.size()) / batch));
 		for (int32_t epoch = 0; epoch < maxEpoch; ++epoch) {
-			std::shuffle(files.begin(), files.end(), *g.get());
+			std::shuffle(trains.begin(), trains.end(), *g.get());
 			float epochLoss = 0.0f;
 			int32_t epochSampleCount = 0;
 			for (int32_t step = 0; step < steps; ++step) {
 				int32_t start = step * batch;
 				int32_t end = (step + 1) * batch;
 				
-				std::vector<std::string> batchFiles(files.begin() + start, files.begin() + (end
-					> files.size() ? files.size() : end));
+				std::vector<std::string> batchFiles(trains.begin() + start, trains.begin() + (end
+					> trains.size() ? trains.size() : end));
 				std::vector<std::shared_ptr<Sample>> batchSamples = Sample::Load(batchFiles);
 				float batchloss = TrainBatchParallel(batchSamples, lr);
 				epochLoss += batchloss * batchSamples.size();
@@ -449,18 +461,49 @@ namespace DeepLr::Neural {
 			}
 			epochLoss = epochSampleCount > 0 ? epochLoss / epochSampleCount : 0.0f;
 			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch + 1, maxEpoch, lr,epochLoss));
+			float valLoss = 0.0f;
+			float charAcc = 0.0f;
+			float labelAcc = 0.0f;
+			//数据验证
+			Validate(validates, valLoss, charAcc, labelAcc);
+			if (epoch == 0) {
+				bestLabelAcc = labelAcc;
+				bestCharAcc = charAcc;
+				bestValLoss = valLoss;
+				bestEpoch = epoch;
+				continue;
+			} 
+			if (labelAcc > bestLabelAcc) {
+				bestLabelAcc = labelAcc;
+				bestCharAcc = charAcc;
+				bestValLoss = valLoss;
+				bestEpoch = epoch;
+				noImproveEpoch = 0;
+				//存储更好模型
+				Log::Debug("Have found a better model.");
+				SaveModel(modelPath);
+			}
+			else {
+				noImproveEpoch += 1;
+			}
+			if (noImproveEpoch == 5) {
+				lr *= 0.5;
+			}
+			if (noImproveEpoch >= 10) {
+				break;
+			}
 		}
-
+		Log::Debug("Training ends.");
 	}
 
-	void Neural::Validate(std::vector<std::string>& files) {
+	void Neural::Validate(std::vector<std::string>& files, float& valLoss, float& charAcc, float& labelAcc) {
 		if(files.size() <= 0) {
 			Log::Debug("No validation samples provided.");
 			return;
 		}
-		float valLoss = 0.0f;
-		float charAcc = 0.0f;
-		float labelAcc = 0.0f;
+		valLoss = 0.0f;
+		charAcc = 0.0f;
+		labelAcc = 0.0f;
 		int32_t sampleCount = 0;
 		int32_t batch = 64;
 		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(files.size()) / batch));

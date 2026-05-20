@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#python .\tools\generate_gray_digits.py D:\YueShaoPu\trainimg 1000 0.18
+#python .\tools\generate_gray_digits.py D:\YueShaoPu\trainimg2 2000 0.18
 import argparse
 import math
 import random

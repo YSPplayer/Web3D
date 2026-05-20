@@ -13,8 +13,8 @@ namespace DeepLr::Neural {
 		Neural(TensorShape tensorShape,const std::vector<NeuralBuild>& builds);
 		Neural();
 		static std::shared_ptr<Neural> BuildDefaultNeural();
-		void Train(std::vector<std::string>& files, int32_t maxEpoch = 5, int32_t batch = 32,float lr = 0.01f);
-		void Validate(std::vector<std::string>& files);
+		void Train(const std::string& modelPath,std::vector<std::string>& files, int32_t maxEpoch = 5, int32_t batch = 32,float lr = 0.01f);
+		void Validate(std::vector<std::string>& files, float& valLoss,float& charAcc,float& labelAcc);
 		void GetNeural(std::vector<NeuralBuild>& builds, std::vector<std::any> &cores);
 		bool SaveModel(const std::string& filename);
 		bool Predict(const Tensor3D& input, std::array<int32_t, 4>& array, Tensor3D& output);
@@ -38,5 +38,10 @@ namespace DeepLr::Neural {
 		bool ReadFromBinaryFile(const std::string& filename, std::vector<char>& buffer);
 		static std::shared_ptr<std::mt19937> g;
 		TensorShape inputShape;
+		float bestValLoss;
+		float bestCharAcc;
+		float bestLabelAcc;
+		int32_t bestEpoch;
+		int32_t noImproveEpoch;
 	};
 }
