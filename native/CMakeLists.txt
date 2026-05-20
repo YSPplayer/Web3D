@@ -1,5 +1,6 @@
 #cmake -S D:\YueShaoPu\Web3D\native -B D:\YueShaoPu\Web3D\native\build
-#cmake --build D:\YueShaoPu\Web3D\native\build --config Debug
+#cmake --build D:\YueShaoPu\Web3D\native\build --config Release
+
 #cmake -S . -B build-testupload -G "Visual Studio 17 2022" -A x64 -DSMARTMEAS_TEST_UPLOAD_BUILD=ON
 #cmake --build build-testupload --config Release
 cmake_minimum_required(VERSION 3.20)

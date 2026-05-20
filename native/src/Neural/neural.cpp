@@ -54,13 +54,14 @@ namespace DeepLr::Neural {
 		TensorShape shape = { 1,128,128 };
 		return std::make_shared<Neural>(shape, builds);
 	}
-	bool Neural::Predict(const Tensor3D& input, std::array<int32_t, 4>& array) {
+	bool Neural::Predict(const Tensor3D& input, std::array<int32_t, 4>& array,Tensor3D& output) {
 		if (inputShape.c != input.Channel() || inputShape.w != input.Width() || inputShape.h != input.Height()) {
 			Log::Debug(std::format("Model parameter mismatch.model shape:[{},{},{}],input shape:[{},{},{}].",
 				inputShape.c, inputShape.w, inputShape.h, input.Channel(), input.Width(), input.Height()));
 			return false;
 		}
 		Tensor3D tensor3D = Predict(input);
+		output = tensor3D;
 		Log::Debug("predict success,data:\n" + tensor3D.ToString());
 		array = TensorToLabel(tensor3D);
 		Log::Debug(std::format("predict result[{},{},{},{}]:", array[0], array[1], array[2], array[3]));
@@ -450,6 +451,53 @@ namespace DeepLr::Neural {
 			Log::Debug(std::format("epoch={}/{},lr={},epochLoss={}", epoch + 1, maxEpoch, lr,epochLoss));
 		}
 
+	}
+
+	void Neural::Validate(std::vector<std::string>& files) {
+		if(files.size() <= 0) {
+			Log::Debug("No validation samples provided.");
+			return;
+		}
+		float valLoss = 0.0f;
+		float charAcc = 0.0f;
+		float labelAcc = 0.0f;
+		int32_t sampleCount = 0;
+		int32_t batch = 64;
+		int32_t steps = static_cast<int32_t>(std::ceil(static_cast<double>(files.size()) / batch));
+		for (int32_t step = 0; step < steps; ++step) {
+			int32_t start = step * batch;
+			int32_t end = (step + 1) * batch;
+				std::vector<std::string> batchFiles(files.begin() + start, files.begin() + (end
+			> files.size() ? files.size() : end));
+			std::vector<std::shared_ptr<Sample>> batchSamples = Sample::Load(batchFiles);
+			sampleCount+= batchSamples.size();
+			for (int32_t j = 0; j < batchSamples.size(); ++j) {
+				const std::shared_ptr<Sample>& batchSample = batchSamples[j];
+				std::array<int32_t, 4> array;
+				const std::array<int32_t, 4>* target = batchSample->Target();
+				Tensor3D output;
+				Predict(*batchSample->Data(), array, output);
+				float loss = this->loss.Forward(output,*target);
+				int32_t number = 0;
+				for (int32_t index = 0; index < 4; ++index) {
+					if(target->at(index) == array.at(index)) {
+						++number;
+					}
+				}	
+				charAcc += (float)number / 4.0f;
+				labelAcc += (number == 4) ? 1.0f : 0.0f;
+				valLoss += loss;
+			}
+			
+		}
+		if(sampleCount <= 0) {
+			Log::Debug("No valid samples found for validation.");
+			return;
+		}
+		charAcc = charAcc / sampleCount;
+		labelAcc = labelAcc / sampleCount;
+		valLoss = valLoss / sampleCount;
+		Log::Debug(std::format("Prediction ends.charAcc:{},labelAcc:{},valLoss:{}", charAcc, labelAcc, valLoss));
 	}
 	void Neural::GetNeural(std::vector<NeuralBuild>& builds, std::vector<std::any>& cores) {
 		builds.resize(neural.size());
