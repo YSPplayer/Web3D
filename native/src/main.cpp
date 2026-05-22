@@ -26,14 +26,15 @@ void keyboardListener() {
     }
 }
 void Predict() {
-   // const std::shared_ptr<Neural>& neural = std::make_shared<Neural>();
-   // neural->InitFromModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
-   // std::array<int32_t, 4> array;
-   ///* std::shared_ptr<Sample> sample = Sample::Load("D:/YueShaoPu/trainimg2/8382.png", "8382");
-   // Tensor3D output;*/
-   // //neural->Predict(*sample->Data(), array, output);
-   // std::vector<std::string> files = Sample::GetPngFiles("D:/YueShaoPu/trainimg2");
-   // neural->Validate(files);
+    const std::shared_ptr<Neural>& neural = std::make_shared<Neural>();
+    neural->InitFromModel("D:/YueShaoPu/trainimg2/Model/2026_5_19.dlm");
+    std::array<int32_t, 4> array;
+    Tensor3D output;
+    std::vector<std::string> files = Sample::GetPngFiles("D:/YueShaoPu/trainimg3");
+    float valLoss;
+    float charAcc;
+    float labelAcc;
+    neural->Validate(files, valLoss, charAcc, labelAcc);
 }
 void Train() {
     std::vector<std::string> files = Sample::GetPngFiles("D:/YueShaoPu/trainimg");
@@ -45,8 +46,8 @@ int main() {
     server = new WebServer(9958);
     server->Start();
     std::thread listener(keyboardListener);
-    Train();
-    //Predict();
+    //Train();
+    Predict();
     if (listener.joinable()) listener.join();
     return 0;
 }
