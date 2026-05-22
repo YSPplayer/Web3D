@@ -1,8 +1,6 @@
 #cmake -S D:\YueShaoPu\Web3D\native -B D:\YueShaoPu\Web3D\native\build
 #cmake --build D:\YueShaoPu\Web3D\native\build --config Release
 
-#cmake -S . -B build-testupload -G "Visual Studio 17 2022" -A x64 -DSMARTMEAS_TEST_UPLOAD_BUILD=ON
-#cmake --build build-testupload --config Release
 cmake_minimum_required(VERSION 3.20)
 
 project(deep_lr LANGUAGES CXX)
@@ -47,6 +45,13 @@ add_executable(deep_lr
     src/Neural/loss.cpp
     src/Neural/neural.h
     src/Neural/neural.cpp
+    src/Neural/heightpool.h
+    src/Neural/heightpool.cpp
+    src/Neural/featuretosequence.h
+    src/Neural/featuretosequence.cpp
+    src/Neural/math.h
+    src/Neural/bilstm.h
+    src/Neural/bilstm.cpp
     src/define.h
     src/data.h
 )

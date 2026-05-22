@@ -13,7 +13,10 @@ namespace DeepLr {
 		MaxPool,//池化
 		Flatten,//展平
 		Linear,//线性
-		SoftMax
+		SoftMax,//
+		HeightPool,//高度池化
+		FeatureToSequence, //序列化
+		BiLSTM 
 	};
 #pragma pack(push, 1) 
 	struct ModelHeader {

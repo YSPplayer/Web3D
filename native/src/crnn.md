@@ -13,7 +13,7 @@ label:  固定 4 位数字
 CRNN OCR 任务：
 
 ```text
-input:  1 x W x H 图像
+input:  1 x H x W 图像
 output: 不定长字符串
 label:  中文 / 英文 / 数字 / 符号
 ```
@@ -21,7 +21,7 @@ label:  中文 / 英文 / 数字 / 符号
 第一版先固定输入尺寸，降低实现难度：
 
 ```text
-input:  1 x 160 x 32
+input:  1 x 32 x 160
 output: T x classCount
 ```
 
@@ -30,6 +30,14 @@ output: T x classCount
 ```text
 T = CNN 输出特征图的宽度方向时间步
 classCount = 字符表数量 + blank
+```
+
+尺寸约定：
+
+```text
+本文中图像/特征图统一写成 C x H x W。
+C = 通道数，H = 高度，W = 宽度。
+代码里的 Tensor3D 构造函数是 Tensor3D(c, w, h)，实现时注意传参顺序和本文展示顺序不同。
 ```
 
 ## 2. 第一版字符表
@@ -65,26 +73,26 @@ blankId = classCount - 1
 输入固定：
 
 ```text
-1 x 160 x 32
+1 x 32 x 160
 ```
 
 CRNN 主网络：
 
-| 层 | 配置 | 输出尺寸 | 参数量 |
+| 层 | 配置 | 输出尺寸（C x H x W） | 参数量 |
 | --- | --- | --- | ---: |
-| Input | 灰度图 | `1 x 160 x 32` | 0 |
-| Conv2D | `3x3, pad=1, out=32` | `32 x 160 x 32` | `32x1x3x3+32 = 320` |
-| ReLU | - | `32 x 160 x 32` | 0 |
-| MaxPool2D | `2x2` | `32 x 80 x 16` | 0 |
-| Conv2D | `3x3, pad=1, out=64` | `64 x 80 x 16` | `64x32x3x3+64 = 18496` |
-| ReLU | - | `64 x 80 x 16` | 0 |
-| MaxPool2D | `2x2` | `64 x 40 x 8` | 0 |
-| Conv2D | `3x3, pad=1, out=128` | `128 x 40 x 8` | `128x64x3x3+128 = 73856` |
-| ReLU | - | `128 x 40 x 8` | 0 |
-| MaxPool2D | `1x2` | `128 x 40 x 4` | 0 |
-| Conv2D | `3x3, pad=1, out=256` | `256 x 40 x 4` | `256x128x3x3+256 = 295168` |
-| ReLU | - | `256 x 40 x 4` | 0 |
-| HeightPool | 沿高度做池化/聚合到 1 | `256 x 40 x 1` | 0 |
+| Input | 灰度图 | `1 x 32 x 160` | 0 |
+| Conv2D | `3x3, pad=1, out=32` | `32 x 32 x 160` | `32x1x3x3+32 = 320` |
+| ReLU | - | `32 x 32 x 160` | 0 |
+| MaxPool2D | `2x2` | `32 x 16 x 80` | 0 |
+| Conv2D | `3x3, pad=1, out=64` | `64 x 16 x 80` | `64x32x3x3+64 = 18496` |
+| ReLU | - | `64 x 16 x 80` | 0 |
+| MaxPool2D | `2x2` | `64 x 8 x 40` | 0 |
+| Conv2D | `3x3, pad=1, out=128` | `128 x 8 x 40` | `128x64x3x3+128 = 73856` |
+| ReLU | - | `128 x 8 x 40` | 0 |
+| MaxPool2D | `poolH=2, poolW=1` | `128 x 4 x 40` | 0 |
+| Conv2D | `3x3, pad=1, out=256` | `256 x 4 x 40` | `256x128x3x3+256 = 295168` |
+| ReLU | - | `256 x 4 x 40` | 0 |
+| HeightPool | 沿高度做池化/聚合到 1 | `256 x 1 x 40` | 0 |
 | FeatureToSequence | 沿宽度展开 | `T=40, F=256` | 0 |
 | BiLSTM | `input=256, hidden=128` | `T=40, F=256` | `394240` |
 | BiLSTM | `input=256, hidden=128` | `T=40, F=256` | `394240` |
@@ -103,10 +111,10 @@ CRNN 主网络：
 
 为了先跑通 OCR 链路，可以先不实现 BiLSTM：
 
-| 层 | 配置 | 输出尺寸 |
+| 层 | 配置 | 输出尺寸（C x H x W） |
 | --- | --- | --- |
-| Input | 灰度图 | `1 x 160 x 32` |
-| CNN | 同上 | `256 x 40 x 1` |
+| Input | 灰度图 | `1 x 32 x 160` |
+| CNN | 同上 | `256 x 1 x 40` |
 | FeatureToSequence | 沿宽度展开 | `T=40, F=256` |
 | SequenceLinear | `256 -> classCount` | `40 x 63` |
 | TimeSoftmax | 每个时间步 softmax | `40 x 63` |
@@ -139,9 +147,9 @@ CRNN 建议新增：
 
 | 类型 | 用途 |
 | --- | --- |
-| `MaxPool2D` | 支持 `poolW/poolH`，保留宽度时间步 |
+| `MaxPool2D` | 支持 `poolH/poolW`，保留宽度时间步 |
 | `HeightPool` | 沿高度做池化/聚合到 1，不把高度展平进通道 |
-| `FeatureToSequence` | `C x W x 1 -> T x F` |
+| `FeatureToSequence` | `C x 1 x W -> T x F` |
 | `SequenceLinear` | 对每个时间步做 Linear |
 | `TimeSoftMax` | 对每个时间步做 Softmax |
 | `LSTM` | 单向序列建模 |
@@ -259,7 +267,7 @@ public:
 输入：
 
 ```text
-Tensor3D: C x W x 1
+Tensor3D: C x 1 x W
 ```
 
 输出：
@@ -274,7 +282,7 @@ F = C
 
 ```text
 for t in [0, W):
-    feature[t] = tensor[:, t, 0]
+    feature[t] = tensor[:, 0, t]
 ```
 
 建议新增序列张量：
@@ -530,7 +538,7 @@ modelTaskType = OCR
 charset
 blankId
 classCount
-inputW / inputH
+inputH / inputW
 sequenceLength T
 SequenceLinear w/b
 LSTM/BiLSTM weights

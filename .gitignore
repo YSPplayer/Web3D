@@ -33,3 +33,4 @@ backend/.mvn/wrapper/dists
 *.njsproj
 *.sln
 *.sw?
+native/build-testupload/
