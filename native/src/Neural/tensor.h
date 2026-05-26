@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "../define.h"
 #include <vector>
 #include <string>
@@ -55,6 +55,9 @@ namespace DeepLr::Neural {
 		bool ReShape(int32_t c, int32_t w, int32_t h);
 		static Tensor3D Load(const std::string& path);
 		static float SumAbs(const std::vector<Tensor3D>& tensors);
+		static Tensor3D Hadamard(const Tensor3D& a, const Tensor3D& b);
+		static Tensor3D StepInput(const Tensor3D& input, int32_t t);
+		static Tensor3D ConcatHiddenInput(const Tensor3D& h, const Tensor3D& x);
 		inline int32_t Count() const {
 			return data.size();
 		}
@@ -71,10 +74,10 @@ namespace DeepLr::Neural {
 	private:
 		static std::random_device rd;
 		static std::mt19937 gen;
-		int32_t h;//¸ß¶È
-		int32_t w;//¿í¶È
-		int32_t c;//Í¨µÀ
-		std::vector<float> data;//Êý¾Ý
+		int32_t h;
+		int32_t w;
+		int32_t c;
+		std::vector<float> data;
 	};
 
 }

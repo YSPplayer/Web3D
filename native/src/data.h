@@ -25,6 +25,7 @@ namespace DeepLr {
 		int32_t fileType{ KEY_TYPE_MODEL };//model checkpoint	
 	};
 #pragma pack(pop)
+
 	struct TensorShape {
 		int32_t c{ 0 };
 		int32_t w{ 0 };

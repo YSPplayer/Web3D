@@ -1,4 +1,4 @@
- #include "tensor.h"
+﻿ #include "tensor.h"
 #include <opencv2/opencv.hpp>
 #include <utility>
 #include "../log.h"
@@ -144,6 +144,34 @@ namespace DeepLr::Neural {
 		}
 		return sum;
 	}
+	Tensor3D Tensor3D::Hadamard(const Tensor3D& a, const Tensor3D& b) {
+		//逐元素相乘
+		Tensor3D out(a.Channel(), a.Width(), a.Height());
+		for (int32_t i = 0; i < a.Count(); ++i) {
+			out.At(i) = a.Get(i) * b.Get(i);
+		}
+		return out;
+	}
+
+	Tensor3D Tensor3D::StepInput(const Tensor3D& input, int32_t t) {
+		Tensor3D x(1, 1, input.Width());
+		for (int32_t f = 0; f < input.Width(); ++f) { //提取时间步t的输入
+			x.At(0, f, 0) = input.Get(0, t, f);
+		}
+		return x;
+	}
+
+	Tensor3D Tensor3D::ConcatHiddenInput(const Tensor3D& h, const Tensor3D& x) {
+		Tensor3D z(1, 1, h.Height() + x.Height());//将上一时刻的隐藏状态h_{t - 1}和当前时刻的输入x_t拼接成一个向量[h_{t-1}; x_t]
+		for (int32_t i = 0; i < h.Height(); ++i) {
+			z.At(0, i, 0) = h.Get(0, i, 0);
+		}
+		for (int32_t i = 0; i < x.Height(); ++i) {
+			z.At(0, h.Height() + i, 0) = x.Get(0, i, 0);
+		}
+		return z;
+	}
+
 	std::string Tensor3D::ToString() const {
 		std::stringstream ss;
 		ss << "Tensor3D[shape=(" << c << "," << h << "," << w << ")]\n";
@@ -188,7 +216,7 @@ namespace DeepLr::Neural {
 		return result;
 	}
 	/// <summary>
-	/// �����ʼ��
+	/// 随机初始化
 	/// </summary>
 	void Tensor3D::HeUniform(int32_t shape) {
 		float limit = std::sqrt(6.0f / (float)shape);
