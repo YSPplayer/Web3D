@@ -27,7 +27,7 @@ namespace DeepLr::Neural {
 			// 写入比例 输入门: 决定写入多少新信息
 			Tensor3D it = par->wi * z + par->bi;
 			Sigmoid(it);
-			// 写入内容 候选记忆: 生成新的候选信息
+			// 写入内容 c: 生成新的候选信息
 			Tensor3D gt = par->wg * z + par->bg;
 			Tanh(gt); // 输出范围 [-1,1]
 			// 输出过滤旋钮 输出门: 决定输出多少记忆

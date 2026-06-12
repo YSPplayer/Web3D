@@ -1,15 +1,15 @@
-#pragma once
+ï»¿#pragma once
 #include "layer.h"
 namespace DeepLr::Neural {
 	struct BiLSTMPar {
-		Tensor3D wf;//ÒÅÍüÃÅÈ¨ÖØ
-		Tensor3D bf;//ÒÅÍüÃÅÆ«ÖÃ
-		Tensor3D wi;//ÊäÈëÃÅÈ¨ÖØ
-		Tensor3D bi;//ÊäÈëÃÅÆ«ÖÃ
-		Tensor3D wg;//ºóÑ¡ÖµÈ¨ÖØ
-		Tensor3D bg;//ºóÑ¡ÖµÆ«ÖÃ
-		Tensor3D wo;//Êä³öÃÅÈ¨ÖØ
-		Tensor3D bo;//Êä³öÃÅÆ«ÖÃ
+		Tensor3D wf;//é—å¿˜é—¨æƒé‡
+		Tensor3D bf;//é—å¿˜é—¨åç½®
+		Tensor3D wi;//è¾“å…¥é—¨æƒé‡
+		Tensor3D bi;//è¾“å…¥é—¨åç½®
+		Tensor3D wg;//åé€‰å€¼æƒé‡
+		Tensor3D bg;//åé€‰å€¼åç½®
+		Tensor3D wo;//è¾“å‡ºé—¨æƒé‡
+		Tensor3D bo;//è¾“å‡ºé—¨åç½®
 	};
 	class BiLSTM : public Layer {
 	public:

@@ -52,6 +52,8 @@ add_executable(deep_lr
     src/Neural/math.h
     src/Neural/bilstm.h
     src/Neural/bilstm.cpp
+    src/Neural/ctcloss.h
+    src/Neural/ctcloss.cpp
     src/define.h
     src/data.h
 )
