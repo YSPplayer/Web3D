@@ -8,6 +8,7 @@
 #include "maxpool.h"
 #include "flatten.h"
 #include "linear.h"
+#include "sequencelinear.h"
 #include "softmax.h"
 #include "../log.h"
 #include <thread>
@@ -53,7 +54,7 @@ namespace DeepLr::Neural {
 				NeuralBuild(NeuralType::Flatten, 1, 1, 2048),
 				NeuralBuild(NeuralType::Linear, 1, 1, 64),
 				NeuralBuild(NeuralType::RelU, 1, 1, 64),
-				NeuralBuild(NeuralType::Linear, 1, 1, 40),
+				NeuralBuild(NeuralType::Linear, 1, 1, 40), 
 				NeuralBuild(NeuralType::SoftMax, 1, 10, 4),
 		};
 		TensorShape shape = { 1,128,128 };
@@ -127,7 +128,7 @@ namespace DeepLr::Neural {
 				coreData.second = ReadTensor3D(buffer, offset);
 				cores[i] = std::move(coreData);
 			}
-			else if (type == NeuralType::Linear) {
+			else if (type == NeuralType::Linear || type == NeuralType::SequenceLinear) {
 				std::pair<Tensor3D, Tensor3D> coreData;
 				coreData.first = ReadTensor3D(buffer, offset);
 				coreData.second = ReadTensor3D(buffer, offset);
@@ -150,6 +151,12 @@ namespace DeepLr::Neural {
 				Linear* linear = dynamic_cast<Linear*>(layer);
 				linear->SetW(data.first);
 				linear->SetB(data.second);
+			}
+			else if (layer->GetNeuralType() == NeuralType::SequenceLinear) {
+				const auto& data = std::any_cast<std::pair<Tensor3D, Tensor3D>>(cores[i]);
+				SequenceLinear* sequenceLinear = dynamic_cast<SequenceLinear*>(layer);
+				sequenceLinear->SetW(data.first);
+				sequenceLinear->SetB(data.second);
 			}
 		}
 		return true;
@@ -323,6 +330,7 @@ namespace DeepLr::Neural {
 			else if (build.type == NeuralType::Flatten) neural[i] = new Flatten();
 			else if (build.type == NeuralType::Linear) neural[i] = new Linear();
 			else if (build.type == NeuralType::SoftMax) neural[i] = new SoftMax();
+			else if (build.type == NeuralType::SequenceLinear) neural[i] = new SequenceLinear();
 			neural[i]->SetShape(lastshape, shape);
 			lastshape = shape;
 		}
@@ -342,6 +350,12 @@ namespace DeepLr::Neural {
 				Linear* linear = dynamic_cast<Linear*>(layer);
 				linear->SetW(data.first);
 				linear->SetB(data.second);
+			}
+			else if (layer->GetNeuralType() == NeuralType::SequenceLinear) {
+				const auto& data = std::any_cast<const std::pair<Tensor3D, Tensor3D>&>(cores[i]);
+				SequenceLinear* sequenceLinear = dynamic_cast<SequenceLinear*>(layer);
+				sequenceLinear->SetW(data.first);
+				sequenceLinear->SetB(data.second);
 			}
 		}
 	}
@@ -557,6 +571,10 @@ namespace DeepLr::Neural {
 				Linear* linear = dynamic_cast<Linear*>(layer);
 				cores[i] = std::make_pair(linear->GetW(), linear->GetB());
 			}
+			else if (layer->GetNeuralType() == NeuralType::SequenceLinear) {
+				SequenceLinear* sequenceLinear = dynamic_cast<SequenceLinear*>(layer);
+				cores[i] = std::make_pair(sequenceLinear->GetW(), sequenceLinear->GetB());
+			}
 		}
 	}
 	bool Neural::SaveModel(const std::string& filename) {
@@ -594,7 +612,7 @@ namespace DeepLr::Neural {
 				}
 				WriteTensor3D(data.second, buffer);
 			}
-			else if (build.type == NeuralType::Linear) {
+			else if (build.type == NeuralType::Linear || build.type == NeuralType::SequenceLinear) {
 				const auto& data = std::any_cast<std::pair<Tensor3D, Tensor3D>>(core);
 				WriteTensor3D(data.first, buffer);
 				WriteTensor3D(data.second, buffer);

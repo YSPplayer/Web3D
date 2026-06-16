@@ -16,7 +16,8 @@ namespace DeepLr {
 		SoftMax,//
 		HeightPool,//高度池化
 		FeatureToSequence, //序列化
-		BiLSTM 
+		BiLSTM,
+		SequenceLinear
 	};
 #pragma pack(push, 1) 
 	struct ModelHeader {

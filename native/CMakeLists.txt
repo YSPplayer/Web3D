@@ -54,6 +54,8 @@ add_executable(deep_lr
     src/Neural/bilstm.cpp
     src/Neural/ctcloss.h
     src/Neural/ctcloss.cpp
+    src/Neural/sequencelinear.h
+    src/Neural/sequencelinear.cpp
     src/define.h
     src/data.h
 )
