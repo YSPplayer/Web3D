@@ -15,19 +15,29 @@ export class Model {
         }
     }
     //透视投影映射公式,转为透视视口
-    perspectiveProject(x,y,z, d = 800, cameraDistance = 800) { 
+    perspectiveProject(x,y,z, viewCenter = this.center, d = 800, cameraDistance = 800) { 
         /*
             x' = x / z * d
             y' = y / z * d
         */
-        const viewZ = z + cameraDistance;
+        const viewX = x - viewCenter.x;
+        const viewY = y - viewCenter.y;
+        const viewZ = z - viewCenter.z + cameraDistance;
         const scale = d / viewZ;
         return {
-            x: x * scale,
-            y: y * scale
+            x: viewX * scale + viewCenter.x,
+            y: viewY * scale + viewCenter.y
         };
     }
     //模型平移
+    screenToWorldDelta(dx, dy, d = 800, cameraDistance = 800) {
+        const scale = cameraDistance / d;
+        return {
+            x: dx * scale,
+            y: dy * scale,
+            z: 0
+        };
+    }
     transform(points,move) {
         points.forEach(point => {
             point.x += move.x;
@@ -78,13 +88,18 @@ export class Model {
         //旋转
         points = this.points.map(point => this.rotateEuler(point, angle));
         // //平移
-        // this.transform(points, move);
-        const point0 = this.perspectiveProject(points[this.indexs[0]].x, points[this.indexs[0]].y, points[this.indexs[0]].z);
+        this.transform(points, move);
+        const viewCenter = {
+            x: this.center.x + move.x,
+            y: this.center.y + move.y,
+            z: this.center.z + move.z
+        };
+        const point0 = this.perspectiveProject(points[this.indexs[0]].x, points[this.indexs[0]].y, points[this.indexs[0]].z, viewCenter);
         //平移
-        ctx.moveTo(point0.x + move.x, point0.y + move.y);
+        ctx.moveTo(point0.x, point0.y);
         for(let i = 1; i < this.indexs.length; i++) {
-            const point = this.perspectiveProject(points[this.indexs[i]].x, points[this.indexs[i]].y, points[this.indexs[i]].z);
-            ctx.lineTo(point.x + move.x, point.y + move.y);
+            const point = this.perspectiveProject(points[this.indexs[i]].x, points[this.indexs[i]].y, points[this.indexs[i]].z, viewCenter);
+            ctx.lineTo(point.x, point.y);
         }
         ctx.closePath();
         ctx.fill();

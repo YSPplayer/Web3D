@@ -39,7 +39,8 @@ export class Window3d {
         rotationz = -rotationz * Math.PI / 180;
         rotationx = rotationx * Math.PI / 180;
         this.models.forEach(element => {
-            element.render(this.canvas,{x:this.moveLeft.totalDeltaX,y:this.moveLeft.totalDeltaY, z: 0}, {x: rotationx, y: 0, z: rotationz});
+            const move = element.screenToWorldDelta(this.moveLeft.totalDeltaX, this.moveLeft.totalDeltaY);
+            element.render(this.canvas, move, {x: rotationx, y: 0, z: rotationz});
         });
     }
     render() {
