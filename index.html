@@ -3,10 +3,35 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Web3D CMake Lab</title>
+    <title>Web3D</title>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div id="app">
+          <canvas id = "show3d"></canvas>
+    </div>
+    <script type="module" src="/show3d/main.js"></script>
   </body>
+  <style>
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  #app {
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    right: 0px;
+    bottom: 0px;
+    display: flex;
+    justify-content: center; /* 水平居中 */
+    align-items: center;     /* 垂直居中 */
+  }
+  #show3d {
+    width: 1000px;
+    height: 700px;
+    background-color: black;
+    border-radius: 5px;
+  }
+  </style>
 </html>
