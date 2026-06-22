@@ -36,6 +36,7 @@ export class Model {
         })
     }
     rotateX(points,angle) {
+        if(angle === 0) return
         points.forEach(point => {
             const y = point.y;
             const z = point.z;
@@ -44,6 +45,7 @@ export class Model {
         })
     }
     rotateY(points,angle) {
+        if(angle === 0) return
         points.forEach(point => {
             const x = point.x;
             const z = point.z;
@@ -52,6 +54,7 @@ export class Model {
         })
     }
     rotateZ(points,angle) {
+        if(angle === 0) return
         points.forEach(point => {
             const x = point.x;
             const y = point.y;
@@ -59,13 +62,18 @@ export class Model {
             point.y = this.center.y + (x - this.center.x) * Math.sin(angle) + (y - this.center.y) * Math.cos(angle);
         })
     }
-    render(canvas,move) {
+    render(canvas,move,angle) {
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height); //先清空画布
         ctx.fillStyle = this.color;
         ctx.beginPath();
         const points = structuredClone(this.points);
+        //旋转
+        this.rotateY(points, angle.y);
+        this.rotateX(points, angle.x);
+        this.rotateZ(points, angle.z);
+        //平移
         this.transform(points, move);
         const point0 = this.perspectiveProject(points[this.indexs[0]].x, points[this.indexs[0]].y, points[this.indexs[0]].z);
         ctx.moveTo(point0.x, point0.y);
