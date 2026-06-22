@@ -15,17 +15,17 @@ export class Model {
         }
     }
     //透视投影映射公式,转为透视视口
-    perspectiveProject(x,y,z,d = 1) { 
+    perspectiveProject(x,y,z, d = 800, cameraDistance = 800) { 
         /*
             x' = x / z * d
             y' = y / z * d
         */
-        const x_ = x / z;
-        const y_ = y / z;
+        const viewZ = z + cameraDistance;
+        const scale = d / viewZ;
         return {
-            x: x_ * d,
-            y: y_ * d
-        }
+            x: x * scale,
+            y: y * scale
+        };
     }
     //模型平移
     transform(points,move) {
@@ -35,32 +35,38 @@ export class Model {
             point.z += move.z;
         })
     }
-    rotateX(points,angle) {
-        if(angle === 0) return
-        points.forEach(point => {
-            const y = point.y;
-            const z = point.z;
-            point.y = this.center.y + (y - this.center.y) * Math.cos(angle) - (z - this.center.z) * Math.sin(angle);
-            point.z = this.center.z + (y - this.center.y) * Math.sin(angle) + (z - this.center.z) * Math.cos(angle);
-        })
-    }
-    rotateY(points,angle) {
-        if(angle === 0) return
-        points.forEach(point => {
-            const x = point.x;
-            const z = point.z;
-            point.x = this.center.x + (x - this.center.x) * Math.cos(angle) + (z - this.center.z) * Math.sin(angle);
-            point.z = this.center.z - (x - this.center.x) * Math.sin(angle) + (z - this.center.z) * Math.cos(angle);
-        })
-    }
-    rotateZ(points,angle) {
-        if(angle === 0) return
-        points.forEach(point => {
-            const x = point.x;
-            const y = point.y;
-            point.x = this.center.x + (x - this.center.x) * Math.cos(angle) - (y - this.center.y) * Math.sin(angle);
-            point.y = this.center.y + (x - this.center.x) * Math.sin(angle) + (y - this.center.y) * Math.cos(angle);
-        })
+    //模型旋转
+    rotateEuler(point,angle) {
+        const cx = this.center.x;
+        const cy = this.center.y;
+        const cz = this.center.z;
+        //世界坐标转模型的局部坐标，把模型的世界坐标转为相当于模型中心点的局部坐标
+        let x = point.x - cx;
+        let y = point.y - cy;
+        let z = point.z - cz;
+        const cosX = Math.cos(angle.x);
+        const sinX = Math.sin(angle.x);
+        const cosY = Math.cos(angle.y);
+        const sinY = Math.sin(angle.y);
+        const cosZ = Math.cos(angle.z);
+        const sinZ = Math.sin(angle.z);
+        // 1. rotate Z
+        const x1 = x * cosZ - y * sinZ;
+        const y1 = x * sinZ + y * cosZ;
+        const z1 = z;
+        // 2. rotate Y
+        const x2 = x1 * cosY + z1 * sinY;
+        const y2 = y1;
+        const z2 = -x1 * sinY + z1 * cosY;
+        // 3. rotate X
+        const x3 = x2;
+        const y3 = y2 * cosX - z2 * sinX;
+        const z3 = y2 * sinX + z2 * cosX;
+        return {
+            x: x3 + cx,
+            y: y3 + cy,
+            z: z3 + cz
+        };
     }
     render(canvas,move,angle) {
         const ctx = canvas.getContext('2d');
@@ -68,18 +74,17 @@ export class Model {
         ctx.clearRect(0, 0, canvas.width, canvas.height); //先清空画布
         ctx.fillStyle = this.color;
         ctx.beginPath();
-        const points = structuredClone(this.points);
+        let points = structuredClone(this.points);
         //旋转
-        this.rotateY(points, angle.y);
-        this.rotateX(points, angle.x);
-        this.rotateZ(points, angle.z);
-        //平移
-        this.transform(points, move);
+        points = this.points.map(point => this.rotateEuler(point, angle));
+        // //平移
+        // this.transform(points, move);
         const point0 = this.perspectiveProject(points[this.indexs[0]].x, points[this.indexs[0]].y, points[this.indexs[0]].z);
-        ctx.moveTo(point0.x, point0.y);
+        //平移
+        ctx.moveTo(point0.x + move.x, point0.y + move.y);
         for(let i = 1; i < this.indexs.length; i++) {
             const point = this.perspectiveProject(points[this.indexs[i]].x, points[this.indexs[i]].y, points[this.indexs[i]].z);
-            ctx.lineTo(point.x, point.y);
+            ctx.lineTo(point.x + move.x, point.y + move.y);
         }
         ctx.closePath();
         ctx.fill();

@@ -18,7 +18,7 @@ export class Window3d {
         this.canvas.width = width
         this.canvas.height = height
         this.models = []
-        this.sensitivity = 0.005
+        this.sensitivity = 0.5
         this.moveLeft = new MoveData(); //左侧偏移
         this.moveRight = new MoveData(); //右侧偏移
         this.boundMouseDown = this.handleMouseDown.bind(this);
@@ -36,7 +36,7 @@ export class Window3d {
         let rotationx = this.moveRight.totalDeltaY % 360
         if (rotationz < 0) rotationz += 360;
         if (rotationx < 0) rotationx += 360;
-        rotationz = rotationz * Math.PI / 180;
+        rotationz = -rotationz * Math.PI / 180;
         rotationx = rotationx * Math.PI / 180;
         this.models.forEach(element => {
             element.render(this.canvas,{x:this.moveLeft.totalDeltaX,y:this.moveLeft.totalDeltaY, z: 0}, {x: rotationx, y: 0, z: rotationz});
