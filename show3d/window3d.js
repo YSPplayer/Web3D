@@ -38,9 +38,17 @@ export class Window3d {
         if (rotationx < 0) rotationx += 360;
         rotationz = -rotationz * Math.PI / 180;
         rotationx = rotationx * Math.PI / 180;
+        let angleX = rotationx;
+        let angleY = rotationz;
+        let angleZ = 0;
+        const nearGimbal = Math.abs(Math.cos(angleY)) < 0.15;
+        if (nearGimbal) {
+            angleZ = rotationx;
+            angleX = 0;
+        }
         this.models.forEach(element => {
             const move = element.screenToWorldDelta(this.moveLeft.totalDeltaX, this.moveLeft.totalDeltaY);
-            element.render(this.canvas, move, {x: rotationx, y: 0, z: rotationz});
+            element.render(this.canvas, move, {x: angleX, y: angleY, z: angleZ });
         });
     }
     render() {

@@ -60,18 +60,18 @@ export class Model {
         const sinY = Math.sin(angle.y);
         const cosZ = Math.cos(angle.z);
         const sinZ = Math.sin(angle.z);
-        // 1. rotate Z
-        const x1 = x * cosZ - y * sinZ;
-        const y1 = x * sinZ + y * cosZ;
-        const z1 = z;
+        // 1. rotate X
+        const x1 = x;
+        const y1 = y * cosX - z * sinX;
+        const z1 = y * sinX + z * cosX;
         // 2. rotate Y
         const x2 = x1 * cosY + z1 * sinY;
         const y2 = y1;
         const z2 = -x1 * sinY + z1 * cosY;
-        // 3. rotate X
-        const x3 = x2;
-        const y3 = y2 * cosX - z2 * sinX;
-        const z3 = y2 * sinX + z2 * cosX;
+        // 3. rotate Z
+        const x3 = x2 * cosZ - y2 * sinZ;
+        const y3 = x2 * sinZ + y2 * cosZ;
+        const z3 = z2;
         return {
             x: x3 + cx,
             y: y3 + cy,
