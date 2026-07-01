@@ -10,6 +10,7 @@
     "language_model": "D:\\YueShaoPu\\Web3D\\LanguageModel"
   },
   "outputs": {
+    "raw_synthetic_qa_source": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\synthetic_zh_qa_seed.json",
     "raw_synthetic_qa": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_zh_qa.txt",
     "corpus": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\corpus.txt",
     "train": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\train.txt",

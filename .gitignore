@@ -34,3 +34,4 @@ backend/.mvn/wrapper/dists
 *.sln
 *.sw?
 native/build-testupload/
+*.pyc
