@@ -1,0 +1,416 @@
+<|qa_start|>
+source: synthetic_zh_qa/001
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是语言模型的 next-token prediction？
+回答：next-token prediction 是让模型根据前面的 token 预测下一个 token 的训练任务。GPT 类模型并不是直接学习问题和答案的表格，而是在大量文本中反复学习上下文到下一个 token 概率分布的映射。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/002
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么训练语言模型时 x 和 y 要相差一个 token？
+回答：因为模型看到 x 中当前位置以及之前的上下文后，要预测 y 中对应位置的下一个 token。比如 x 是 [t0, t1, t2]，y 就是 [t1, t2, t3]，这正好表达了 next-token prediction。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/003
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 tokenizer？
+回答：tokenizer 是把原始文本转换成 token id 的组件。模型不能直接处理字符串，它需要整数 id。tokenizer 负责 encode 和 decode，也决定了词表大小、文本长度和训练效率。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/004
+language: zh+en
+kind: synthetic_learning_qa
+问题：字符级 tokenizer 有什么优缺点？
+回答：字符级 tokenizer 非常简单透明，适合学习原理；缺点是序列很长，训练效率低，也不容易表达常见代码片段和英文单词。第一阶段可以先用它验证流程，再换成 BPE。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/005
+language: zh+en
+kind: synthetic_learning_qa
+问题：BPE tokenizer 为什么适合代码和中英文混合语料？
+回答：BPE 会把高频片段合并成 token，例如 function、return、Tensor、梯度 等。它比字符级 tokenizer 更短，也比按空格切词更能处理未知词、中文、代码符号和混合语言。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/006
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 embedding？
+回答：embedding 是把 token id 映射成向量的表。每个 token 都有一个可训练向量，模型后续的 attention 和 feed-forward 都是在这些向量表示上计算的。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/007
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么 GPT 需要 positional embedding？
+回答：Transformer 的 self-attention 本身不天然知道 token 的位置。如果没有 positional embedding，模型很难区分同一组 token 的不同顺序。位置编码给每个位置提供顺序信息。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/008
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 causal mask？
+回答：causal mask 用来阻止模型在训练时偷看未来 token。预测第 t 个位置时，模型只能看当前位置和之前的位置，不能看后面的答案，否则训练目标就失去意义。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/009
+language: zh+en
+kind: synthetic_learning_qa
+问题：Q、K、V 在 attention 中分别代表什么？
+回答：Q 是 query，表示当前 token 想查找什么信息；K 是 key，表示每个 token 可以被匹配的特征；V 是 value，表示真正被加权汇聚的信息。attention 通过 Q 和 K 计算权重，再加权求和 V。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/010
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么要使用 multi-head attention？
+回答：multi-head attention 让模型从多个子空间同时观察上下文。不同 head 可以关注不同关系，例如变量定义、函数调用、括号匹配、自然语言解释中的因果关系等。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/011
+language: zh+en
+kind: synthetic_learning_qa
+问题：LayerNorm 在 Transformer 中有什么作用？
+回答：LayerNorm 会稳定每层的激活分布，减少训练震荡，让深层网络更容易优化。它通常和 residual connection 一起使用，是现代 Transformer 稳定训练的重要组件。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/012
+language: zh+en
+kind: synthetic_learning_qa
+问题：Residual connection 为什么重要？
+回答：Residual connection 让信息和梯度可以更顺畅地穿过多层网络。没有残差连接时，深层模型更容易出现梯度消失、训练不稳定或收敛困难。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/013
+language: zh+en
+kind: synthetic_learning_qa
+问题：语言模型训练中的 logits 是什么？
+回答：logits 是模型对词表中每个 token 给出的未归一化分数。经过 softmax 后，logits 会变成概率分布，再用 cross entropy 和真实下一个 token 计算损失。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/014
+language: zh+en
+kind: synthetic_learning_qa
+问题：cross entropy 在语言模型中如何使用？
+回答：模型输出 [batch, time, vocab] 的 logits，目标是 [batch, time] 的 token id。cross entropy 会让真实下一个 token 的概率变高，让错误 token 的概率相对变低。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/015
+language: zh+en
+kind: synthetic_learning_qa
+问题：perplexity 是什么？
+回答：perplexity 可以理解为模型对下一个 token 的困惑程度，通常等于 exp(loss)。perplexity 越低，说明模型对验证集文本的预测越确定，但它不是唯一质量指标。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/016
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么第一阶段要先 overfit 一个小文件？
+回答：如果模型连一个很小的文件都无法记住，说明数据右移、loss、mask、优化器或模型实现可能有 bug。overfit 小文件是验证训练链路正确性的最小实验。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/017
+language: zh+en
+kind: synthetic_learning_qa
+问题：Bigram language model 有什么意义？
+回答：Bigram 模型只根据当前 token 预测下一个 token，能力很弱，但它能快速验证 dataset、loss、训练循环和生成函数是否可用，是写 Transformer 前的低成本基线。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/018
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么第一阶段不用问答 JSONL？
+回答：从零训练 causal LM 时，最底层目标是连续文本的 next-token prediction。普通 txt 语料已经足够。问答格式可以作为文本块写进去，但不需要先做复杂的指令微调格式。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/019
+language: zh+en
+kind: synthetic_learning_qa
+问题：中文问答和英文代码可以混合训练吗？
+回答：可以。tokenizer 会把中文、英文、符号和代码都变成 token id。混合语料有助于模型学习中文解释风格和英文编程语法，但第一阶段模型较小，不能期待强推理能力。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/020
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么要拆分 train、valid 和 test？
+回答：train 用来更新参数，valid 用来观察训练过程中是否过拟合，test 用来在训练结束后做最终检查。如果只看 train loss，很容易误判模型真的学会了泛化。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/021
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么不要把 node_modules 和构建产物放进训练集？
+回答：这些文件重复、巨大、噪声高，很多内容对学习语言模型原理没有帮助。第一阶段更需要干净且能解释的数据，而不是大量无意义 token。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/022
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 checkpoint？
+回答：checkpoint 是训练过程中的保存点，通常包含模型参数、优化器状态、训练步数和配置。它让训练可以中断后继续，也能用于离线生成。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/023
+language: zh+en
+kind: synthetic_learning_qa
+问题：temperature 对生成有什么影响？
+回答：temperature 控制采样随机性。温度低时输出更保守，温度高时输出更多样但更容易乱。学习阶段可以用 0.8 到 1.0 观察生成差异。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/024
+language: zh+en
+kind: synthetic_learning_qa
+问题：top-k sampling 是什么？
+回答：top-k sampling 每次只在概率最高的 k 个 token 中采样，能减少低概率 token 带来的混乱输出。它常用于自回归文本生成。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/025
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么小模型容易生成错误答案？
+回答：小模型参数少、语料少、训练时间短，主要学到局部 token 模式，不具备可靠事实知识和复杂推理能力。第一阶段的目标是理解机制，不是追求助手质量。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/026
+language: zh+en
+kind: synthetic_learning_qa
+问题：代码语料对语言模型有什么帮助？
+回答：代码语料能让模型学习关键字、函数结构、缩进、括号匹配、类名、调用关系和注释风格。即使小模型不能可靠写程序，也能学到代码文本的局部规律。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/027
+language: zh+en
+kind: synthetic_learning_qa
+问题：Markdown 笔记对模型有什么帮助？
+回答：Markdown 笔记包含解释性中文、标题层级、列表和代码块，适合让模型学习中文技术说明的表达方式，也能和源码形成互补。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/028
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么训练数据要加 file_start 和 file_end 标记？
+回答：文件边界标记可以告诉模型不同文件之间是独立片段，减少多个文件被无意义粘连的影响，也方便后续观察生成结果是否学会了文件结构。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/029
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 batch_size？
+回答：batch_size 表示每次并行训练多少段 token 序列。batch_size 越大，显存占用越高，梯度估计通常更稳定；显存不足时需要降低它。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/030
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 block_size？
+回答：block_size 是模型一次能看到的上下文长度。block_size 越大，模型能利用的上下文越长，但 attention 计算和显存占用也会明显增加。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/031
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么 attention 显存会随 block_size 增长很快？
+回答：标准 self-attention 需要计算每个 token 和其他 token 的相关性，注意力矩阵规模大约是 block_size 的平方，所以上下文长度翻倍时计算和显存压力会明显增加。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/032
+language: zh+en
+kind: synthetic_learning_qa
+问题：AdamW 和 SGD 有什么区别？
+回答：SGD 按梯度方向直接更新参数，简单但调参更敏感。AdamW 会使用一阶和二阶动量估计，并把 weight decay 解耦，通常更适合训练 Transformer。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/033
+language: zh+en
+kind: synthetic_learning_qa
+问题：gradient clipping 为什么有用？
+回答：gradient clipping 可以限制梯度范数，避免某些 batch 导致梯度爆炸。训练 Transformer 或 RNN 时，它是常见的稳定训练手段。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/034
+language: zh+en
+kind: synthetic_learning_qa
+问题：训练 loss 下降但验证 loss 上升说明什么？
+回答：这通常说明模型正在过拟合训练集。可以减少模型规模、增加 dropout、清洗数据、扩大语料，或者提前停止训练。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/035
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么 corpus.txt 是纯文本就够了？
+回答：causal LM 最终只需要一串 token 序列。纯文本可以被 tokenizer 编码成 token ids，再通过右移构造训练目标。因此第一阶段不需要复杂数据库或标注格式。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/036
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 decoder-only Transformer？
+回答：decoder-only Transformer 是 GPT 类模型常用结构，只使用带 causal mask 的 Transformer block，从左到右预测下一个 token。它适合文本续写和聊天生成。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/037
+language: zh+en
+kind: synthetic_learning_qa
+问题：encoder-only 和 decoder-only 有什么区别？
+回答：encoder-only 模型通常看完整输入，适合理解任务；decoder-only 模型只能从左到右看上下文，适合生成任务。GPT 类语言模型主要使用 decoder-only 结构。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/038
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么语言模型生成是自回归的？
+回答：因为每一步生成的新 token 会被追加到上下文中，下一步预测又依赖之前所有已生成 token。这个过程一步一步向后滚动，所以叫自回归生成。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/039
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么第一阶段不做 RAG？
+回答：RAG 是检索增强生成，重点在 embedding、向量库和上下文拼接。第一阶段先学习模型本身如何训练和生成，等基础链路清楚后再加 RAG 更合理。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/040
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么第一阶段不做 LoRA？
+回答：LoRA 是对预训练大模型做参数高效微调的技术。你现在要先理解从文本到 token、从 token 到 loss、从 loss 到参数更新的底层训练流程，所以先不做 LoRA。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/041
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是模型参数量？
+回答：参数量是模型中可训练权重的数量。参数越多，容量越大，但训练需要更多数据、算力和显存。第一阶段应使用小参数量模型，方便观察和调试。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/042
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么模型会模仿训练语料风格？
+回答：模型通过 next-token prediction 学习语料中的统计规律，包括词语搭配、代码格式、注释风格、中文解释方式和文件结构，因此生成时会表现出类似风格。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/043
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是验证集泄漏？
+回答：验证集泄漏是指验证数据和训练数据高度重复，导致 valid loss 看起来很好但不能反映泛化能力。按文件块拆分比按字符随机切分更能减少这种问题。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/044
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么要记录 dataset_manifest.json？
+回答：manifest 记录数据来源、文件数量、拆分比例、跳过原因和字符统计。它让训练结果可追踪，也方便以后比较不同语料版本。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/045
+language: zh+en
+kind: synthetic_learning_qa
+问题：C++ 头文件和源文件都要放进语料吗？
+回答：可以。头文件包含类、函数签名和接口设计，源文件包含实现细节。二者一起训练能让模型看到更完整的工程代码模式。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/046
+language: zh+en
+kind: synthetic_learning_qa
+问题：Vue 文件为什么可以作为训练语料？
+回答：Vue 文件混合模板、TypeScript 和样式，能让模型学习前端组件结构、事件处理、状态绑定和界面逻辑。它对编程文本建模有帮助。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/047
+language: zh+en
+kind: synthetic_learning_qa
+问题：Java 后端代码为什么适合放入语料？
+回答：Java 后端代码包含 controller、service、entity、mapper 等常见工程结构，适合让模型学习企业级后端代码风格和英文标识符命名。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/048
+language: zh+en
+kind: synthetic_learning_qa
+问题：模型训练时会理解代码语义吗？
+回答：小模型主要学习代码文本的统计模式，不等同于真正理解程序语义。随着模型变大、数据变多，它会表现出更强的模式组合能力，但第一阶段不要高估它。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/049
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么要从小数据集开始？
+回答：小数据集能快速验证整个训练链路，出错时容易定位。等数据准备、tokenizer、模型、loss 和生成都稳定后，再扩大语料规模更稳妥。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/050
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是离线推理？
+回答：离线推理指模型、tokenizer、checkpoint 都保存在本地，不需要联网即可加载并生成文本。第一阶段要保证本地文件闭环可用。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/051
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么生成结果会重复？
+回答：小模型和小语料容易学到重复模式，采样参数也会影响重复程度。可以调整 temperature、top-k、top-p，或增加更丰富的数据和训练策略。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/052
+language: zh+en
+kind: synthetic_learning_qa
+问题：训练小语言模型最重要的调试顺序是什么？
+回答：先确认数据能读，再确认 tokenizer encode/decode，再确认 x/y 右移，再确认 bigram 能训练，最后再上 Tiny GPT。不要一开始就堆大模型。
+<|qa_end|>
+

@@ -81,7 +81,6 @@ export class Model {
     render(canvas,move,angle) {
         const ctx = canvas.getContext('2d');
         if(!ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height); //先清空画布
         ctx.fillStyle = this.color;
         ctx.beginPath();
         let points = structuredClone(this.points);

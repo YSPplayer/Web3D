@@ -52,6 +52,18 @@ export class Window3d {
         });
     }
     render() {
+        const canvas = this.canvas;
+        const ctx = canvas.getContext('2d');
+        if(!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height); //先清空画布
+        const centerX = canvas.width / 2;
+        ctx.strokeStyle = 'green';
+        ctx.lineWidth = 2;
+        const alignedX = (canvas.width % 2 === 0) ? centerX + 0.5 : centerX;
+        ctx.beginPath();
+        ctx.moveTo(alignedX, 0);
+        ctx.lineTo(alignedX, canvas.height);
+        ctx.stroke();
         this.drawModel();    
     }
     handleContextMenu(event) {
