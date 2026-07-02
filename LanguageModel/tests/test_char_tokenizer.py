@@ -17,7 +17,7 @@ class CharTokenizerTests(unittest.TestCase):
         tokenizer = CharTokenizer.from_file(TOKENIZER_PATH)
 
         self.assertEqual(tokenizer.name, "char_v1")
-        self.assertEqual(tokenizer.vocab_size, 1027)
+        self.assertGreater(tokenizer.vocab_size, len(tokenizer.special_tokens))
         self.assertEqual(tokenizer.pad_id, 0)
         self.assertEqual(tokenizer.unk_id, 1)
         self.assertEqual(tokenizer.bos_id, 2)

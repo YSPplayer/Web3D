@@ -3,119 +3,113 @@
   "purpose": "Small causal language model learning corpus: Chinese explanations plus English/programming code.",
   "random_seed": 20260701,
   "max_file_bytes": 81920,
-  "max_source_blocks": 230,
+  "max_source_blocks": 80,
   "roots": {
     "web3d": "D:\\YueShaoPu\\Web3D",
     "projectyjt": "D:\\work\\projectyjt",
     "language_model": "D:\\YueShaoPu\\Web3D\\LanguageModel"
   },
   "outputs": {
-    "raw_synthetic_qa_source": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\synthetic_zh_qa_seed.json",
+    "raw_synthetic_qa_sources": [
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\synthetic_zh_qa_seed.json",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\zh_programming_qa_expansion.json"
+    ],
     "raw_synthetic_qa": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_zh_qa.txt",
     "corpus": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\corpus.txt",
     "train": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\train.txt",
     "valid": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\valid.txt",
     "test": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\test.txt"
   },
-  "source_candidates_used": 230,
-  "source_blocks_written": 230,
-  "synthetic_qa_blocks_written": 52,
+  "source_candidates_used": 80,
+  "source_blocks_written": 80,
+  "synthetic_qa_blocks_written": 132,
   "total": {
-    "blocks": 282,
-    "chars": 1117131,
-    "kib": 1090.95,
+    "blocks": 212,
+    "chars": 221913,
+    "kib": 216.71,
     "kinds": {
-      "source_or_document": 230,
-      "synthetic_learning_qa": 52
+      "source_or_document": 80,
+      "synthetic_learning_qa": 132
     },
     "languages": {
-      "markdown": 39,
-      "cpp": 21,
-      "cpp-header": 85,
+      "markdown": 12,
+      "cpp": 18,
+      "cpp-header": 19,
       "java": 16,
-      "typescript": 11,
+      "typescript": 8,
       "vue": 3,
       "python": 1,
       "yaml": 1,
-      "json": 43,
-      "text": 10,
-      "zh+en": 52
+      "json": 2,
+      "zh+en": 132
     }
   },
   "splits": {
     "train": {
-      "blocks": 231,
-      "chars": 902847,
-      "kib": 881.69,
+      "blocks": 179,
+      "chars": 196381,
+      "kib": 191.78,
       "kinds": {
-        "source_or_document": 189,
-        "synthetic_learning_qa": 42
+        "source_or_document": 73,
+        "synthetic_learning_qa": 106
       },
       "languages": {
-        "json": 37,
-        "zh+en": 42,
-        "markdown": 31,
-        "cpp-header": 71,
+        "java": 16,
         "cpp": 16,
-        "vue": 3,
-        "typescript": 9,
-        "java": 12,
-        "text": 9,
-        "yaml": 1
+        "zh+en": 106,
+        "markdown": 12,
+        "cpp-header": 17,
+        "json": 2,
+        "yaml": 1,
+        "vue": 2,
+        "typescript": 6,
+        "python": 1
       }
     },
     "valid": {
-      "blocks": 15,
-      "chars": 107282,
-      "kib": 104.77,
+      "blocks": 14,
+      "chars": 12924,
+      "kib": 12.62,
       "kinds": {
-        "source_or_document": 10,
-        "synthetic_learning_qa": 5
+        "synthetic_learning_qa": 13,
+        "source_or_document": 1
       },
       "languages": {
-        "cpp": 2,
-        "zh+en": 5,
-        "json": 2,
-        "python": 1,
-        "java": 1,
-        "typescript": 2,
-        "cpp-header": 2
+        "zh+en": 13,
+        "cpp": 1
       }
     },
     "test": {
-      "blocks": 36,
-      "chars": 107002,
-      "kib": 104.49,
+      "blocks": 19,
+      "chars": 12608,
+      "kib": 12.31,
       "kinds": {
-        "synthetic_learning_qa": 5,
-        "source_or_document": 31
+        "synthetic_learning_qa": 13,
+        "source_or_document": 6
       },
       "languages": {
-        "zh+en": 5,
-        "cpp-header": 12,
-        "json": 4,
-        "markdown": 8,
-        "cpp": 3,
-        "java": 3,
-        "text": 1
+        "zh+en": 13,
+        "typescript": 2,
+        "cpp": 1,
+        "cpp-header": 2,
+        "vue": 1
       }
     }
   },
   "source_extension_counts": {
-    ".md": 39,
-    ".cpp": 21,
-    ".h": 85,
+    ".md": 12,
+    ".cpp": 18,
+    ".h": 19,
     ".java": 16,
-    ".ts": 11,
+    ".ts": 8,
     ".vue": 3,
     ".py": 1,
     ".yml": 1,
-    ".json": 43,
-    ".txt": 10
+    ".json": 2
   },
   "source_root_counts": {
     "web3d": 74,
-    "projectyjt": 156
+    "projectyjt": 6
   },
   "skipped_count": 29,
   "skipped_samples": [
@@ -151,7 +145,7 @@
     {
       "path": "D:\\work\\projectyjt\\apps\\frontend\\src\\views\\module\\collectImages\\threeDDialog.vue",
       "reason": "too_large",
-      "bytes": 105566
+      "bytes": 105581
     },
     {
       "path": "D:\\work\\projectyjt\\docs\\product\\smartmeas3d-hl-prd.md",

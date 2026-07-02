@@ -14,11 +14,12 @@ PROJECTYJT_ROOT = Path(r"D:\work\projectyjt")
 
 RAW_DIR = LANGUAGE_MODEL_ROOT / "data" / "raw"
 PROCESSED_DIR = LANGUAGE_MODEL_ROOT / "data" / "processed"
-SYNTHETIC_QA_SOURCE_PATH = RAW_DIR / "synthetic_qa" / "synthetic_zh_qa_seed.json"
+SYNTHETIC_QA_SOURCE_DIR = RAW_DIR / "synthetic_qa"
+SYNTHETIC_QA_SOURCE_PATH = SYNTHETIC_QA_SOURCE_DIR / "synthetic_zh_qa_seed.json"
 SYNTHETIC_QA_PATH = RAW_DIR / "synthetic_zh_qa.txt"
 
 MAX_FILE_BYTES = 80 * 1024
-MAX_SOURCE_BLOCKS = 230
+MAX_SOURCE_BLOCKS = 80
 RANDOM_SEED = 20260701
 
 ALLOWED_EXTENSIONS = {
@@ -261,40 +262,57 @@ def make_source_block(source: SourceFile, content: str) -> TextBlock:
         text=block,
     )
 
+def synthetic_qa_source_paths(path: Path | None = None) -> list[Path]:
+    if path is None:
+        return sorted(SYNTHETIC_QA_SOURCE_DIR.glob("*.json"))
+    if path.is_dir():
+        return sorted(path.glob("*.json"))
+    return [path]
 
 
-def load_synthetic_qa_items(path: Path = SYNTHETIC_QA_SOURCE_PATH) -> list[dict[str, object]]:
-    raw_items = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(raw_items, list):
-        raise ValueError(f"Synthetic QA JSON must be a list: {path}")
+def load_synthetic_qa_items(path: Path | None = None) -> list[dict[str, object]]:
+    source_paths = synthetic_qa_source_paths(path)
+    if not source_paths:
+        raise FileNotFoundError(f"No synthetic QA JSON files found: {SYNTHETIC_QA_SOURCE_DIR}")
 
     items: list[dict[str, object]] = []
-    for index, raw_item in enumerate(raw_items, start=1):
-        if not isinstance(raw_item, dict):
-            raise ValueError(f"Synthetic QA item #{index} must be an object")
+    seen_sources: set[str] = set()
+    for source_path in source_paths:
+        raw_items = json.loads(source_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_items, list):
+            raise ValueError(f"Synthetic QA JSON must be a list: {source_path}")
 
-        question = str(raw_item.get("question", "")).strip()
-        answer = str(raw_item.get("answer", "")).strip()
-        if not question or not answer:
-            raise ValueError(f"Synthetic QA item #{index} must include question and answer")
+        for index, raw_item in enumerate(raw_items, start=1):
+            if not isinstance(raw_item, dict):
+                raise ValueError(f"Synthetic QA item #{index} must be an object: {source_path}")
 
-        source = str(raw_item.get("source") or f"synthetic_zh_qa/{index:03d}").strip()
-        language = str(raw_item.get("language") or "zh+en").strip()
-        kind = str(raw_item.get("kind") or "synthetic_learning_qa").strip()
-        tags = raw_item.get("tags", [])
-        if not isinstance(tags, list):
-            tags = []
+            question = str(raw_item.get("question", "")).strip()
+            answer = str(raw_item.get("answer", "")).strip()
+            if not question or not answer:
+                raise ValueError(f"Synthetic QA item #{index} must include question and answer: {source_path}")
 
-        items.append(
-            {
-                "source": source,
-                "language": language,
-                "kind": kind,
-                "question": question,
-                "answer": answer,
-                "tags": tags,
-            }
-        )
+            source = str(raw_item.get("source") or f"{source_path.stem}/{index:03d}").strip()
+            if source in seen_sources:
+                raise ValueError(f"Duplicate synthetic QA source: {source}")
+            seen_sources.add(source)
+
+            language = str(raw_item.get("language") or "zh+en").strip()
+            kind = str(raw_item.get("kind") or "synthetic_learning_qa").strip()
+            tags = raw_item.get("tags", [])
+            if not isinstance(tags, list):
+                tags = []
+
+            items.append(
+                {
+                    "source": source,
+                    "language": language,
+                    "kind": kind,
+                    "question": question,
+                    "answer": answer,
+                    "tags": tags,
+                    "source_file": str(source_path),
+                }
+            )
     return items
 
 
@@ -438,7 +456,7 @@ def write_manifest(
             "language_model": str(LANGUAGE_MODEL_ROOT),
         },
         "outputs": {
-            "raw_synthetic_qa_source": str(SYNTHETIC_QA_SOURCE_PATH),
+            "raw_synthetic_qa_sources": [str(path) for path in synthetic_qa_source_paths()],
             "raw_synthetic_qa": str(SYNTHETIC_QA_PATH),
             "corpus": str(PROCESSED_DIR / "corpus.txt"),
             "train": str(PROCESSED_DIR / "train.txt"),

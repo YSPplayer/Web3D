@@ -414,3 +414,643 @@ kind: synthetic_learning_qa
 回答：先确认数据能读，再确认 tokenizer encode/decode，再确认 x/y 右移，再确认 bigram 能训练，最后再上 Tiny GPT。不要一开始就堆大模型。
 <|qa_end|>
 
+<|qa_start|>
+source: synthetic_programming_zh_qa/001
+language: zh+en
+kind: synthetic_learning_qa
+问题：请问什么是 AI？
+回答：AI 是人工智能，指让计算机模拟人的感知、学习、推理和决策能力。常见应用包括语音识别、图像识别、代码生成、推荐系统和智能问答。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/002
+language: zh+en
+kind: synthetic_learning_qa
+问题：AI 和传统程序有什么区别？
+回答：传统程序主要靠人手写规则，输入满足规则就得到固定输出。AI 模型更多是从数据中学习规律，面对没见过的输入时根据概率和参数给出结果。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/003
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是机器学习？
+回答：机器学习是让模型从数据中学习规律的方法。它不直接把所有规则写死，而是通过训练数据调整参数，使模型在新样本上也能做预测或分类。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/004
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是深度学习？
+回答：深度学习是机器学习的一个方向，核心是使用多层神经网络从数据中学习表示。图像识别、语音识别和大语言模型都大量使用深度学习技术。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/005
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是神经网络？
+回答：神经网络由很多可训练的线性变换和非线性激活组成。训练时它根据 loss 的梯度不断调整参数，让输入到输出的映射越来越接近目标数据。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/006
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是大语言模型？
+回答：大语言模型是使用大量文本训练出来的神经网络，主要能力是根据上下文预测和生成文本。GPT 类模型通常使用 decoder-only Transformer 结构。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/007
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么我问问题时模型会输出代码？
+回答：这通常说明训练数据里源码和代码块比例太高，而中文问答样本太少。模型学到了代码格式，却没有充分学会看到问题后用中文解释。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/008
+language: zh+en
+kind: synthetic_learning_qa
+问题：模型输出乱码或者不连贯怎么办？
+回答：先检查 tokenizer 是否覆盖了训练语料中的字符，再检查中文问答数据比例是否足够。小模型还需要降低 temperature、增加高质量问答样本，并继续训练到 valid_loss 稳定下降。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/009
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么不能只把源码丢给语言模型训练？
+回答：只训练源码会让模型更像代码续写器，而不是中文问答助手。如果目标是用中文回答编程问题，就需要大量问题、解释、诊断和代码讲解样本。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/010
+language: zh+en
+kind: synthetic_learning_qa
+问题：中文问答数据对模型有什么作用？
+回答：中文问答数据会教模型问题和回答之间的格式关系，也会教它使用解释性中文组织答案。没有足够问答样本时，模型容易继续生成训练集中占比更高的源码或文档格式。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/011
+language: zh+en
+kind: synthetic_learning_qa
+问题：代码解释数据应该怎么写？
+回答：代码解释数据应该包含问题、代码片段和中文解释。重点不是让模型背源码，而是让它学会看到代码后说明变量、流程、输入输出和潜在风险。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/012
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是过拟合？
+回答：过拟合是指模型在训练集上表现很好，但在验证集或新数据上表现变差。语言模型里常见现象是 train_loss 继续下降，而 valid_loss 不再下降甚至上升。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/013
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是欠拟合？
+回答：欠拟合是指模型连训练集里的规律都没有学好，train_loss 和 valid_loss 都比较高。原因可能是训练步数不够、模型太小、学习率不合适或数据质量差。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/014
+language: zh+en
+kind: synthetic_learning_qa
+问题：训练集、验证集和测试集有什么区别？
+回答：训练集用于更新参数，验证集用于训练过程中观察泛化和保存 best.pt，测试集用于训练结束后的最终评估。测试集不应该频繁参与调参。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/015
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么 best.pt 比 latest.pt 更适合推理？
+回答：best.pt 是验证集 loss 最低时保存的模型，通常泛化更好。latest.pt 只是最后一步状态，可能已经过拟合，所以推理时优先加载 best.pt。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/016
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是反向传播？
+回答：反向传播是根据 loss 对每个参数求梯度的过程。优化器利用这些梯度更新参数，使下一次预测更接近训练目标。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/017
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是学习率？
+回答：学习率控制每次参数更新的步子大小。学习率太大容易震荡或发散，太小则训练很慢，Transformer 常用 AdamW 并从较小学习率开始。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/018
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 AdamW 优化器？
+回答：AdamW 是训练 Transformer 常用的优化器。它使用一阶和二阶动量估计梯度方向，并把 weight decay 与梯度更新解耦，通常比普通 SGD 更容易调参。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/019
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 PyTorch？
+回答：PyTorch 是一个深度学习框架，提供张量计算、自动求导、神经网络模块和 GPU 加速能力。它适合快速搭建和训练神经网络。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/020
+language: zh+en
+kind: synthetic_learning_qa
+问题：PyTorch 里的 tensor 是什么？
+回答：tensor 是多维数组，也是 PyTorch 的基本计算对象。模型输入、权重、激活值和梯度通常都以 tensor 的形式存储和计算。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/021
+language: zh+en
+kind: synthetic_learning_qa
+问题：PyTorch 中 model.train() 和 model.eval() 有什么区别？
+回答：model.train() 会启用 dropout 等训练行为，model.eval() 会关闭这些随机行为。训练时使用 train，验证和推理时使用 eval。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/022
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么推理时要使用 torch.no_grad()？
+回答：推理时不需要反向传播，使用 torch.no_grad() 可以避免保存梯度计算图，减少显存和内存占用，也能让推理更快。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/023
+language: zh+en
+kind: synthetic_learning_qa
+问题：CUDA out of memory 是什么意思？
+回答：CUDA out of memory 表示 GPU 显存不足。可以减小 batch_size、block_size、模型层数或 embedding 维度，也可以使用梯度累积和混合精度训练。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/024
+language: zh+en
+kind: synthetic_learning_qa
+问题：batch_size 和 block_size 哪个更影响显存？
+回答：两者都会影响显存。batch_size 决定并行样本数，block_size 决定每个样本的上下文长度；注意力计算对 block_size 更敏感，因为复杂度接近平方增长。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/025
+language: zh+en
+kind: synthetic_learning_qa
+问题：C++ 中 vector 和 array 有什么区别？
+回答：std::vector 是动态数组，大小可以运行时改变，通常在堆上管理内存。std::array 是固定大小数组，大小在编译期确定，接口更接近容器但不能动态扩容。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/026
+language: zh+en
+kind: synthetic_learning_qa
+问题：C++ 中引用和指针有什么区别？
+回答：引用通常必须初始化后绑定到一个对象，语法上像别名；指针保存地址，可以为空，也可以重新指向其他对象。两者都能避免拷贝，但语义不同。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/027
+language: zh+en
+kind: synthetic_learning_qa
+问题：C++ 中 const 有什么作用？
+回答：const 用来表达不可修改的语义。它可以修饰变量、指针、引用、成员函数和返回值，帮助编译器检查错误，也让接口意图更清楚。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/028
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 RAII？
+回答：RAII 是 C++ 的资源管理思想，把资源生命周期绑定到对象生命周期。构造函数获取资源，析构函数释放资源，可以减少内存泄漏和异常路径错误。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/029
+language: zh+en
+kind: synthetic_learning_qa
+问题：智能指针 shared_ptr 和 unique_ptr 有什么区别？
+回答：unique_ptr 表示独占所有权，同一时间只有一个对象负责释放资源。shared_ptr 表示共享所有权，通过引用计数决定什么时候释放资源。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/030
+language: zh+en
+kind: synthetic_learning_qa
+问题：C++ 中头文件为什么要加 #pragma once？
+回答：#pragma once 用来避免同一个头文件被重复包含。它可以减少重复定义错误，作用类似传统的 include guard。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/031
+language: zh+en
+kind: synthetic_learning_qa
+问题：CMake 是做什么的？
+回答：CMake 是跨平台构建系统生成工具。它读取 CMakeLists.txt，根据不同平台生成 Visual Studio、Makefile 或 Ninja 等构建配置。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/032
+language: zh+en
+kind: synthetic_learning_qa
+问题：CMake 里的 target_link_libraries 是什么作用？
+回答：target_link_libraries 用来给目标链接库，并可以传播依赖关系。现代 CMake 推荐围绕 target 设置 include、compile options 和 link libraries。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/033
+language: zh+en
+kind: synthetic_learning_qa
+问题：Python 中 list 和 tuple 有什么区别？
+回答：list 是可变序列，可以增删改元素；tuple 是不可变序列，创建后不能修改。tuple 常用于表达固定结构的数据。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/034
+language: zh+en
+kind: synthetic_learning_qa
+问题：Python 的虚拟环境有什么用？
+回答：虚拟环境可以为项目隔离 Python 解释器和依赖包，避免不同项目之间的包版本互相冲突。训练项目建议使用固定虚拟环境。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/035
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 Git commit？
+回答：Git commit 是一次代码快照，记录修改内容、作者、时间和说明。频繁清晰地提交可以帮助追踪问题和回退错误改动。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/036
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 REST API？
+回答：REST API 是一种常见 Web 接口风格，通常使用 HTTP 方法表达操作，例如 GET 查询、POST 创建、PUT 更新、DELETE 删除。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/037
+language: zh+en
+kind: synthetic_learning_qa
+问题：前端里的组件是什么？
+回答：组件是可以复用的界面和逻辑单元。一个组件通常包含状态、属性、事件和渲染结构，可以组合成完整页面。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/038
+language: zh+en
+kind: synthetic_learning_qa
+问题：Vue 中 props 和 state 有什么区别？
+回答：props 通常由父组件传入，用来配置子组件；state 是组件自身维护的数据。props 更像输入，state 更像内部状态。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/039
+language: zh+en
+kind: synthetic_learning_qa
+问题：TypeScript 相比 JavaScript 有什么优势？
+回答：TypeScript 增加了静态类型检查，可以在编译阶段发现很多类型错误。大型前端项目中，它能提升可维护性和重构安全性。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/040
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 WebGL？
+回答：WebGL 是浏览器里的图形 API，可以利用 GPU 绘制 2D 和 3D 图形。Three.js 等库通常基于 WebGL 封装更易用的 3D 能力。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/041
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 Three.js？
+回答：Three.js 是一个 JavaScript 3D 图形库，封装了场景、相机、材质、几何体、灯光和渲染器。它可以帮助开发者在浏览器中构建 3D 应用。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/042
+language: zh+en
+kind: synthetic_learning_qa
+问题：3D 渲染中的相机有什么作用？
+回答：相机决定从哪个位置、方向和视角观察场景。透视相机会产生近大远小效果，正交相机常用于工程视图和 UI 类场景。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/043
+language: zh+en
+kind: synthetic_learning_qa
+问题：3D 模型中的 mesh 是什么？
+回答：mesh 是由顶点、边和面组成的几何网格。渲染器会根据 mesh 的几何数据、材质和变换矩阵把模型画到屏幕上。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/044
+language: zh+en
+kind: synthetic_learning_qa
+问题：矩阵在 3D 图形中有什么用？
+回答：矩阵常用于表达平移、旋转、缩放和投影。多个变换可以通过矩阵相乘组合，最终把模型坐标转换到屏幕坐标。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/045
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是向量点乘？
+回答：点乘可以衡量两个向量方向的相似程度，也可以用于计算投影。图形学中常用点乘计算光照夹角和视线方向关系。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/046
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是向量叉乘？
+回答：叉乘会得到一个垂直于两个输入向量的新向量。3D 图形中常用它计算法线方向、坐标轴和旋转相关关系。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/047
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是法线 normal？
+回答：法线是垂直于表面的方向向量。光照计算会使用法线判断表面朝向，从而决定明暗效果。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/048
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 shader？
+回答：shader 是运行在 GPU 上的小程序，常见有顶点着色器和片元着色器。它们决定顶点如何变换以及像素最终显示什么颜色。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/049
+language: zh+en
+kind: synthetic_learning_qa
+问题：如何解释一段函数代码？
+回答：解释函数时先说明它的输入和输出，再说明主要流程、关键分支、循环逻辑和副作用。最后指出它可能依赖的外部状态和潜在边界条件。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/050
+language: zh+en
+kind: synthetic_learning_qa
+问题：如何分析一个类的职责？
+回答：分析类时先看类名、成员变量、构造函数和公开方法。一个好的类通常有清晰职责，内部状态和方法围绕同一个抽象服务。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/051
+language: zh+en
+kind: synthetic_learning_qa
+问题：代码报错时应该先看什么？
+回答：先看完整错误信息和堆栈位置，再定位是哪一行触发。不要只看最后一句报错，还要看异常类型、调用链和输入数据。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/052
+language: zh+en
+kind: synthetic_learning_qa
+问题：如何判断 bug 是数据问题还是代码问题？
+回答：可以先构造一个最小输入样例。如果最小样例也失败，通常是代码逻辑问题；如果只在特定数据上失败，就要检查数据格式、范围和缺失值。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/053
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么要写单元测试？
+回答：单元测试可以固定函数或模块的预期行为，防止后续改动破坏已有逻辑。对训练项目来说，测试能快速发现 tokenizer、dataset、model 和 checkpoint 的问题。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/054
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 TDD？
+回答：TDD 是测试驱动开发，先写失败测试，再写最少代码让测试通过，最后重构。它能让需求更清楚，也能减少回归问题。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/055
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是数据清洗？
+回答：数据清洗是删除或修正低质量、重复、乱码、无关和格式错误的数据。语言模型训练中，数据清洗往往比盲目增加训练步数更重要。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/056
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么训练数据要避免乱码？
+回答：乱码会让模型学习错误字符分布，导致生成时也输出乱码或奇怪符号。训练前应确保文件编码统一为 UTF-8，并过滤明显损坏的文本。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/057
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么问答样本需要多个说法？
+回答：同一个概念应该用不同问法覆盖，例如“什么是 AI”“AI 是什么”“请问人工智能是什么意思”。这样模型更容易泛化到用户自然输入。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/058
+language: zh+en
+kind: synthetic_learning_qa
+问题：AI 是什么？
+回答：AI 是人工智能，它让计算机通过算法和模型完成类似人类智能的任务，例如识别图片、理解文本、生成代码和回答问题。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/059
+language: zh+en
+kind: synthetic_learning_qa
+问题：人工智能是什么意思？
+回答：人工智能是研究如何让机器表现出智能行为的技术领域。它包括机器学习、深度学习、自然语言处理、计算机视觉和强化学习等方向。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/060
+language: zh+en
+kind: synthetic_learning_qa
+问题：你懂我的意思吗？
+回答：我理解你的意思。你是在确认模型是否能按中文问答的方式理解问题并给出解释，而不是继续生成无关代码或格式片段。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/061
+language: zh+en
+kind: synthetic_learning_qa
+问题：你为什么回答得不对？
+回答：可能原因是模型训练数据不足、中文问答比例太低、模型规模太小或采样参数太随机。需要补充高质量问答数据并重新训练。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/062
+language: zh+en
+kind: synthetic_learning_qa
+问题：怎么回事，模型为什么这么差？
+回答：当前是从零训练的小模型，能力主要取决于数据质量、数据量、tokenizer 和训练步数。如果训练数据被源码主导，它就容易生成代码而不是中文解释。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/063
+language: zh+en
+kind: synthetic_learning_qa
+问题：如果模型答非所问，应该怎么改？
+回答：先增加目标任务格式的数据，例如中文问答、代码解释和错误诊断；再降低无关源码比例；最后重新生成 tokenizer 和 tokenized 数据后继续训练。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/064
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么要重新生成 tokenized 数据？
+回答：processed 文本改变后，原来的 train_ids.pt 仍然对应旧数据。必须重新运行 tokenization，把新的训练文本转换成新的 token id 序列。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/065
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么新增字符后要重建 tokenizer？
+回答：字符级 tokenizer 的词表来自 corpus。如果新语料里有旧词表没有的汉字，这些字会被编码成 <unk>，模型就无法真正学习这些字符。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/066
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么重建 tokenizer 后旧 checkpoint 不能继续训练？
+回答：重建 tokenizer 可能改变 vocab_size，模型的 embedding 和 lm_head 维度也会变化。旧 checkpoint 的权重形状不匹配，因此通常要从零重新训练。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/067
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 logits 到 token 的采样？
+回答：模型先输出每个候选 token 的 logits，softmax 后得到概率分布。推理时可以选择概率最高的 token，也可以按概率随机采样生成更多样的文本。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/068
+language: zh+en
+kind: synthetic_learning_qa
+问题：temperature 设置为 0 是什么意思？
+回答：temperature 为 0 时通常使用贪心解码，每一步选择 logits 最大的 token。这样输出更稳定，但也可能更容易重复或缺少多样性。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/069
+language: zh+en
+kind: synthetic_learning_qa
+问题：推理时为什么只取最后一个位置的 logits？
+回答：自回归生成每次只需要预测下一个 token。模型虽然会为上下文中每个位置都输出 logits，但生成新 token 时只使用最后一个位置的预测结果。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/070
+language: zh+en
+kind: synthetic_learning_qa
+问题：模型生成错一个 token 后会发生什么？
+回答：生成出的 token 会被追加到上下文里，后续预测会基于这个新上下文继续生成。因此自回归模型的错误可能累积，训练质量和采样策略都很重要。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/071
+language: zh+en
+kind: synthetic_learning_qa
+问题：如何让小模型更像问答助手？
+回答：需要让训练数据中问答格式占主要比例，并保持问题多样、回答清晰、风格稳定。原始源码可以保留少量，但不应该压过中文解释样本。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/072
+language: zh+en
+kind: synthetic_learning_qa
+问题：代码知识和问答能力如何平衡？
+回答：可以少量加入源码，让模型接触代码符号和结构；同时大量加入代码解释、概念问答和调试问答，让模型学习用中文谈论代码，而不是只续写代码。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/073
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是函数的副作用？
+回答：副作用是函数除了返回值以外对外部状态造成的影响，例如修改全局变量、写文件、打印日志、发送网络请求或改变对象成员。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/074
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是纯函数？
+回答：纯函数在相同输入下总是返回相同输出，并且没有副作用。纯函数更容易测试、缓存和推理。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/075
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是递归？
+回答：递归是函数直接或间接调用自身的编程方式。递归需要明确终止条件，否则会无限调用直到栈溢出。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/076
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是时间复杂度？
+回答：时间复杂度描述算法运行时间随输入规模增长的趋势。常见表示有 O(1)、O(log n)、O(n)、O(n log n) 和 O(n^2)。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/077
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是哈希表？
+回答：哈希表通过哈希函数把 key 映射到存储位置，通常能以接近 O(1) 的时间完成插入、查找和删除。unordered_map 就是 C++ 中常见的哈希表容器。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/078
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是栈和队列？
+回答：栈是后进先出的数据结构，队列是先进先出的数据结构。它们常用于表达函数调用、撤销操作、任务调度和搜索过程。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/079
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是二叉树？
+回答：二叉树是一种树形数据结构，每个节点最多有两个子节点。它常用于搜索、排序、表达式解析和层级结构建模。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/080
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是动态规划？
+回答：动态规划适合解决具有重叠子问题和最优子结构的问题。它通过保存子问题结果避免重复计算，常见写法包括递推表和记忆化搜索。
+<|qa_end|>
+

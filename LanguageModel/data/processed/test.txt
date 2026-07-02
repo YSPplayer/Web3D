@@ -1,632 +1,72 @@
 <|qa_start|>
-source: synthetic_zh_qa/032
+source: synthetic_zh_qa/052
 language: zh+en
 kind: synthetic_learning_qa
-问题：AdamW 和 SGD 有什么区别？
-回答：SGD 按梯度方向直接更新参数，简单但调参更敏感。AdamW 会使用一阶和二阶动量估计，并把 weight decay 解耦，通常更适合训练 Transformer。
+问题：训练小语言模型最重要的调试顺序是什么？
+回答：先确认数据能读，再确认 tokenizer encode/decode，再确认 x/y 右移，再确认 bigram 能训练，最后再上 Tiny GPT。不要一开始就堆大模型。
 <|qa_end|>
 
 <|file_start|>
-source: web3d/native/src/Neural/featuretosequence.h
-language: cpp-header
+source: web3d/vite.config.ts
+language: typescript
 kind: source_or_document
 <|file_content|>
-#pragma once
-#include "layer.h"
-namespace DeepLr::Neural {
-	class FeatureToSequence : public Layer {
-	public:
-		FeatureToSequence();
-		Tensor3D Forward(const Tensor3D& input) override;
-		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
-		void Update(float lr, int32_t batchSize) override {};
-	};
-}
-<|file_end|>
+import vue from "@vitejs/plugin-vue";
+import { fileURLToPath, URL } from "node:url";
+import { defineConfig } from "vite";
 
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/perfutil.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-// structs
-
-
-// functions
-void DAPI PerfInitialize(
-    );
-void DAPI PerfClickTime(
-    __out_opt LARGE_INTEGER* pliElapsed
-    );
-double DAPI PerfConvertToSeconds(
-    __in const LARGE_INTEGER* pli
-    );
-
-#ifdef __cplusplus
-}
-#endif
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+  server: {
+    port: 5173,
+  },
+});
 <|file_end|>
 
 <|qa_start|>
-source: synthetic_zh_qa/001
+source: synthetic_programming_zh_qa/033
 language: zh+en
 kind: synthetic_learning_qa
-问题：什么是语言模型的 next-token prediction？
-回答：next-token prediction 是让模型根据前面的 token 预测下一个 token 的训练任务。GPT 类模型并不是直接学习问题和答案的表格，而是在大量文本中反复学习上下文到下一个 token 概率分布的映射。
+问题：Python 中 list 和 tuple 有什么区别？
+回答：list 是可变序列，可以增删改元素；tuple 是不可变序列，创建后不能修改。tuple 常用于表达固定结构的数据。
 <|qa_end|>
 
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/buffutil.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-// macro definitions
-
-#define ReleaseBuffer ReleaseMem
-#define ReleaseNullBuffer ReleaseNullMem
-#define BuffFree MemFree
-
-
-// function declarations
-
-HRESULT BuffReadNumber(
-    __in_bcount(cbBuffer) const BYTE* pbBuffer,
-    __in SIZE_T cbBuffer,
-    __inout SIZE_T* piBuffer,
-    __out DWORD* pdw
-    );
-HRESULT BuffReadNumber64(
-    __in_bcount(cbBuffer) const BYTE* pbBuffer,
-    __in SIZE_T cbBuffer,
-    __inout SIZE_T* piBuffer,
-    __out DWORD64* pdw64
-    );
-HRESULT BuffReadString(
-    __in_bcount(cbBuffer) const BYTE* pbBuffer,
-    __in SIZE_T cbBuffer,
-    __inout SIZE_T* piBuffer,
-    __deref_out_z LPWSTR* pscz
-    );
-HRESULT BuffReadStringAnsi(
-    __in_bcount(cbBuffer) const BYTE* pbBuffer,
-    __in SIZE_T cbBuffer,
-    __inout SIZE_T* piBuffer,
-    __deref_out_z LPSTR* pscz
-    );
-HRESULT BuffReadStream(
-    __in_bcount(cbBuffer) const BYTE* pbBuffer,
-    __in SIZE_T cbBuffer,
-    __inout SIZE_T* piBuffer,
-    __deref_out_bcount(*pcbStream) BYTE** ppbStream,
-    __out SIZE_T* pcbStream
-    );
-
-HRESULT BuffWriteNumber(
-    __deref_out_bcount(*piBuffer) BYTE** ppbBuffer,
-    __inout SIZE_T* piBuffer,
-    __in DWORD dw
-    );
-HRESULT BuffWriteNumber64(
-    __deref_out_bcount(*piBuffer) BYTE** ppbBuffer,
-    __inout SIZE_T* piBuffer,
-    __in DWORD64 dw64
-    );
-HRESULT BuffWriteString(
-    __deref_out_bcount(*piBuffer) BYTE** ppbBuffer,
-    __inout SIZE_T* piBuffer,
-    __in_z_opt LPCWSTR scz
-    );
-HRESULT BuffWriteStringAnsi(
-    __deref_out_bcount(*piBuffer) BYTE** ppbBuffer,
-    __inout SIZE_T* piBuffer,
-    __in_z_opt LPCSTR scz
-    );
-HRESULT BuffWriteStream(
-    __deref_out_bcount(*piBuffer) BYTE** ppbBuffer,
-    __inout SIZE_T* piBuffer,
-    __in_bcount(cbStream) const BYTE* pbStream,
-    __in SIZE_T cbStream
-    );
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/Release/Work/Node/viewserver/filament/src/webapp/runtime-assets/filament/package.json
-language: json
-kind: source_or_document
-<|file_content|>
-{
-  "name": "filament",
-  "version": "1.67.0",
-  "description": "Real-time physically based rendering engine",
-  "main": "filament.js",
-  "module": "filament.js",
-  "jsdelivr": "filament.js",
-  "types": "filament.d.ts",
-  "unpkg": "filament.js",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/google/filament.git"
-  },
-  "dependencies": {
-    "gl-matrix": "^3.2.1"
-  },
-  "files": [
-    "filament.d.ts",
-    "filament.js",
-    "filament.wasm",
-    "filament-viewer.js",
-    "README.md"
-  ],
-  "keywords": [
-    "3d",
-    "android",
-    "wasm",
-    "webgl"
-  ],
-  "author": "Google",
-  "license": "Apache-2.0"
-}
-<|file_end|>
-
-<|file_start|>
-source: web3d/native/src/Neural/conv2d.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-#include "layer.h"
-#include "../data.h"
-#include <vector>
-namespace DeepLr::Neural {
-	class Conv2D :public Layer {
-	public:
-		Conv2D();
-		void SetShape(const TensorShape& lastshape, const TensorShape& shape) override;
-		Tensor3D Forward(const Tensor3D& input) override;
-		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target)override;
-		void Update(float lr, int32_t batchSize) override;
-		void ClearGrad() override;
-		void AccumulateGrad(const Layer& other) override;
-		void SetKernels(const std::vector<Tensor3D>& kernels);
-		inline std::vector<Tensor3D> GetKernels() {
-			return kernels;
-		}
-		inline Tensor3D GetBias() {
-			return bias;
-		}
-		void SetBias(const Tensor3D& bias);
-	private:
-		std::vector<Tensor3D> kernels;//卷积核
-		std::vector<Tensor3D> dkernels;//反卷积核
-		//std::vector<Kernel> kernels;//卷积核
-		Tensor3D oldx;
-		Tensor3D bias; //超参偏置B
-		Tensor3D dbias;//超参偏置B 偏导后
-	};
-}
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/docs/api/api-contract.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# API契约（前端封装阶段）
-
-> 当前为前端 Mock 契约，后续可无缝替换为真实后端。
-
-## 统一返回结构
-```ts
-interface ApiResult<T> {
-  code: number
-  message: string
-  data: T
-  requestId: string
-}
-```
-
-## 接口列表
-
-### 首页
-- `GET /api/dashboard/summary`
-- 返回：样本总数、采集任务数、比对任务数、交换记录数。
-
-### 采集
-- `POST /api/capture/tasks`
-- 入参：`sampleId`
-- 返回：`CaptureTask`
-
-- `GET /api/capture/tasks/:taskId`
-- 返回：单个采集任务状态
-
-- `GET /api/capture/tasks`
-- 返回：采集任务列表
-
-### 录入
-- `POST /api/entry/samples`
-- 入参：`SampleEntryInput`
-- 返回：`SampleEntry`
-
-- `GET /api/entry/samples`
-- 返回：样本列表
-
-### 比对
-- `POST /api/compare/jobs`
-- 入参：`querySampleId`
-- 返回：`CompareJob`
-
-- `GET /api/compare/jobs/:jobId`
-- 返回：单个比对任务状态及结果
-
-- `GET /api/compare/jobs`
-- 返回：比对任务列表
-
-### 信息交换
-- `GET /api/exchange/records`
-- 入参：`keyword/page/perPage`
-- 返回：分页记录
-
-### 信息发布
-- `GET /api/publish/tasks`
-- 入参：`keyword/status/page/perPage`
-- 返回：`PublishQueryResult`
-
-- `POST /api/publish/tasks`
-- 入参：`title/source/category/payloadRef`
-- 返回：`PublishTask`
-
-- `POST /api/publish/tasks/:taskId/send`
-- 返回：`PublishTask`
-
-- `POST /api/publish/tasks/:taskId/retry`
-- 返回：`PublishTask`
-
-### 分类建库
-- `GET /api/library/categories`
-- 返回：`LibraryCategory[]`
-
-- `GET /api/library/records`
-- 入参：`keyword/status/page/perPage`
-- 返回：`LibraryQueryResult`
-
-- `POST /api/library/records`
-- 入参：`LibraryRecordInput`
-- 返回：`LibraryRecord`
-
-### Mock WS
-- `WS /ws/tasks`
-- 事件：`capture`、`compare` 任务状态更新
-
-## 关键类型
-- `CaptureTask`: `id/status/progress/sampleId/createdAt/updatedAt`
-- `CompareJob`: `id/status/progress/querySampleId/topMatches/durationMs/createdAt/updatedAt`
-- `MatchItem`: `sampleId/score/rank/tags/previewUrl`
-- `PublishTask`: `id/title/source/status/category/createdAt/updatedAt/payloadRef`
-- `PublishQueryResult`: `records/total/page/perPage`
-- `LibraryCategory`: `id/name/code`
-- `LibraryRecord`: `id/sampleId/categoryId/categoryName/caseNo/status/createdAt`
-- `LibraryRecordInput`: `sampleId/categoryId/notes`
-- `NavEntry`: `key/label/path/source/phase/legacyPage`
-<|file_end|>
-
-<|file_start|>
-source: web3d/native/src/Neural/bilstm.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-#include <memory>
-#include "layer.h"
-namespace DeepLr::Neural {
-	struct BiLSTMPar {
-		Tensor3D wf;//遗忘门权重
-		Tensor3D bf;//遗忘门偏置
-		Tensor3D wi;//输入门权重
-		Tensor3D bi;//输入门偏置
-		Tensor3D wg;//后选值权重
-		Tensor3D bg;//后选值偏置
-		Tensor3D wo;//输出门权重
-		Tensor3D bo;//输出门偏置
-	};
-	class BiLSTM : public Layer {
-	public:
-		BiLSTM();
-		Tensor3D Forward(const Tensor3D& input) override;
-		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
-		void SetShape(const TensorShape& lastshape, const TensorShape& shape) override;
-		void Update(float lr, int32_t batchSize) override;
-	private:
-		std::shared_ptr<BiLSTMPar> par;
-		std::shared_ptr<BiLSTMPar> rpar;
-		std::shared_ptr<BiLSTMPar> dpar;
-		std::shared_ptr<BiLSTMPar> drpar;
-		Tensor3D oldx;
-		int32_t inputSize;
-		int32_t hiddenSize;
-		void Sigmoid(Tensor3D& input);
-		void Tanh(Tensor3D& input);
-	};
-}
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/balretry.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef enum BALRETRY_TYPE
-{
-    BALRETRY_TYPE_CACHE,
-    BALRETRY_TYPE_EXECUTE,
-} BALRETRY_TYPE;
-
-/*******************************************************************
- BalRetryInitialize - initialize the retry count and timeout between
-                      retries (in milliseconds).
-********************************************************************/
-DAPI_(void) BalRetryInitialize(
-    __in DWORD dwMaxRetries,
-    __in DWORD dwTimeout
-    );
-
-/*******************************************************************
- BalRetryUninitialize - call to cleanup any memory allocated during
-                        use of the retry utility.
-********************************************************************/
-DAPI_(void) BalRetryUninitialize();
-
-/*******************************************************************
- BalRetryStartPackage - call when a package begins to be modified. If
-                        the package is being retried, the function will
-                        wait the specified timeout.
-********************************************************************/
-DAPI_(void) BalRetryStartPackage(
-    __in BALRETRY_TYPE type,
-    __in_z_opt LPCWSTR wzPackageId,
-    __in_z_opt LPCWSTR wzPayloadId
-    );
-
-/*******************************************************************
- BalRetryErrorOccured - call when an error occurs for the retry utility
-                        to consider.
-********************************************************************/
-DAPI_(void) BalRetryErrorOccurred(
-    __in_z_opt LPCWSTR wzPackageId,
-    __in DWORD dwError
-    );
-
-/*******************************************************************
- BalRetryEndPackage - returns IDRETRY is a retry is recommended or 
-                      IDNOACTION if a retry is not recommended.
-********************************************************************/
-DAPI_(int) BalRetryEndPackage(
-    __in BALRETRY_TYPE type,
-    __in_z_opt LPCWSTR wzPackageId,
-    __in_z_opt LPCWSTR wzPayloadId,
-    __in HRESULT hrError
-    );
-
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: web3d/native/src/Neural/sample.cpp
-language: cpp
-kind: source_or_document
-<|file_content|>
-#include <filesystem>
-#include "sample.h"
-#include "../log.h"
-namespace DeepLr::Neural {
-	Sample::Sample() {
-		labelText = "";
-		target = std::array<int, 4>();
-	}
-    std::shared_ptr<Sample> Sample::Load(const std::string& path, const std::string& imgValue) {
-        std::shared_ptr<Sample> sample = std::make_shared<Sample>();
-		sample->input = Tensor3D::Load(path);
-		sample->target = ParseLabel(imgValue);
-		sample->labelText = imgValue;
-		return sample;
-	}
-    std::vector<std::string> Sample::GetPngFiles(const std::string& path) {
-        std::vector<std::string> pngFiles;
-        if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
-            return pngFiles;
-        }
-        for (const auto& entry : std::filesystem::directory_iterator(path)) {
-            if (!entry.is_regular_file()) continue;
-            std::string filename = entry.path().filename().string();
-            if (filename.size() < 4) continue;
-            std::string ext = filename.substr(filename.size() - 4);
-            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-            if (ext == ".png") {
-                pngFiles.push_back(entry.path().string()); // 返回完整路径
-            }
-        }
-        return pngFiles;
-    }
-	std::vector<std::shared_ptr<Sample>> Sample::Load(const std::string& path) {
-        std::vector<std::shared_ptr<Sample>> samples;
-        // 检查目录是否存在
-        if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
-            Log::Debug("Directory not found: " + path);
-            return samples;
-        }
-        // 遍历目录中的所有文件
-        for (const auto& entry : std::filesystem::directory_iterator(path)) {
-            if (!entry.is_regular_file()) continue;
-            std::string filepath = entry.path().string();
-            std::string filename = entry.path().filename().string();
-            // 只处理 .png 文件（大小写不敏感）
-            if (filename.size() < 4) continue;
-            std::string ext = filename.substr(filename.size() - 4);
-            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-            if (ext != ".png") continue;
-            // 去掉 .png 后缀，得到 imgValue（如 "0123"）
-            std::string imgValue = filename.substr(0, filename.size() - 4);
-            // 加载样本
-            samples.push_back(Load(filepath, imgValue));
-        }
-        Log::Debug("Loaded " + std::to_string(samples.size()) + " samples from " + path);
-        return samples;
-	}
-    std::vector<std::shared_ptr<Sample>> Sample::Load(const std::vector<std::string>& filepaths) {
-        std::vector<std::shared_ptr<Sample>> samples;
-        for (const auto& filepath : filepaths) {
-            if (!std::filesystem::exists(filepath) || !std::filesystem::is_regular_file(filepath)) {
-                Log::Debug("File not found or not regular file: " + filepath);
-                continue;  // 跳过无效文件，继续处理下一个
-            }
-            // 获取文件名（不含路径），用于提取 imgValue
-            std::string filename = std::filesystem::path(filepath).filename().string();
-            // 检查扩展名是否为 .png（大小写不敏感）
-            if (filename.size() < 4) {
-                Log::Debug("Filename too short, skipping: " + filename);
-                continue;
-            }
-            std::string ext = filename.substr(filename.size() - 4);
-            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-            if (ext != ".png") {
-                Log::Debug("Not a PNG file, skipping: " + filename);
-                continue;
-            }
-            // 去掉 .png 后缀，得到 imgValue（如 "0123"）
-            std::string imgValue = filename.substr(0, filename.size() - 4);
-            // 加载样本
-            auto sample = Load(filepath, imgValue);  // 假设有 Load(filepath, imgValue) 方法
-            if (sample) {
-                samples.push_back(sample);
-            }
-        }
-        Log::Debug("Loaded " + std::to_string(samples.size()) + " samples from " +
-            std::to_string(filepaths.size()) + " provided file paths");
-        return samples;
-    }
-	std::array<int32_t, 4> Sample::ParseLabel(const std::string& imgValue) {
-		if (imgValue.size() != 4) {
-			Log::Debug("Expected 4-digit label: " + imgValue);
-			return std::array<int32_t, 4>();
-		}
-		return {
-			imgValue[0] - '0',
-			imgValue[1] - '0',
-			imgValue[2] - '0',
-			imgValue[3] - '0'
-		};
-	}
-}
-<|file_end|>
-
-<|file_start|>
-source: web3d/native/src/Neural/flatten.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-#include "layer.h"
-namespace DeepLr::Neural {
-	class Flatten : public Layer {
-	public:
-		Flatten();
-		Tensor3D Forward(const Tensor3D& input) override;
-		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
-		void Update(float lr, int32_t batchSize) override {};
-	private:
-		int32_t oldc;
-		int32_t oldh;
-		int32_t oldw;
-	};
-}
-<|file_end|>
-
-<|file_start|>
-source: web3d/backend/src/main/java/com/deeplr/mapper/GrayImageMapper.java
-language: java
-kind: source_or_document
-<|file_content|>
-package com.deeplr.mapper;
-
-import java.util.List;
-
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-
-import com.deeplr.entity.GrayImage;
-
-@Mapper
-public interface GrayImageMapper {
-
-    @Insert("INSERT INTO gray_image (img_key, img_path, img_value, width, height, interference_strength, img_status, create_time) "
-            + "VALUES (#{imgKey}, #{imgPath}, #{imgValue}, #{width}, #{height}, #{interferenceStrength}, #{imgStatus}, #{createTime})")
-    int insert(GrayImage grayImage);
-    @Select("SELECT * FROM gray_image LIMIT #{offset}, #{limit}")
-    List<GrayImage> selectAllByPage(@Param("offset") int offset, @Param("limit") int limit);
-    @Select("SELECT COUNT(*) FROM gray_image")
-    int selectAllCount();
-    int insertBatch(@Param("list") List<GrayImage> list);
-}
-<|file_end|>
-
-<|file_start|>
-source: web3d/backend/src/test/java/com/deeplr/DeeplrApplicationTests.java
-language: java
-kind: source_or_document
-<|file_content|>
-package com.deeplr;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-
-@SpringBootTest
-class DeeplrApplicationTests {
-
-  @Test
-  void contextLoads() {
-  }
-}
-<|file_end|>
-
 <|qa_start|>
-source: synthetic_zh_qa/051
+source: synthetic_programming_zh_qa/012
 language: zh+en
 kind: synthetic_learning_qa
-问题：为什么生成结果会重复？
-回答：小模型和小语料容易学到重复模式，采样参数也会影响重复程度。可以调整 temperature、top-k、top-p，或增加更丰富的数据和训练策略。
+问题：什么是过拟合？
+回答：过拟合是指模型在训练集上表现很好，但在验证集或新数据上表现变差。语言模型里常见现象是 train_loss 继续下降，而 valid_loss 不再下降甚至上升。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/042
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么模型会模仿训练语料风格？
+回答：模型通过 next-token prediction 学习语料中的统计规律，包括词语搭配、代码格式、注释风格、中文解释方式和文件结构，因此生成时会表现出类似风格。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/021
+language: zh+en
+kind: synthetic_learning_qa
+问题：为什么不要把 node_modules 和构建产物放进训练集？
+回答：这些文件重复、巨大、噪声高，很多内容对学习语言模型原理没有帮助。第一阶段更需要干净且能解释的数据，而不是大量无意义 token。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/016
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是反向传播？
+回答：反向传播是根据 loss 对每个参数求梯度的过程。优化器利用这些梯度更新参数，使下一次预测更接近训练目标。
 <|qa_end|>
 
 <|file_start|>
@@ -755,6 +195,193 @@ namespace DeepLr::Web {
 <|file_end|>
 
 <|qa_start|>
+source: synthetic_programming_zh_qa/008
+language: zh+en
+kind: synthetic_learning_qa
+问题：模型输出乱码或者不连贯怎么办？
+回答：先检查 tokenizer 是否覆盖了训练语料中的字符，再检查中文问答数据比例是否足够。小模型还需要降低 temperature、增加高质量问答样本，并继续训练到 valid_loss 稳定下降。
+<|qa_end|>
+
+<|file_start|>
+source: web3d/native/src/Neural/heightpool.h
+language: cpp-header
+kind: source_or_document
+<|file_content|>
+#pragma once
+#include <vector>
+#include "layer.h"
+namespace DeepLr::Neural {
+	class HeightPool : public Layer {
+	public:
+		HeightPool();
+		Tensor3D Forward(const Tensor3D& input) override;
+		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
+		void SetShape(const TensorShape& lastshape, const TensorShape& shape) override;
+		void Update(float lr, int32_t batchSize) override {};
+	private:
+		std::vector<std::vector<int32_t>> maxindex;
+	};
+}
+<|file_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/079
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是二叉树？
+回答：二叉树是一种树形数据结构，每个节点最多有两个子节点。它常用于搜索、排序、表达式解析和层级结构建模。
+<|qa_end|>
+
+<|file_start|>
+source: web3d/src/api/grayImageApi.ts
+language: typescript
+kind: source_or_document
+<|file_content|>
+import { request } from './request'
+
+export const grayImageApi = {
+  async generateGrayDatas(count: number): Promise<any> {
+    return await request.post('/grayImage/generateGrayDatas', { count })
+  },
+  async getGrayDatasByPage(params:any): Promise<any> {
+    return await request.get('/grayImage/getGrayDatasByPage', { params })
+  },
+  async getGrayDataTotalCount(): Promise<any> {
+    return await request.get('/grayImage/getGrayDataTotalCount')
+  }
+}
+<|file_end|>
+
+<|file_start|>
+source: web3d/src/module/grayImage.vue
+language: vue
+kind: source_or_document
+<|file_content|>
+<template>
+  <div class="right_container colflex">
+    <el-button class="sample-btn" type="primary" @click="openSampleCountDialog">生成样本</el-button>
+    <SampleCountDialog ref="sampleCountDialogRef" @emitSetTableData="setTableData" />
+    <div class="train_container colflex">
+      <el-table
+        :data="tableData"
+        border
+        class="gray-image-table"
+        style="width: 100%"
+        :cell-style="{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }"
+        :header-cell-style="{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }"
+      >
+        <el-table-column prop="id" label="序号" width="auto" align="center" />
+        <el-table-column prop="image" label="图像" width="180" align="center">
+          <template #default="{ row }">
+            <div class="image-cell">
+              <img :src="row.image" class="table-image" />
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="value" label="数值" width="auto" align="center" />
+        <el-table-column prop="createdAt" label="创建日期" width="180" align="center" />
+      </el-table>
+      <div class="rowflex flexcenter" style="margin-top: 10px;">
+    <el-pagination
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :total="total"
+      layout="prev, pager, next"
+      background
+      @current-change="handleCurrentChange"
+    />
+    <label style="display: block; text-align: center; margin-left: 10px; " >页</label>
+    </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref,onMounted } from 'vue'
+import SampleCountDialog from '@/component/samplecountdialog.vue'
+import { grayImageApi } from '@/api/grayImageApi'
+const currentPage = ref(1)
+const pageSize = ref(6)
+const total = ref(0)
+const tableData = ref<any[]>([])
+const sampleCountDialogRef = ref()
+//更新表格数据
+const updateTableData = async () => {
+  const params = {
+    pageNum: currentPage.value,
+    pageSize: pageSize.value
+  }
+  const result = await grayImageApi.getGrayDatasByPage(params)
+  setTableData(result.data)
+}
+onMounted(async ()=>{
+  //获取数据库存放的样本总量
+  const result = await grayImageApi.getGrayDataTotalCount()
+  total.value = result.data
+  await updateTableData()
+})
+const openSampleCountDialog = () => {
+  sampleCountDialogRef.value.handleOpen()
+}
+const handleCurrentChange = async (page: number) => {
+  currentPage.value = page
+  await updateTableData()
+}
+const setTableData = (data: any) => {
+  tableData.value = data.map((edata: any, index: number) => ({
+    id: index + 1,
+    image: edata.imgPath,
+    value: edata.imgValue,
+    createdAt: edata.createTime ? new Date(edata.createTime).toLocaleString() : ''
+  }))
+}
+</script>
+
+<style scoped>
+.sample-btn {
+  align-self: flex-start;
+  width: auto;
+  margin: 10px;
+}
+
+.gray-image-table :deep(.cell) {
+  white-space: nowrap;
+}
+
+.image-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+}
+
+.table-image {
+  display: block;
+  width: 160px;
+  height: 64px;
+  object-fit: fill;
+  border-radius: 6px;
+}
+</style>
+<|file_end|>
+
+<|qa_start|>
+source: synthetic_programming_zh_qa/063
+language: zh+en
+kind: synthetic_learning_qa
+问题：如果模型答非所问，应该怎么改？
+回答：先增加目标任务格式的数据，例如中文问答、代码解释和错误诊断；再降低无关源码比例；最后重新生成 tokenizer 和 tokenized 数据后继续训练。
+<|qa_end|>
+
+<|qa_start|>
+source: synthetic_zh_qa/003
+language: zh+en
+kind: synthetic_learning_qa
+问题：什么是 tokenizer？
+回答：tokenizer 是把原始文本转换成 token id 的组件。模型不能直接处理字符串，它需要整数 id。tokenizer 负责 encode 和 decode，也决定了词表大小、文本长度和训练效率。
+<|qa_end|>
+
+<|qa_start|>
 source: synthetic_zh_qa/004
 language: zh+en
 kind: synthetic_learning_qa
@@ -762,1915 +389,52 @@ kind: synthetic_learning_qa
 回答：字符级 tokenizer 非常简单透明，适合学习原理；缺点是序列很长，训练效率低，也不容易表达常见代码片段和英文单词。第一阶段可以先用它验证流程，再换成 BPE。
 <|qa_end|>
 
+<|file_start|>
+source: web3d/native/src/Neural/sequencelinear.h
+language: cpp-header
+kind: source_or_document
+<|file_content|>
+#pragma once
+#include "layer.h"
+namespace DeepLr::Neural {
+	class SequenceLinear : public Layer {
+	public:
+		SequenceLinear();
+		void SetShape(const TensorShape& lastshape, const TensorShape& shape) override;
+		Tensor3D Forward(const Tensor3D& input) override;
+		Tensor3D Backward(const Tensor3D& output, const std::array<int32_t, 4>& target) override;
+		void Update(float lr, int32_t batchSize) override;
+		void ClearGrad() override;
+		void AccumulateGrad(const Layer& other) override;
+		Tensor3D GetW() const;
+		Tensor3D GetB() const;
+		void SetW(const Tensor3D& w);
+		void SetB(const Tensor3D& b);
+	private:
+		Tensor3D w;
+		Tensor3D b;
+		Tensor3D dw;
+		Tensor3D db;
+		Tensor3D oldx;
+		int32_t inputSize;
+		int32_t outputSize;
+	};
+}
+<|file_end|>
+
 <|qa_start|>
-source: synthetic_zh_qa/030
+source: synthetic_programming_zh_qa/025
 language: zh+en
 kind: synthetic_learning_qa
-问题：什么是 block_size？
-回答：block_size 是模型一次能看到的上下文长度。block_size 越大，模型能利用的上下文越长，但 attention 计算和显存占用也会明显增加。
+问题：C++ 中 vector 和 array 有什么区别？
+回答：std::vector 是动态数组，大小可以运行时改变，通常在堆上管理内存。std::array 是固定大小数组，大小在编译期确定，接口更接近容器但不能动态扩容。
 <|qa_end|>
 
-<|file_start|>
-source: projectyjt/inference/triton/model-repository/ballismind-bullet/1/bundle/README.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# ballismind-bullet Deploy Bundle
-
-This bundle is the source deploy artifact for `ballismind-bullet@v3.8.1`.
-
-## Contents
-
-- `metadata.json`
-- `checkpoint.pt`
-- `deploy_lib.py`
-- `requirements-deploy.txt`
-- `config_snapshot/`
-- `vendor/`
-
-## Deployment target
-
-This bundle is aligned to the current V3 bullet deploy chain:
-
-- config: `bullet_convnext_bigimg_aspectfit`
-- crop size: `8192x2048`
-- tile size: `8192x2048`
-- tile stride: `8192x2048`
-- tile grid: `2x3`
-- tile override: `4096x1024`
-- output: normalized `global_embed[512]`
-
-## Checkpoint rule
-
-The loader expects this exact file:
-
-```text
-bundle/checkpoint.pt
-```
-
-This model now uses its own V3 bullet checkpoint.
-Current runtime has already been cut over to this bundle.
-<|file_end|>
-
-<|file_start|>
-source: web3d/native/src/Neural/loss.cpp
-language: cpp
-kind: source_or_document
-<|file_content|>
-#include "loss.h"
-#include <cmath>
-namespace DeepLr::Neural {
-    float Loss::Forward(const Tensor3D& input, const std::array<int32_t, 4>& target) {
-        float sum = 0.0;
-        float eps = 1e-7;
-        for (int32_t i = 0; i < target.size(); ++i) {
-            float value = input.Get(0, i, target[i]);
-            sum += (-log(std::max(value, eps)));
-        }
-        return sum / (float)target.size();
-    }
-}
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-testupload/CMakeFiles/InstallScripts.json
-language: json
-kind: source_or_document
-<|file_content|>
-{
-	"InstallScripts" : 
-	[
-		"D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-testupload/cmake_install.cmake"
-	],
-	"Parallel" : false
-}
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/docs/guides/macos-standalone-deployment.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# macOS 独立部署说明
-
-本文档描述当前仓库在 Apple Silicon/macOS 上的可行独立部署路径。
-
-## 范围
-
-这条路径覆盖：
-
-- `apps/frontend`
-- `services/yijianvisionend`
-- MySQL / Redis / MinIO / Milvus 这类本地基础依赖
-
-这条路径明确不覆盖：
-
-- `engines/hw-control`
-- 本机 Triton / NVIDIA GPU 推理部署
-
-也就是说，当前 macOS 方案是“前后端加基础依赖可本机运行”，不是“整套实验室硬件与 GPU 推理链路都迁到 Mac”。
-
-## 前提
-
-- macOS Apple Silicon
-- Docker Desktop
-- Node.js 18+
-- Maven 3.8+
-- JDK 8（推荐 Amazon Corretto 8 arm64）
-- 如需导出 PDF，安装 LibreOffice
-
-## 1. 启动基础依赖
-
-```bash
-./scripts/dev-up.sh deps macos-standalone
-```
-
-这会拉起：
-
-- MySQL
-- Redis
-- etcd
-- MinIO
-- Milvus standalone
-- Attu
-
-不会拉起：
-
-- Triton
-- 前端容器
-- 后端容器
-- 硬件控制相关工程
-
-## 2. 启动后端
-
-```bash
-./scripts/macos-standalone-backend.sh
-```
-
-脚本会自动：
-
-- 选择 JDK 8
-- 将后端指向 `127.0.0.1`
-- 将日志目录设置到 `.runtime/macos-standalone/logs`
-- 将上传目录设置到 `.runtime/macos-standalone/uploadPath`
-- 启用 Milvus，并连接本机 compose 暴露的 `127.0.0.1:19530`
-
-注意：
-
-- 当前脚本不部署 Triton
-- 依赖硬件或 GPU 推理的功能不在本机独立部署保障范围内
-- 如果 `9090` 已被其他进程占用，可改用 `BACKEND_PORT=9190 ./scripts/macos-standalone-backend.sh`
-
-## 3. 启动前端
-
-```bash
-cd apps/frontend
-npm ci
-npm run dev
-```
-
-如果后端改跑 `9190`，前端开发态也要同步覆盖 API 地址：
-
-```bash
-cd apps/frontend
-VITE_API_URL=http://127.0.0.1:9190/ npm run dev
-```
-
-默认访问地址：
-
-```text
-http://127.0.0.1:5173/#/login
-```
-
-前端开发环境默认直连：
-
-```text
-http://127.0.0.1:9090/
-```
-
-本机 Milvus 健康检查地址：
-
-```text
-http://127.0.0.1:9091/healthz
-```
-
-业务流 WebSocket 默认运行时配置已改为：
-
-```text
-ws://127.0.0.1:9090/ws
-```
-
-但在当前 macOS standalone 预设里，前端默认不会主动连接这条硬件 WebSocket：
-
-- `WEBSOCKET_ENABLED=false`
-- `engines/hw-control` 不在部署范围内
-
-如果需要生成不依赖 `/api/` 反代的构建产物：
-
-```bash
-cd apps/frontend
-npm run build:standalone
-```
-
-如果后端改跑 `9190`，构建时可以直接复用同一个端口变量：
-
-```bash
-cd apps/frontend
-BACKEND_PORT=9190 npm run build:standalone
-```
-
-## 4. 验证
-
-```bash
-./scripts/dev-smoke.sh macos-standalone
-```
-
-如果后端改跑 `9190`，验证命令也要同步覆盖：
-
-```bash
-BACKEND_URL=http://127.0.0.1:9190/ ./scripts/dev-smoke.sh macos-standalone
-```
-
-这个预设会：
-
-- 检查前端根路径
-- 检查后端直连接口
-- 检查 MinIO 健康状态
-- 检查 Milvus 健康状态
-- 跳过前端 `/api/` 反代检查
-- 跳过 Triton 健康检查
-
-## 5. 已知限制
-
-- `engines/hw-control` 不在当前部署范围内
-- Triton 仍然是 GPU / NVIDIA 导向，不适合作为当前 Mac 本机依赖
-- 需要 PDF 导出时，macOS 上必须能探测到 LibreOffice 的 `soffice`
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/xmlutil.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument   = {0x2933BF90, 0x7B36, 0x11d2, {0xB2, 0x0E, 0x00, 0xC0, 0x4F, 0x98, 0x3E, 0x60}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument20  = {0xF6D90F11, 0x9C73, 0x11D3, {0xB3, 0x2E, 0x00, 0xC0, 0x4F, 0x99, 0x0B, 0xB4}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument26 = {0xf5078f1b, 0xc551, 0x11d3, {0x89, 0xb9, 0x00, 0x00, 0xf8, 0x1f, 0xe2, 0x21}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument30 = {0xf5078f32, 0xc551, 0x11d3, {0x89, 0xb9, 0x00, 0x00, 0xf8, 0x1f, 0xe2, 0x21}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument40 = {0x88d969c0, 0xf192, 0x11d4, {0xa6, 0x5f, 0x00, 0x40, 0x96, 0x32, 0x51, 0xe5}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument50 = {0x88d969e5, 0xf192, 0x11d4, {0xa6, 0x5f, 0x00, 0x40, 0x96, 0x32, 0x51, 0xe5}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_DOMDocument60 = {0x88d96a05, 0xf192, 0x11d4, {0xa6, 0x5f, 0x00, 0x40, 0x96, 0x32, 0x51, 0xe5}};
-extern __declspec(selectany) const CLSID XmlUtil_CLSID_XMLSchemaCache = {0x88d969c2, 0xf192, 0x11d4, {0xa6, 0x5f, 0x00, 0x40, 0x96, 0x32, 0x51, 0xe5}};
-
-extern __declspec(selectany) const IID XmlUtil_IID_IXMLDOMDocument =  {0x2933BF81, 0x7B36, 0x11D2, {0xB2, 0x0E, 0x00, 0xC0, 0x4F, 0x98, 0x3E, 0x60}};
-extern __declspec(selectany) const IID XmlUtil_IID_IXMLDOMDocument2 = {0x2933BF95, 0x7B36, 0x11D2, {0xB2, 0x0E, 0x00, 0xC0, 0x4F, 0x98, 0x3E, 0x60}};
-extern __declspec(selectany) const IID XmlUtil_IID_IXMLDOMSchemaCollection = {0x373984C8, 0xB845, 0x449B, {0x91, 0xE7, 0x45, 0xAC, 0x83, 0x03, 0x6A, 0xDE}};
-
-typedef enum XML_LOAD_ATTRIBUTE
-{
-    XML_LOAD_PRESERVE_WHITESPACE = 1,
-} XML_LOAD_ATTRIBUTE;
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-HRESULT DAPI XmlInitialize();
-void DAPI XmlUninitialize();
-
-HRESULT DAPI XmlCreateElement(
-    __in IXMLDOMDocument *pixdDocument,
-    __in_z LPCWSTR wzElementName,
-    __out IXMLDOMElement **ppixnElement
-    );
-HRESULT DAPI XmlCreateDocument(
-    __in_opt LPCWSTR pwzElementName, 
-    __out IXMLDOMDocument** ppixdDocument,
-    __out_opt IXMLDOMElement** ppixeRootElement = NULL
-    );
-HRESULT DAPI XmlLoadDocument(
-    __in_z LPCWSTR wzDocument,
-    __out IXMLDOMDocument** ppixdDocument
-    );
-HRESULT DAPI XmlLoadDocumentEx(
-    __in_z LPCWSTR wzDocument,
-    __in DWORD dwAttributes,
-    __out IXMLDOMDocument** ppixdDocument
-    );
-HRESULT DAPI XmlLoadDocumentFromFile(
-    __in_z LPCWSTR wzPath,
-    __out IXMLDOMDocument** ppixdDocument
-    );
-HRESULT DAPI XmlLoadDocumentFromBuffer(
-    __in_bcount(cbSource) const BYTE* pbSource,
-    __in DWORD cbSource,
-    __out IXMLDOMDocument** ppixdDocument
-    );
-HRESULT DAPI XmlLoadDocumentFromFileEx(
-    __in_z LPCWSTR wzPath,
-    __in DWORD dwAttributes,
-    __out IXMLDOMDocument** ppixdDocument
-    );
-HRESULT DAPI XmlSelectSingleNode(
-    __in IXMLDOMNode* pixnParent,
-    __in_z LPCWSTR wzXPath,
-    __out IXMLDOMNode **ppixnChild
-    );
-HRESULT DAPI XmlSetAttribute(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzAttribute,
-    __in_z LPCWSTR pwzAttributeValue
-    );
-HRESULT DAPI XmlCreateTextNode(
-    __in IXMLDOMDocument *pixdDocument,
-    __in_z LPCWSTR wzText,
-    __out IXMLDOMText **ppixnTextNode
-    );
-HRESULT DAPI XmlGetText(
-    __in IXMLDOMNode* pixnNode,
-    __deref_out_z BSTR* pbstrText
-    );
-HRESULT DAPI XmlGetAttribute(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzAttribute,
-    __deref_out_z BSTR* pbstrAttributeValue
-    );
-HRESULT DAPI XmlGetAttributeEx(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR wzAttribute,
-    __deref_out_z LPWSTR* psczAttributeValue
-    );
-HRESULT DAPI XmlGetYesNoAttribute(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR wzAttribute,
-    __out BOOL* pfYes
-    );
-HRESULT DAPI XmlGetAttributeNumber(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzAttribute,
-    __out DWORD* pdwValue
-    );
-HRESULT DAPI XmlGetAttributeNumberBase(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzAttribute,
-    __in int nBase,
-    __out DWORD* pdwValue
-    );
-HRESULT DAPI XmlGetAttributeLargeNumber(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzAttribute,
-    __out DWORD64* pdw64Value
-    );
-HRESULT DAPI XmlGetNamedItem(
-    __in IXMLDOMNamedNodeMap *pixnmAttributes, 
-    __in_opt LPCWSTR wzName, 
-    __out IXMLDOMNode **ppixnNamedItem
-    );
-HRESULT DAPI XmlSetText(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzText
-    );
-HRESULT DAPI XmlSetTextNumber(
-    __in IXMLDOMNode *pixnNode,
-    __in DWORD dwValue
-    );
-HRESULT DAPI XmlCreateChild(
-    __in IXMLDOMNode* pixnParent,
-    __in_z LPCWSTR pwzElementType,
-    __out IXMLDOMNode** ppixnChild
-    );
-HRESULT DAPI XmlRemoveAttribute(
-    __in IXMLDOMNode* pixnNode,
-    __in_z LPCWSTR pwzAttribute
-    );
-HRESULT DAPI XmlSelectNodes(
-    __in IXMLDOMNode* pixnParent,
-    __in_z LPCWSTR wzXPath,
-    __out IXMLDOMNodeList **ppixnChild
-    );
-HRESULT DAPI XmlNextAttribute(
-    __in IXMLDOMNamedNodeMap* pixnnm,
-    __out IXMLDOMNode** pixnAttribute,
-    __deref_opt_out_z_opt BSTR* pbstrAttribute
-    );
-HRESULT DAPI XmlNextElement(
-    __in IXMLDOMNodeList* pixnl,
-    __out IXMLDOMNode** pixnElement,
-    __deref_opt_out_z_opt BSTR* pbstrElement
-    );
-HRESULT DAPI XmlRemoveChildren(
-    __in IXMLDOMNode* pixnSource,
-    __in_z LPCWSTR pwzXPath
-    );
-HRESULT DAPI XmlSaveDocument(
-    __in IXMLDOMDocument* pixdDocument, 
-    __inout LPCWSTR wzPath
-    );
-HRESULT DAPI XmlSaveDocumentToBuffer(
-    __in IXMLDOMDocument* pixdDocument,
-    __deref_out_bcount(*pcbDest) BYTE** ppbDest,
-    __out DWORD* pcbDest
-    );
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/docs/guides/frontend-migration-from-yjtweb.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# Frontend Migration from yjtweb
-
-## Source
-- From: `yjtweb`
-- To: `apps/frontend`
-
-## Scope
-- 迁移前端路由、布局、业务页面、主题与静态资源。
-- 迁移硬件接口主链路，包括 `coreapi + websocket + webworker + viewsdk2d`。
-
-## Key Changes
-1. 路由切换为 Hash 模式（`/#/...`）。
-2. 构建模式改为 `vite build`。
-3. 前端 API 基址改为通过 `.env*` 中的 `VITE_API_URL` 管理。
-4. 硬件 WebSocket 不再通过 `VITE_HL_WS_URL` 注入；当前采用代码默认值加运行时配置文件覆盖：
-   - 默认值：`src/utils/businessFlow/shared/coreapi.js`
-   - 运行时配置：`public/businessFlow/shared/config.json`
-
-## Compatibility Notes
-- 不保留旧 `/portal`、`/dashboard`、`/capture` 路由兼容层。
-- `x3pwork.js` 当前为占位实现，返回 `not-supported`。
-- 业务菜单以当前后端动态菜单为准，不再假设静态路由全集固定。
-
-## Verification Checklist
-- `npm run build` 通过。
-- 访问 `/#/login` 正常。
-- 登录后默认进入 `/#/top-home`。
-- 业务菜单可从后端成功加载。
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/balcondition.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-typedef struct _BAL_CONDITION
-{
-    LPWSTR sczCondition;
-    LPWSTR sczMessage;
-} BAL_CONDITION;
-
-
-typedef struct _BAL_CONDITIONS
-{
-    BAL_CONDITION* rgConditions;
-    DWORD cConditions;
-} BAL_CONDITIONS;
-
-
-/*******************************************************************
- BalConditionsParseFromXml - loads the conditions from the UX manifest.
-
-********************************************************************/
-DAPI_(HRESULT) BalConditionsParseFromXml(
-    __in BAL_CONDITIONS* pConditions,
-    __in IXMLDOMDocument* pixdManifest,
-    __in_opt WIX_LOCALIZATION* pWixLoc
-    );
-
-
-/*******************************************************************
- BalConditionEvaluate - evaluates condition against the provided IBurnCore.
-
- NOTE: psczMessage is optional.
-********************************************************************/
-DAPI_(HRESULT) BalConditionEvaluate(
-    __in BAL_CONDITION* pCondition,
-    __in IBootstrapperEngine* pEngine,
-    __out BOOL* pfResult,
-    __out_z_opt LPWSTR* psczMessage
-    );
-
-
-/*******************************************************************
- BalConditionsUninitialize - uninitializes any conditions previously loaded.
-
-********************************************************************/
-DAPI_(void) BalConditionsUninitialize(
-    __in BAL_CONDITIONS* pConditions
-    );
-
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/wcawow64.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#include "wcautil.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-HRESULT WIXAPI WcaInitializeWow64();
-BOOL WIXAPI WcaIsWow64Process();
-BOOL WIXAPI WcaIsWow64Initialized();
-HRESULT WIXAPI WcaDisableWow64FSRedirection();
-HRESULT WIXAPI WcaRevertWow64FSRedirection();
-HRESULT WIXAPI WcaFinalizeWow64();
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/apuputil.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define ReleaseApupChain(p) if (p) { ApupFreeChain(p); p = NULL; }
-#define ReleaseNullApupChain(p) if (p) { ApupFreeChain(p); p = NULL; }
-
-
-const LPCWSTR APPLICATION_SYNDICATION_NAMESPACE = L"http://appsyndication.org/2006/appsyn";
-
-typedef enum APUP_HASH_ALGORITHM
-{
-    APUP_HASH_ALGORITHM_UNKNOWN,
-    APUP_HASH_ALGORITHM_MD5,
-    APUP_HASH_ALGORITHM_SHA1,
-    APUP_HASH_ALGORITHM_SHA256,
-} APUP_HASH_ALGORITHM;
-
-
-struct APPLICATION_UPDATE_ENCLOSURE
-{
-    LPWSTR wzUrl;
-    LPWSTR wzLocalName;
-    DWORD64 dw64Size;
-
-    BYTE* rgbDigest;
-    DWORD cbDigest;
-    APUP_HASH_ALGORITHM digestAlgorithm;
-
-    BOOL fInstaller;
-};
-
-
-struct APPLICATION_UPDATE_ENTRY
-{
-    LPWSTR wzApplicationId;
-    LPWSTR wzApplicationType;
-    LPWSTR wzTitle;
-    LPWSTR wzSummary;
-    LPWSTR wzContentType;
-    LPWSTR wzContent;
-
-    LPWSTR wzUpgradeId;
-    BOOL fUpgradeExclusive;
-    DWORD64 dw64Version;
-    DWORD64 dw64UpgradeVersion;
-
-    DWORD64 dw64TotalSize;
-
-    DWORD cEnclosures;
-    APPLICATION_UPDATE_ENCLOSURE* rgEnclosures;
-};
-
-
-struct APPLICATION_UPDATE_CHAIN
-{
-    LPWSTR wzDefaultApplicationId;
-    LPWSTR wzDefaultApplicationType;
-
-    DWORD cEntries;
-    APPLICATION_UPDATE_ENTRY* rgEntries;
-};
-
-
-HRESULT DAPI ApupAllocChainFromAtom(
-    __in ATOM_FEED* pFeed,
-    __out APPLICATION_UPDATE_CHAIN** ppChain
-    );
-
-HRESULT DAPI ApupFilterChain(
-    __in APPLICATION_UPDATE_CHAIN* pChain,
-    __in DWORD64 dw64Version,
-    __out APPLICATION_UPDATE_CHAIN** ppFilteredChain
-    );
-
-void DAPI ApupFreeChain(
-    __in APPLICATION_UPDATE_CHAIN* pChain
-    );
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/README.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-## TestUpload模式命令
-cd D:\work\projectyjt\engines\hw-control\Smartmeas3DHL-Server 
-
-cmake -S . -B build-testupload -G "Visual Studio 17 2022" -A x64 -DSMARTMEAS_TEST_UPLOAD_BUILD=ON 
-
-cmake --build build-testupload --config Release -- /m
-
-## 常规模式命令
-cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A x64 -DSMARTMEAS_TEST_UPLOAD_BUILD=OFF
-cmake --build build-msvc --config Release -- /m
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/Debug/Work/Node/viewserver/filament/package.json
-language: json
-kind: source_or_document
-<|file_content|>
-{
-  "name": "viewserver-offscreen-render",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "start": "node src/server.js"
-  },
-  "dependencies": {
-    "express": "^4.21.2",
-    "playwright": "^1.54.2"
-  }
-}
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/tools/visual-diff/README.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# Visual Diff (Vue vs Axure)
-
-## Inputs
-- Pair list: `tools/visual-diff/pairs.json`
-- Captures:
-  - `artifacts/output/current-visual-compare/capture/vue/*.png`
-  - `artifacts/output/current-visual-compare/capture/axure/*.png`
-
-`pairs.json` now uses `?chromeless=1` for Vue URLs to hide app shell (header/top menu/side nav) and compare business content against Axure pages more fairly.
-
-## Run diff on captured images
-```bash
-python3 tools/visual-diff/run_compare_from_capture.py \
-  --pairs tools/visual-diff/pairs.json \
-  --capture-root artifacts/output/current-visual-compare/capture \
-  --report-dir artifacts/output/current-visual-compare/report \
-  --tolerance 20 \
-  --threshold 0.03
-```
-
-Outputs:
-- Per page: `artifacts/output/current-visual-compare/report/<key>.metrics.json`
-- Summary: `artifacts/output/current-visual-compare/report/summary.json`
-
-## Notes
-- The diff tool uses macOS `sips` to decode PNG into BMP and compares pixels with `numpy`.
-- If screenshots have different sizes, comparison uses the overlap area (top-left aligned).
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Container/.tauri/WixTools314/sdk/inc/memutil.h
-language: cpp-header
-kind: source_or_document
-<|file_content|>
-#pragma once
-// Copyright (c) .NET Foundation and contributors. All rights reserved. Licensed under the Microsoft Reciprocal License. See LICENSE.TXT file in the project root for full license information.
-
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define ReleaseMem(p) if (p) { MemFree(p); }
-#define ReleaseNullMem(p) if (p) { MemFree(p); p = NULL; }
-
-HRESULT DAPI MemInitialize();
-void DAPI MemUninitialize();
-
-LPVOID DAPI MemAlloc(
-    __in SIZE_T cbSize,
-    __in BOOL fZero
-    );
-LPVOID DAPI MemReAlloc(
-    __in LPVOID pv,
-    __in SIZE_T cbSize,
-    __in BOOL fZero
-    );
-HRESULT DAPI MemReAllocSecure(
-    __in LPVOID pv,
-    __in SIZE_T cbSize,
-    __in BOOL fZero,
-    __deref_out LPVOID* ppvNew
-    );
-HRESULT DAPI MemEnsureArraySize(
-    __deref_out_bcount(cArray * cbArrayType) LPVOID* ppvArray,
-    __in DWORD cArray,
-    __in SIZE_T cbArrayType,
-    __in DWORD dwGrowthCount
-    );
-HRESULT DAPI MemInsertIntoArray(
-    __deref_out_bcount((cExistingArray + cNumInsertItems) * cbArrayType) LPVOID* ppvArray,
-    __in DWORD dwInsertIndex,
-    __in DWORD cNumInsertItems,
-    __in DWORD cExistingArray,
-    __in SIZE_T cbArrayType,
-    __in DWORD dwGrowthCount
-    );
-
-HRESULT DAPI MemFree(
-    __in LPVOID pv
-    );
-SIZE_T DAPI MemSize(
-    __in LPCVOID pv
-    );
-
-#ifdef __cplusplus
-}
-#endif
-<|file_end|>
-
-<|file_start|>
-source: web3d/backend/README.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# DeepLR Backend
-
-Spring Boot backend for the DeepLR neural network learning project.
-
-## Requirements
-
-- Java 8 or newer
-
-This project includes Maven Wrapper, so global Maven is not required.
-
-## Run
-
-```bash
-.\mvnw.cmd spring-boot:run
-```
-
-## Test
-
-```bash
-.\mvnw.cmd test
-```
-
-## Dataset Storage
-
-The backend creates dataset folders under `DEEPLR_DATA_DIR`.
-
-If the environment variable is not set, it defaults to:
-
-```text
-${user.dir}
-```
-
-Current synthetic digit dataset folder:
-
-```text
-datasets/
-  synthetic-digits/
-```
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/.vs/hw_control_server/v17/DocumentLayout.json
-language: json
-kind: source_or_document
-<|file_content|>
-{
-  "Version": 1,
-  "WorkspaceRootPath": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\build-msvc\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\coreapi.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\controller\\controller.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\const.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\gopxl\\gopxlmanager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\gopxl\\gopxljson.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\coreapi.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\motion\\zauxmanager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\motion\\zauxmanager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\filament_x3p_png_renderer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\algorithm.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\algorithmgpu.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\transport\\protocol\\gpxl.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\util.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\texture_enhancement_utils.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\stream\\profile_stream_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\controller\\controller.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\texture_enhancement_utils.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_translator.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\collect_watchdog.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\splice\\splice_x3p_async_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\splice\\splice_x3p_async_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\lutis\\lutis_py_bridge.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\collect_3d_render_task.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\led\\serialport.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\config\\conf.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\filament_x3p_png_renderer.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\define.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\webgl_x3p_png_renderer.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\splice_x3p_async_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\lutis\\lutis_py_bridge.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\viewserver_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\webgl_x3p_png_renderer.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{FC70E787-3D11-307B-B24A-F46C1BBE0B38}|Smartmeas3DHL-Server.vcxproj|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\stream\\profile_stream_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\async.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\async.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\lutis_py_bridge.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\splice_x3p_async_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithmgpu.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithm.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\profile_stream_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithmgpu.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\serialport.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\viewserver_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\lutis_py_bridge.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithm.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\serialport.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\zauxmanager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\zauxmanager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\profile_stream_manager.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\viewserver_manager.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\log_translator.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\log_translator.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\data.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\gpxl.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\conf.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\full-cylinder-acquisition-end\\Package\\include\\opencv2\\core\\async.hpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
-    }
-  ],
-  "DocumentGroupContainers": [
-    {
-      "Orientation": 0,
-      "VerticalTabListWidth": 256,
-      "DocumentGroups": [
-        {
-          "DockedWidth": 200,
-          "SelectedChildIndex": 2,
-          "Children": [
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "coreapi.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\coreapi.h",
-              "RelativeDocumentMoniker": "..\\Core\\coreapi.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\coreapi.h",
-              "RelativeToolTip": "..\\Core\\coreapi.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAARAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-08T00:56:10.273Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "coreapi.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\coreapi.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\coreapi.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\coreapi.cpp",
-              "RelativeToolTip": "..\\Core\\coreapi.cpp",
-              "ViewState": "AgIAAL4IAAAAAAAAAAAlwN0IAAAjAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-30T02:01:23.221Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "filament_x3p_png_renderer.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\filament_x3p_png_renderer.cpp",
-              "RelativeDocumentMoniker": "..\\src\\integration\\viewserver\\filament_x3p_png_renderer.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\filament_x3p_png_renderer.cpp",
-              "RelativeToolTip": "..\\src\\integration\\viewserver\\filament_x3p_png_renderer.cpp",
-              "ViewState": "AgIAAAwAAAAAAAAAAAAowCYAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-21T05:40:18.147Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "gpxl.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\transport\\protocol\\gpxl.h",
-              "RelativeDocumentMoniker": "..\\src\\transport\\protocol\\gpxl.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\transport\\protocol\\gpxl.h",
-              "RelativeToolTip": "..\\src\\transport\\protocol\\gpxl.h",
-              "ViewState": "AgIAAGwAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-27T01:34:38.111Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 19,
-              "Title": "texture_enhancement_utils.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\texture_enhancement_utils.h",
-              "RelativeDocumentMoniker": "..\\src\\processing\\surface\\texture_enhancement_utils.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\texture_enhancement_utils.h",
-              "RelativeToolTip": "..\\src\\processing\\surface\\texture_enhancement_utils.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAARAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-24T01:17:15.295Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 17,
-              "Title": "profile_stream_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\stream\\profile_stream_manager.cpp",
-              "RelativeDocumentMoniker": "..\\src\\pipeline\\stream\\profile_stream_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\stream\\profile_stream_manager.cpp",
-              "RelativeToolTip": "..\\src\\pipeline\\stream\\profile_stream_manager.cpp",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAB0AAABVAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-05-11T08:09:28.2Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "algorithm.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\algorithm.h",
-              "RelativeDocumentMoniker": "..\\src\\processing\\surface\\algorithm.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\algorithm.h",
-              "RelativeToolTip": "..\\src\\processing\\surface\\algorithm.h",
-              "ViewState": "AgIAAK4AAAAAAAAAAAAjwMMAAAAiAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-03T05:28:45.831Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 24,
-              "Title": "lutis_py_bridge.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\lutis\\lutis_py_bridge.cpp",
-              "RelativeDocumentMoniker": "..\\src\\integration\\lutis\\lutis_py_bridge.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\lutis\\lutis_py_bridge.cpp",
-              "RelativeToolTip": "..\\src\\integration\\lutis\\lutis_py_bridge.cpp",
-              "ViewState": "AgIAABADAAAAAAAAAAAAACQDAAAKAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-14T23:30:29.795Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "algorithmgpu.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\algorithmgpu.h",
-              "RelativeDocumentMoniker": "..\\src\\processing\\surface\\algorithmgpu.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\algorithmgpu.h",
-              "RelativeToolTip": "..\\src\\processing\\surface\\algorithmgpu.h",
-              "ViewState": "AgIAAE4AAAAAAAAAAADwv1cAAAAbAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-07-01T01:07:35.855Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "main.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\main.cpp",
-              "RelativeDocumentMoniker": "..\\main.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\main.cpp",
-              "RelativeToolTip": "..\\main.cpp",
-              "ViewState": "AgIAAFkAAAAAAAAAAAAEwGgAAAAZAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-15T09:25:57.108Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 8,
-              "Title": "zauxmanager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\motion\\zauxmanager.cpp",
-              "RelativeDocumentMoniker": "..\\src\\device\\motion\\zauxmanager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\motion\\zauxmanager.cpp",
-              "RelativeToolTip": "..\\src\\device\\motion\\zauxmanager.cpp",
-              "ViewState": "AgIAAA0BAAAAAAAAAAAlwCEBAAAZAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-26T00:46:13.758Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "log_manager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_manager.h",
-              "RelativeDocumentMoniker": "..\\src\\common\\log\\log_manager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_manager.h",
-              "RelativeToolTip": "..\\src\\common\\log\\log_manager.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-05-11T08:09:09.888Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "controller.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\controller\\controller.cpp",
-              "RelativeDocumentMoniker": "..\\src\\device\\controller\\controller.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\controller\\controller.cpp",
-              "RelativeToolTip": "..\\src\\device\\controller\\controller.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAdAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-15T05:52:45.286Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "const.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\const.h",
-              "RelativeDocumentMoniker": "..\\const.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\const.h",
-              "RelativeToolTip": "..\\const.h",
-              "ViewState": "AgIAAA0AAAAAAAAAAAAlwCgAAAAnAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-15T05:50:50.342Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "gopxlmanager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\gopxl\\gopxlmanager.h",
-              "RelativeDocumentMoniker": "..\\src\\device\\gopxl\\gopxlmanager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\gopxl\\gopxlmanager.h",
-              "RelativeToolTip": "..\\src\\device\\gopxl\\gopxlmanager.h",
-              "ViewState": "AgIAACwAAAAAAAAAAAAlwD8AAAA5AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-07-01T00:58:17.322Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "gopxljson.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\gopxl\\gopxljson.h",
-              "RelativeDocumentMoniker": "..\\src\\device\\gopxl\\gopxljson.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\gopxl\\gopxljson.h",
-              "RelativeToolTip": "..\\src\\device\\gopxl\\gopxljson.h",
-              "ViewState": "AgIAAF0AAAAAAAAAAAAAAEkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-07-01T01:14:46.315Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "zauxmanager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\motion\\zauxmanager.h",
-              "RelativeDocumentMoniker": "..\\src\\device\\motion\\zauxmanager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\motion\\zauxmanager.h",
-              "RelativeToolTip": "..\\src\\device\\motion\\zauxmanager.h",
-              "ViewState": "AgIAABwAAAAAAAAAAAAlwCkAAAAPAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-07-01T01:51:40.292Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 21,
-              "Title": "collect_watchdog.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\collect_watchdog.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\collect_watchdog.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\collect_watchdog.cpp",
-              "RelativeToolTip": "..\\Core\\collect_watchdog.cpp",
-              "ViewState": "AgIAAAEAAAAAAAAAAAAIwBUAAAAXAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-24T01:12:03.37Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 14,
-              "Title": "log_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_manager.cpp",
-              "RelativeDocumentMoniker": "..\\src\\common\\log\\log_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_manager.cpp",
-              "RelativeToolTip": "..\\src\\common\\log\\log_manager.cpp",
-              "ViewState": "AgIAAA4BAAAAAAAAAADwvxoBAAAFAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-24T03:25:33.401Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 18,
-              "Title": "controller.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\controller\\controller.h",
-              "RelativeDocumentMoniker": "..\\src\\device\\controller\\controller.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\controller\\controller.h",
-              "RelativeToolTip": "..\\src\\device\\controller\\controller.h",
-              "ViewState": "AgIAAA0AAAAAAAAAAAASwBAAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-15T05:50:52.613Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 20,
-              "Title": "log_translator.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_translator.h",
-              "RelativeDocumentMoniker": "..\\src\\common\\log\\log_translator.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\common\\log\\log_translator.h",
-              "RelativeToolTip": "..\\src\\common\\log\\log_translator.h",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-17T06:38:22.412Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "util.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\util.cpp",
-              "RelativeDocumentMoniker": "..\\util.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\util.cpp",
-              "RelativeToolTip": "..\\util.cpp",
-              "ViewState": "AgIAAC8GAAAAAAAAAADgv+4FAAAJAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-05-17T03:19:18.248Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 22,
-              "Title": "splice_x3p_async_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\splice\\splice_x3p_async_manager.cpp",
-              "RelativeDocumentMoniker": "..\\src\\pipeline\\splice\\splice_x3p_async_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\splice\\splice_x3p_async_manager.cpp",
-              "RelativeToolTip": "..\\src\\pipeline\\splice\\splice_x3p_async_manager.cpp",
-              "ViewState": "AgIAAAwDAAAAAAAAAADgvxkDAAA0AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-23T09:20:03.846Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "texture_enhancement_utils.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\texture_enhancement_utils.cpp",
-              "RelativeDocumentMoniker": "..\\src\\processing\\surface\\texture_enhancement_utils.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\processing\\surface\\texture_enhancement_utils.cpp",
-              "RelativeToolTip": "..\\src\\processing\\surface\\texture_enhancement_utils.cpp",
-              "ViewState": "AgIAAAMAAAAAAAAAAADwvxIAAABCAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-25T00:57:13.417Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 23,
-              "Title": "splice_x3p_async_manager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\splice\\splice_x3p_async_manager.h",
-              "RelativeDocumentMoniker": "..\\src\\pipeline\\splice\\splice_x3p_async_manager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\splice\\splice_x3p_async_manager.h",
-              "RelativeToolTip": "..\\src\\pipeline\\splice\\splice_x3p_async_manager.h",
-              "ViewState": "AgIAACgAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-14T09:21:04.078Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 58,
-              "Title": "async.hpp",
-              "DocumentMoniker": "D:\\full-cylinder-acquisition-end\\Package\\include\\opencv2\\core\\async.hpp",
-              "RelativeDocumentMoniker": "..\\..\\..\\..\\..\\..\\full-cylinder-acquisition-end\\Package\\include\\opencv2\\core\\async.hpp",
-              "ToolTip": "D:\\full-cylinder-acquisition-end\\Package\\include\\opencv2\\core\\async.hpp",
-              "RelativeToolTip": "..\\..\\..\\..\\..\\..\\full-cylinder-acquisition-end\\Package\\include\\opencv2\\core\\async.hpp",
-              "ViewState": "AgIAADoAAAAAAAAAAAAhwEgAAAAEAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-03-06T00:58:09.911Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 26,
-              "Title": "serialport.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\led\\serialport.h",
-              "RelativeDocumentMoniker": "..\\src\\device\\led\\serialport.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\device\\led\\serialport.h",
-              "RelativeToolTip": "..\\src\\device\\led\\serialport.h",
-              "ViewState": "AgIAAAwAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-18T08:06:09.138Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 25,
-              "Title": "collect_3d_render_task.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\collect_3d_render_task.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\collect_3d_render_task.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\collect_3d_render_task.cpp",
-              "RelativeToolTip": "..\\Core\\collect_3d_render_task.cpp",
-              "ViewState": "AgIAAAMAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-06-15T09:26:07.259Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 29,
-              "Title": "define.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\define.h",
-              "RelativeDocumentMoniker": "..\\define.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\define.h",
-              "RelativeToolTip": "..\\define.h",
-              "ViewState": "AgIAABgAAAAAAAAAAADwvwgAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-17T06:40:19.217Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 27,
-              "Title": "conf.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\config\\conf.h",
-              "RelativeDocumentMoniker": "..\\src\\config\\conf.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\config\\conf.h",
-              "RelativeToolTip": "..\\src\\config\\conf.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-16T02:53:43.755Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 28,
-              "Title": "filament_x3p_png_renderer.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\filament_x3p_png_renderer.h",
-              "RelativeDocumentMoniker": "..\\src\\integration\\viewserver\\filament_x3p_png_renderer.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\filament_x3p_png_renderer.h",
-              "RelativeToolTip": "..\\src\\integration\\viewserver\\filament_x3p_png_renderer.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-06-15T09:26:08.643Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 30,
-              "Title": "webgl_x3p_png_renderer.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\webgl_x3p_png_renderer.cpp",
-              "RelativeDocumentMoniker": "..\\src\\integration\\viewserver\\webgl_x3p_png_renderer.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\webgl_x3p_png_renderer.cpp",
-              "RelativeToolTip": "..\\src\\integration\\viewserver\\webgl_x3p_png_renderer.cpp",
-              "ViewState": "AgIAAFcAAAAAAAAAAAAAAH4AAAAYAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-24T03:26:52.38Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 32,
-              "Title": "lutis_py_bridge.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\lutis\\lutis_py_bridge.h",
-              "RelativeDocumentMoniker": "..\\src\\integration\\lutis\\lutis_py_bridge.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\lutis\\lutis_py_bridge.h",
-              "RelativeToolTip": "..\\src\\integration\\lutis\\lutis_py_bridge.h",
-              "ViewState": "AgIAAB4AAAAAAAAAAAAAACgAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-05-07T01:01:30.789Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 33,
-              "Title": "viewserver_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\viewserver_manager.cpp",
-              "RelativeDocumentMoniker": "..\\src\\integration\\viewserver\\viewserver_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\viewserver_manager.cpp",
-              "RelativeToolTip": "..\\src\\integration\\viewserver\\viewserver_manager.cpp",
-              "ViewState": "AgIAAHgAAAAAAAAAAAAAAIkAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-15T05:34:16.713Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 35,
-              "Title": "profile_stream_manager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\stream\\profile_stream_manager.h",
-              "RelativeDocumentMoniker": "..\\src\\pipeline\\stream\\profile_stream_manager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\pipeline\\stream\\profile_stream_manager.h",
-              "RelativeToolTip": "..\\src\\pipeline\\stream\\profile_stream_manager.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-20T01:49:43.767Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 34,
-              "Title": "webgl_x3p_png_renderer.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\webgl_x3p_png_renderer.h",
-              "RelativeDocumentMoniker": "..\\src\\integration\\viewserver\\webgl_x3p_png_renderer.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\src\\integration\\viewserver\\webgl_x3p_png_renderer.h",
-              "RelativeToolTip": "..\\src\\integration\\viewserver\\webgl_x3p_png_renderer.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-20T09:28:41.157Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 55,
-              "Title": "data.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\data.h",
-              "RelativeDocumentMoniker": "..\\Core\\data.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\data.h",
-              "RelativeToolTip": "..\\Core\\data.h",
-              "ViewState": "AgIAAIgAAAAAAAAAAAAUwJMAAAAVAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-10T01:42:46.873Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 39,
-              "Title": "splice_x3p_async_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\splice_x3p_async_manager.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\splice_x3p_async_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\splice_x3p_async_manager.cpp",
-              "RelativeToolTip": "..\\Core\\splice_x3p_async_manager.cpp",
-              "ViewState": "AgIAAF4AAAAAAAAAAAAUwIEAAABCAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-03-09T06:48:53.091Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 38,
-              "Title": "lutis_py_bridge.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\lutis_py_bridge.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\lutis_py_bridge.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\lutis_py_bridge.cpp",
-              "RelativeToolTip": "..\\Core\\lutis_py_bridge.cpp",
-              "ViewState": "AgIAAGUDAAAAAAAAAAAUwCsDAAAlAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-12T16:37:14.205Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 54,
-              "Title": "log_translator.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\log_translator.cpp",
-              "RelativeDocumentMoniker": "..\\log_translator.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\log_translator.cpp",
-              "RelativeToolTip": "..\\log_translator.cpp",
-              "ViewState": "AgIAACUAAAAAAAAAAAAAABoAAAAMAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-14T01:47:29.882Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 40,
-              "Title": "algorithmgpu.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithmgpu.h",
-              "RelativeDocumentMoniker": "..\\Core\\algorithmgpu.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithmgpu.h",
-              "RelativeToolTip": "..\\Core\\algorithmgpu.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACsAAAAfAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-03-11T03:18:34.874Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 41,
-              "Title": "algorithm.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithm.h",
-              "RelativeDocumentMoniker": "..\\Core\\algorithm.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithm.h",
-              "RelativeToolTip": "..\\Core\\algorithm.h",
-              "ViewState": "AgIAAG8AAAAAAAAAAAAAAHsAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-02-21T08:02:06.015Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 53,
-              "Title": "log_translator.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\log_translator.h",
-              "RelativeDocumentMoniker": "..\\log_translator.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\log_translator.h",
-              "RelativeToolTip": "..\\log_translator.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-14T01:47:38.552Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 56,
-              "Title": "gpxl.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\gpxl.h",
-              "RelativeDocumentMoniker": "..\\Core\\gpxl.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\gpxl.h",
-              "RelativeToolTip": "..\\Core\\gpxl.h",
-              "ViewState": "AgIAAB0AAAAAAAAAAAAUwCkAAAAaAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-03-25T02:41:48.178Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 42,
-              "Title": "profile_stream_manager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\profile_stream_manager.h",
-              "RelativeDocumentMoniker": "..\\Core\\profile_stream_manager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\profile_stream_manager.h",
-              "RelativeToolTip": "..\\Core\\profile_stream_manager.h",
-              "ViewState": "AgIAAA0AAAAAAAAAAAAEwBwAAAALAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-02-21T08:14:13.31Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 43,
-              "Title": "algorithmgpu.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithmgpu.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\algorithmgpu.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithmgpu.cpp",
-              "RelativeToolTip": "..\\Core\\algorithmgpu.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAPAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-03-11T03:18:45.609Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 44,
-              "Title": "serialport.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\serialport.h",
-              "RelativeDocumentMoniker": "..\\Core\\serialport.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\serialport.h",
-              "RelativeToolTip": "..\\Core\\serialport.h",
-              "ViewState": "AgIAAAIAAAAAAAAAAAAqwA8AAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-10T06:32:42.844Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 45,
-              "Title": "viewserver_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\viewserver_manager.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\viewserver_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\viewserver_manager.cpp",
-              "RelativeToolTip": "..\\Core\\viewserver_manager.cpp",
-              "ViewState": "AgIAAJECAAAAAAAAAAAAAAcAAAASAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-07T06:56:40.063Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 57,
-              "Title": "conf.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\conf.h",
-              "RelativeDocumentMoniker": "..\\Core\\conf.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\conf.h",
-              "RelativeToolTip": "..\\Core\\conf.h",
-              "ViewState": "AgIAACQAAAAAAAAAAAAIwDMAAAAWAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-10T01:42:44.841Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 46,
-              "Title": "lutis_py_bridge.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\lutis_py_bridge.h",
-              "RelativeDocumentMoniker": "..\\Core\\lutis_py_bridge.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\lutis_py_bridge.h",
-              "RelativeToolTip": "..\\Core\\lutis_py_bridge.h",
-              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-12T16:51:53.603Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 47,
-              "Title": "algorithm.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithm.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\algorithm.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\algorithm.cpp",
-              "RelativeToolTip": "..\\Core\\algorithm.cpp",
-              "ViewState": "AgIAAOEFAAAAAAAAAAAUwPIFAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-12T16:51:57.345Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 48,
-              "Title": "serialport.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\serialport.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\serialport.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\serialport.cpp",
-              "RelativeToolTip": "..\\Core\\serialport.cpp",
-              "ViewState": "AgIAAIABAAAAAAAAAAAUwIkBAAAoAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-09T05:29:24.656Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 49,
-              "Title": "zauxmanager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\zauxmanager.h",
-              "RelativeDocumentMoniker": "..\\Core\\zauxmanager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\zauxmanager.h",
-              "RelativeToolTip": "..\\Core\\zauxmanager.h",
-              "ViewState": "AgIAAAgAAAAAAAAAAAAqwBUAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-11T16:09:19.47Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 50,
-              "Title": "zauxmanager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\zauxmanager.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\zauxmanager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\zauxmanager.cpp",
-              "RelativeToolTip": "..\\Core\\zauxmanager.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAQAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-04-11T16:10:13.334Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 31,
-              "Title": "splice_x3p_async_manager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\splice_x3p_async_manager.h",
-              "RelativeDocumentMoniker": "..\\Core\\splice_x3p_async_manager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\splice_x3p_async_manager.h",
-              "RelativeToolTip": "..\\Core\\splice_x3p_async_manager.h",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-04-03T10:37:52.931Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 51,
-              "Title": "profile_stream_manager.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\profile_stream_manager.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\profile_stream_manager.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\profile_stream_manager.cpp",
-              "RelativeToolTip": "..\\Core\\profile_stream_manager.cpp",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAeAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-03-20T06:37:39.056Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 52,
-              "Title": "viewserver_manager.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\viewserver_manager.h",
-              "RelativeDocumentMoniker": "..\\Core\\viewserver_manager.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\viewserver_manager.h",
-              "RelativeToolTip": "..\\Core\\viewserver_manager.h",
-              "ViewState": "AgIAAEUAAAAAAAAAAAAAACkAAAAbAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-03-10T10:03:57.033Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 37,
-              "Title": "async.cpp",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\async.cpp",
-              "RelativeDocumentMoniker": "..\\Core\\async.cpp",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\async.cpp",
-              "RelativeToolTip": "..\\Core\\async.cpp",
-              "ViewState": "AgIAAAUAAAAAAAAAAAAIwBAAAAAGAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
-              "WhenOpened": "2026-02-21T07:56:33.86Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 36,
-              "Title": "async.h",
-              "DocumentMoniker": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\async.h",
-              "RelativeDocumentMoniker": "..\\Core\\async.h",
-              "ToolTip": "D:\\work\\projectyjt\\engines\\hw-control\\Smartmeas3DHL-Server\\Core\\async.h",
-              "RelativeToolTip": "..\\Core\\async.h",
-              "ViewState": "AgIAABgAAAAAAAAAAAAAACIAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
-              "WhenOpened": "2026-02-23T12:02:09.562Z"
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/docs/db/expert-review-project-storage.md
-language: markdown
-kind: source_or_document
-<|file_content|>
-# Expert Review Project Storage
-
-## Scope
-- 2D expert review project snapshots are stored in `expert_review_project.project_json`.
-- The snapshot payload now persists overlap fusion color state under `compare2d.overlap.fusionColorize`.
-
-## Snapshot Shape
-```json
-{
-  "compare2d": {
-    "overlap": {
-      "topSide": "right",
-      "operationSide": "left",
-      "effectiveInteractionSide": "left",
-      "leftOpacity": 1,
-      "rightOpacity": 0.5,
-      "fusionColorize": {
-        "enabled": true,
-        "fusionColor": "#808080"
-      }
-    }
-  }
-}
-```
-
-## Compatibility
-- Older snapshots without `fusionColorize` remain readable.
-- Tint colors are not stored; they are derived from `fusionColor` when the project is restored.
-
-## Database
-- `expert_review_project.project_json` should use `MEDIUMTEXT`.
-- Incremental change: `db/migrations/V1__expert_review_project_project_json_mediumtext.sql`
-- Fresh init schema: `services/yijianvisionend/sql/yijiantong.sql`
-<|file_end|>
-
-<|file_start|>
-source: projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/TargetDirectories.txt
-language: text
-kind: source_or_document
-<|file_content|>
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/Experimental.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/Nightly.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/Continuous.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/NightlyMemoryCheck.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/Smartmeas3DHL-Server.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/texture_enhancement_utils_test.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/RUN_TESTS.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/ALL_BUILD.dir
-D:/work/projectyjt/engines/hw-control/Smartmeas3DHL-Server/build-msvc/CMakeFiles/ZERO_CHECK.dir
-<|file_end|>
-
-<|file_start|>
-source: web3d/backend/src/main/java/com/deeplr/entity/GrayImage.java
-language: java
-kind: source_or_document
-<|file_content|>
-package com.deeplr.entity;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-public class GrayImage {
-    private String imgKey;
-    private String imgPath;
-    private String imgValue;
-    private Integer width;
-    private Integer height;
-    private BigDecimal interferenceStrength;
-    private Long imgStatus;
-    private LocalDateTime createTime;
-
-    public GrayImage() {}
-
-    public GrayImage(String imgKey, String imgPath, String imgValue,
-                     Integer width, Integer height, BigDecimal interferenceStrength, Long imgStatus) {
-        this.imgKey = imgKey;
-        this.imgPath = imgPath;
-        this.imgValue = imgValue;
-        this.width = width;
-        this.height = height;
-        this.interferenceStrength = interferenceStrength;
-        this.imgStatus = imgStatus;
-    }
-
-    public String getImgKey() {
-        return imgKey;
-    }
-
-    public void setImgKey(String imgKey) {
-        this.imgKey = imgKey;
-    }
-
-    public String getImgPath() {
-        return imgPath;
-    }
-
-    public void setImgPath(String imgPath) {
-        this.imgPath = imgPath;
-    }
-
-    public String getImgValue() {
-        return imgValue;
-    }
-
-    public void setImgValue(String imgValue) {
-        this.imgValue = imgValue;
-    }
-
-    public Integer getWidth() {
-        return width;
-    }
-
-    public void setWidth(Integer width) {
-        this.width = width;
-    }
-
-    public Integer getHeight() {
-        return height;
-    }
-
-    public void setHeight(Integer height) {
-        this.height = height;
-    }
-
-    public BigDecimal getInterferenceStrength() {
-        return interferenceStrength;
-    }
-
-    public void setInterferenceStrength(BigDecimal interferenceStrength) {
-        this.interferenceStrength = interferenceStrength;
-    }
-
-    public Long getImgStatus() {
-        return imgStatus;
-    }
-
-    public void setImgStatus(Long imgStatus) {
-        this.imgStatus = imgStatus;
-    }
-
-    public LocalDateTime getCreateTime() {
-        return createTime;
-    }
-
-    public void setCreateTime(LocalDateTime createTime) {
-        this.createTime = createTime;
-    }
-
-    @Override
-    public String toString() {
-        return "GrayImage{" +
-                "imgKey='" + imgKey + '\'' +
-                ", imgPath='" + imgPath + '\'' +
-                ", imgValue='" + imgValue + '\'' +
-                ", width=" + width +
-                ", height=" + height +
-                ", interferenceStrength=" + interferenceStrength +
-                ", imgStatus=" + imgStatus +
-                ", createTime=" + createTime +
-                '}';
-    }
-}
-<|file_end|>
+<|qa_start|>
+source: synthetic_programming_zh_qa/058
+language: zh+en
+kind: synthetic_learning_qa
+问题：AI 是什么？
+回答：AI 是人工智能，它让计算机通过算法和模型完成类似人类智能的任务，例如识别图片、理解文本、生成代码和回答问题。
+<|qa_end|>
 
