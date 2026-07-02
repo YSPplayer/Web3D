@@ -35,3 +35,4 @@ backend/.mvn/wrapper/dists
 *.sw?
 native/build-testupload/
 *.pyc
+LanguageModel/checkpoints/
