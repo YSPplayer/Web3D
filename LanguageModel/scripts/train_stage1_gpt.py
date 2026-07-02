@@ -66,8 +66,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--early-stop-patience",
         type=int,
-        default=10,
-        help="Stop after this many evaluations without a new best valid_loss. Use 0 to disable.",
+        default=0,
+        help="Stop after this many evaluations without a new best valid_loss. Default 0 disables automatic early stopping.",
     )
     parser.add_argument(
         "--disable-esc-stop",

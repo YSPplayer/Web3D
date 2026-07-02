@@ -17,6 +17,8 @@ PROCESSED_DIR = LANGUAGE_MODEL_ROOT / "data" / "processed"
 SYNTHETIC_QA_SOURCE_DIR = RAW_DIR / "synthetic_qa"
 SYNTHETIC_QA_SOURCE_PATH = SYNTHETIC_QA_SOURCE_DIR / "synthetic_zh_qa_seed.json"
 SYNTHETIC_QA_PATH = RAW_DIR / "synthetic_zh_qa.txt"
+EXTERNAL_DOC_SOURCE_DIR = RAW_DIR / "external_docs"
+EXTERNAL_DOCS_PATH = RAW_DIR / "external_docs.txt"
 
 MAX_FILE_BYTES = 80 * 1024
 MAX_SOURCE_BLOCKS = 80
@@ -345,6 +347,89 @@ def make_qa_blocks() -> list[TextBlock]:
     return blocks
 
 
+def external_doc_source_paths(path: Path | None = None) -> list[Path]:
+    if path is None:
+        if not EXTERNAL_DOC_SOURCE_DIR.exists():
+            return []
+        return sorted(EXTERNAL_DOC_SOURCE_DIR.glob("*.jsonl"))
+    if path.is_dir():
+        return sorted(path.glob("*.jsonl"))
+    return [path]
+
+
+def load_external_doc_items(path: Path | None = None) -> list[dict[str, object]]:
+    source_paths = external_doc_source_paths(path)
+    items: list[dict[str, object]] = []
+    seen_sources: set[str] = set()
+
+    for source_path in source_paths:
+        with source_path.open("r", encoding="utf-8") as file:
+            for line_number, line in enumerate(file, start=1):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+
+                raw_item = json.loads(stripped)
+                if not isinstance(raw_item, dict):
+                    raise ValueError(f"External document line #{line_number} must be an object: {source_path}")
+
+                text = str(raw_item.get("text", "")).strip()
+                if not text:
+                    raise ValueError(f"External document line #{line_number} must include text: {source_path}")
+
+                source = str(raw_item.get("source") or f"{source_path.stem}/{line_number:06d}").strip()
+                if source in seen_sources:
+                    raise ValueError(f"Duplicate external document source: {source}")
+                seen_sources.add(source)
+
+                language = str(raw_item.get("language") or "zh").strip()
+                kind = str(raw_item.get("kind") or "external_document").strip()
+                title = str(raw_item.get("title") or "").strip()
+
+                items.append(
+                    {
+                        "source": source,
+                        "language": language,
+                        "kind": kind,
+                        "title": title,
+                        "text": text,
+                        "source_file": str(source_path),
+                    }
+                )
+    return items
+
+
+def make_external_doc_blocks(path: Path | None = None) -> list[TextBlock]:
+    blocks: list[TextBlock] = []
+    for item in load_external_doc_items(path):
+        source = str(item["source"])
+        language = str(item["language"])
+        kind = str(item["kind"])
+        title = str(item["title"])
+        content = str(item["text"])
+        title_line = f"title: {title}\n" if title else ""
+        text = (
+            "<|file_start|>\n"
+            f"source: {source}\n"
+            f"language: {language}\n"
+            f"kind: {kind}\n"
+            f"{title_line}"
+            "<|file_content|>\n"
+            f"{content}\n"
+            "<|file_end|>\n"
+        )
+        blocks.append(
+            TextBlock(
+                block_id=source,
+                source=source,
+                kind=kind,
+                language=language,
+                text=text,
+            )
+        )
+    return blocks
+
+
 def build_source_blocks(source_files: list[SourceFile]) -> tuple[list[TextBlock], list[dict[str, object]]]:
     blocks: list[TextBlock] = []
     skipped: list[dict[str, object]] = []
@@ -440,6 +525,7 @@ def split_stats(blocks: list[TextBlock]) -> dict[str, object]:
 def write_manifest(
     source_files: list[SourceFile],
     source_blocks: list[TextBlock],
+    external_doc_blocks: list[TextBlock],
     qa_blocks: list[TextBlock],
     splits: dict[str, list[TextBlock]],
     skipped: list[dict[str, object]],
@@ -458,6 +544,8 @@ def write_manifest(
         "outputs": {
             "raw_synthetic_qa_sources": [str(path) for path in synthetic_qa_source_paths()],
             "raw_synthetic_qa": str(SYNTHETIC_QA_PATH),
+            "raw_external_doc_sources": [str(path) for path in external_doc_source_paths()],
+            "raw_external_docs": str(EXTERNAL_DOCS_PATH),
             "corpus": str(PROCESSED_DIR / "corpus.txt"),
             "train": str(PROCESSED_DIR / "train.txt"),
             "valid": str(PROCESSED_DIR / "valid.txt"),
@@ -465,8 +553,9 @@ def write_manifest(
         },
         "source_candidates_used": len(source_files),
         "source_blocks_written": len(source_blocks),
+        "external_doc_blocks_written": len(external_doc_blocks),
         "synthetic_qa_blocks_written": len(qa_blocks),
-        "total": split_stats(source_blocks + qa_blocks),
+        "total": split_stats(source_blocks + external_doc_blocks + qa_blocks),
         "splits": {name: split_stats(items) for name, items in splits.items()},
         "source_extension_counts": dict(Counter(item.path.suffix.lower() for item in source_files)),
         "source_root_counts": dict(Counter(item.root_label for item in source_files)),
@@ -476,6 +565,7 @@ def write_manifest(
             "Files are split by whole text blocks instead of random characters.",
             "The dataset is plain UTF-8 text for causal language model pretraining.",
             "Synthetic QA blocks are learning-oriented Chinese explanations with English programming terms.",
+            "External document JSONL files are serialized as source_or_document style blocks.",
             "Generated dependency/build/vendor/binary files are excluded.",
         ],
     }
@@ -491,11 +581,13 @@ def main() -> None:
 
     source_files, skipped_collect = collect_source_files()
     source_blocks, skipped_read = build_source_blocks(source_files)
+    external_doc_blocks = make_external_doc_blocks()
     qa_blocks = make_qa_blocks()
 
     SYNTHETIC_QA_PATH.write_text("\n".join(block.text for block in qa_blocks) + "\n", encoding="utf-8")
+    EXTERNAL_DOCS_PATH.write_text("\n".join(block.text for block in external_doc_blocks) + "\n", encoding="utf-8")
 
-    all_blocks = source_blocks + qa_blocks
+    all_blocks = source_blocks + external_doc_blocks + qa_blocks
     splits = split_blocks(all_blocks)
 
     write_blocks(PROCESSED_DIR / "corpus.txt", all_blocks)
@@ -504,10 +596,11 @@ def main() -> None:
     write_blocks(PROCESSED_DIR / "test.txt", splits["test"])
 
     skipped = skipped_collect + skipped_read
-    write_manifest(source_files, source_blocks, qa_blocks, splits, skipped)
+    write_manifest(source_files, source_blocks, external_doc_blocks, qa_blocks, splits, skipped)
 
     print("Stage 1 dataset generated.")
     print(f"source blocks: {len(source_blocks)}")
+    print(f"external document blocks: {len(external_doc_blocks)}")
     print(f"synthetic QA blocks: {len(qa_blocks)}")
     print(f"total chars: {sum(block.chars for block in all_blocks)}")
     for name in ("train", "valid", "test"):
