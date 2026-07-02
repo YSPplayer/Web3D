@@ -2,26 +2,26 @@
   "schema_version": 1,
   "tokenizer_name": "char_v1",
   "tokenizer_path": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\tokenizer\\char_v1\\tokenizer.json",
-  "vocab_size": 969,
-  "generated_at": "2026-07-02T16:21:41",
+  "vocab_size": 1020,
+  "generated_at": "2026-07-02T16:40:41",
   "splits": {
     "train": {
       "split": "train",
       "source": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\train.txt",
       "output": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\tokenized\\char_v1\\train_ids.pt",
-      "num_tokens": 191589
+      "num_tokens": 1498727
     },
     "valid": {
       "split": "valid",
       "source": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\valid.txt",
       "output": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\tokenized\\char_v1\\valid_ids.pt",
-      "num_tokens": 12639
+      "num_tokens": 176064
     },
     "test": {
       "split": "test",
       "source": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\test.txt",
       "output": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\tokenized\\char_v1\\test_ids.pt",
-      "num_tokens": 12133
+      "num_tokens": 175652
     }
   }
 }

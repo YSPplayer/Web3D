@@ -25,8 +25,10 @@ class PrepareStage1DatasetTests(unittest.TestCase):
         items = module.load_synthetic_qa_items()
         sources = {str(item["source"]) for item in items}
 
-        self.assertGreaterEqual(len(items), 120)
+        self.assertGreaterEqual(len(items), 9000)
         self.assertTrue(any(source.startswith("synthetic_programming_zh_qa/") for source in sources))
+        self.assertTrue(any(source.startswith("synthetic_zh_qa_3000/") for source in sources))
+        self.assertTrue(any(source.startswith("synthetic_dialogue_zh_qa_6000/") for source in sources))
         self.assertTrue(any(item["question"] == "请问什么是 AI？" for item in items))
 
 

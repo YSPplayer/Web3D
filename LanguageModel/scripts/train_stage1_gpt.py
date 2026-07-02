@@ -1,4 +1,6 @@
-##训练命令:D:\YueShaoPu\lutis\.venv\Scripts\python.exe D:\YueShaoPu\Web3D\LanguageModel\scripts\train_stage1_gpt.py --auto-resume --max-iters 0
+#训练命令:
+#$env:PYTHONIOENCODING='utf-8'
+#D:\YueShaoPu\lutis\.venv\Scripts\python.exe D:\YueShaoPu\Web3D\LanguageModel\scripts\train_stage1_gpt.py --max-iters 0 --checkpoint-dir D:\YueShaoPu\Web3D\LanguageModel\checkpoints\stage1_char_gpt_v2_qa
 from __future__ import annotations
 
 import argparse

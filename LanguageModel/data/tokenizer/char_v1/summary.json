@@ -1,9 +1,9 @@
 {
   "name": "char_v1",
-  "vocab_size": 969,
+  "vocab_size": 1020,
   "special_token_count": 9,
-  "normal_char_count": 960,
-  "source_corpus_bytes": 264243,
+  "normal_char_count": 1011,
+  "source_corpus_bytes": 3482265,
   "output": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\tokenizer\\char_v1\\tokenizer.json",
   "first_20_normal_chars": [
     "\t",

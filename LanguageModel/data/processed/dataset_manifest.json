@@ -12,7 +12,9 @@
   "outputs": {
     "raw_synthetic_qa_sources": [
       "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\synthetic_zh_qa_seed.json",
-      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\zh_programming_qa_expansion.json"
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\zh_dialogue_qa_generated_6000.json",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\zh_programming_qa_expansion.json",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\zh_qa_generated_3000.json"
     ],
     "raw_synthetic_qa": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_zh_qa.txt",
     "corpus": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\corpus.txt",
@@ -22,14 +24,14 @@
   },
   "source_candidates_used": 80,
   "source_blocks_written": 80,
-  "synthetic_qa_blocks_written": 132,
+  "synthetic_qa_blocks_written": 9000,
   "total": {
-    "blocks": 212,
-    "chars": 221913,
-    "kib": 216.71,
+    "blocks": 9080,
+    "chars": 2026075,
+    "kib": 1978.59,
     "kinds": {
       "source_or_document": 80,
-      "synthetic_learning_qa": 132
+      "synthetic_learning_qa": 9000
     },
     "languages": {
       "markdown": 12,
@@ -41,58 +43,58 @@
       "python": 1,
       "yaml": 1,
       "json": 2,
-      "zh+en": 132
+      "zh+en": 9000
     }
   },
   "splits": {
     "train": {
-      "blocks": 179,
-      "chars": 196381,
-      "kib": 191.78,
+      "blocks": 7273,
+      "chars": 1639553,
+      "kib": 1601.13,
       "kinds": {
-        "source_or_document": 73,
-        "synthetic_learning_qa": 106
+        "synthetic_learning_qa": 7200,
+        "source_or_document": 73
       },
       "languages": {
-        "java": 16,
-        "cpp": 16,
-        "zh+en": 106,
-        "markdown": 12,
-        "cpp-header": 17,
+        "zh+en": 7200,
         "json": 2,
-        "yaml": 1,
+        "cpp-header": 17,
+        "cpp": 16,
+        "java": 16,
         "vue": 2,
         "typescript": 6,
-        "python": 1
+        "python": 1,
+        "markdown": 12,
+        "yaml": 1
       }
     },
     "valid": {
-      "blocks": 14,
-      "chars": 12924,
-      "kib": 12.62,
+      "blocks": 901,
+      "chars": 193354,
+      "kib": 188.82,
       "kinds": {
-        "synthetic_learning_qa": 13,
+        "synthetic_learning_qa": 900,
         "source_or_document": 1
       },
       "languages": {
-        "zh+en": 13,
+        "zh+en": 900,
         "cpp": 1
       }
     },
     "test": {
-      "blocks": 19,
-      "chars": 12608,
-      "kib": 12.31,
+      "blocks": 906,
+      "chars": 193168,
+      "kib": 188.64,
       "kinds": {
-        "synthetic_learning_qa": 13,
+        "synthetic_learning_qa": 900,
         "source_or_document": 6
       },
       "languages": {
-        "zh+en": 13,
-        "typescript": 2,
-        "cpp": 1,
+        "zh+en": 900,
         "cpp-header": 2,
-        "vue": 1
+        "vue": 1,
+        "typescript": 2,
+        "cpp": 1
       }
     }
   },
