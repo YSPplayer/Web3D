@@ -1,3 +1,7 @@
+# 
+$env:PYTHONIOENCODING='utf-8'
+$env:PYTHONDONTWRITEBYTECODE='1'
+D:\YueShaoPu\lutis\.venv\Scripts\python.exe D:\YueShaoPu\Web3D\LanguageModel\tests\test_dataset.py -v
 # 第一阶段：从零训练小型语言模型方案
 
 > **给后续执行者的说明：** 如果以后按本文档逐步实现代码，建议使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 按任务推进。
