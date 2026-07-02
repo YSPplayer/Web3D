@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+import sys
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +11,13 @@ import torch
 
 from lm.dataset import TokenDataset
 from lm.model import GPTConfig, GPTLanguageModel
+
+
+@dataclass(frozen=True)
+class EarlyStoppingDecision:
+    stale_evals: int
+    should_stop: bool
+    reason: str | None
 
 
 def train_step(
@@ -159,3 +168,91 @@ def append_metrics_history(history_path: str | Path, record: dict[str, Any]) -> 
     with history_path.open("a", encoding="utf-8") as file:
         file.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
         file.write("\n")
+
+
+def resolve_resume_checkpoint(
+    checkpoint_dir: str | Path,
+    resume_path: str | Path | None,
+    auto_resume: bool,
+) -> Path | None:
+    if resume_path is not None:
+        return Path(resume_path)
+
+    latest_path = Path(checkpoint_dir) / "latest.pt"
+    if auto_resume and latest_path.exists():
+        return latest_path
+
+    return None
+
+
+def load_training_checkpoint(
+    checkpoint_path: str | Path,
+    device: torch.device,
+) -> tuple[GPTConfig, dict[str, Any]]:
+    checkpoint_path = Path(checkpoint_path)
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(f"Checkpoint does not exist: {checkpoint_path}")
+
+    payload = torch.load(checkpoint_path, map_location=device)
+    for key in ("step", "model_config", "model_state_dict", "optimizer_state_dict"):
+        if key not in payload:
+            raise KeyError(f"Checkpoint missing {key}: {checkpoint_path}")
+
+    return GPTConfig(**payload["model_config"]), payload
+
+
+def restore_training_state(
+    model: GPTLanguageModel,
+    optimizer: torch.optim.Optimizer,
+    checkpoint_payload: dict[str, Any],
+) -> int:
+    model.load_state_dict(checkpoint_payload["model_state_dict"])
+    optimizer.load_state_dict(checkpoint_payload["optimizer_state_dict"])
+    return int(checkpoint_payload["step"])
+
+
+def read_best_valid_loss(checkpoint_dir: str | Path, device: torch.device) -> float | None:
+    best_path = Path(checkpoint_dir) / "best.pt"
+    if not best_path.exists():
+        return None
+
+    payload = torch.load(best_path, map_location=device)
+    valid_loss = payload.get("metrics", {}).get("valid_loss")
+    return None if valid_loss is None else float(valid_loss)
+
+
+def update_early_stopping(improved: bool, stale_evals: int, patience: int) -> EarlyStoppingDecision:
+    if patience <= 0:
+        return EarlyStoppingDecision(stale_evals=stale_evals, should_stop=False, reason=None)
+    if improved:
+        return EarlyStoppingDecision(stale_evals=0, should_stop=False, reason=None)
+
+    next_stale_evals = stale_evals + 1
+    should_stop = next_stale_evals >= patience
+    reason = None
+    if should_stop:
+        reason = f"valid_loss did not improve for {next_stale_evals} evaluations"
+
+    return EarlyStoppingDecision(
+        stale_evals=next_stale_evals,
+        should_stop=should_stop,
+        reason=reason,
+    )
+
+
+def should_stop_for_escape_key(key_reader: Callable[[], str | None] | None = None) -> bool:
+    if key_reader is None:
+        if sys.platform != "win32":
+            return False
+        try:
+            import msvcrt
+
+            if not msvcrt.kbhit():
+                return False
+            key = msvcrt.getwch()
+        except OSError:
+            return False
+    else:
+        key = key_reader()
+
+    return key == "\x1b"

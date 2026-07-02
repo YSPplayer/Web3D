@@ -15,9 +15,15 @@ from lm.model import GPTConfig, GPTLanguageModel
 from lm.training import (
     append_metrics_history,
     estimate_loss,
+    load_training_checkpoint,
+    read_best_valid_loss,
+    resolve_resume_checkpoint,
+    restore_training_state,
     save_best_checkpoint_if_improved,
     save_checkpoint,
+    should_stop_for_escape_key,
     train_step,
+    update_early_stopping,
 )
 
 
@@ -216,6 +222,124 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(records[0]["step"], 1)
         self.assertTrue(records[0]["is_best"])
         self.assertFalse(records[1]["is_best"])
+
+    def test_update_early_stopping_stops_after_patience_without_improvement(self) -> None:
+        fresh = update_early_stopping(improved=True, stale_evals=3, patience=2)
+        first_stale = update_early_stopping(improved=False, stale_evals=0, patience=2)
+        second_stale = update_early_stopping(improved=False, stale_evals=1, patience=2)
+
+        self.assertEqual(fresh.stale_evals, 0)
+        self.assertFalse(fresh.should_stop)
+        self.assertEqual(first_stale.stale_evals, 1)
+        self.assertFalse(first_stale.should_stop)
+        self.assertEqual(second_stale.stale_evals, 2)
+        self.assertTrue(second_stale.should_stop)
+        self.assertIn("valid_loss", second_stale.reason)
+
+    def test_should_stop_for_escape_key_uses_injected_reader(self) -> None:
+        self.assertTrue(should_stop_for_escape_key(lambda: "\x1b"))
+        self.assertFalse(should_stop_for_escape_key(lambda: "a"))
+        self.assertFalse(should_stop_for_escape_key(lambda: None))
+
+    def test_resolve_resume_checkpoint_supports_explicit_and_auto_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            checkpoint_dir = Path(temp_dir) / "checkpoint"
+            checkpoint_dir.mkdir()
+            latest_path = checkpoint_dir / "latest.pt"
+            explicit_path = Path(temp_dir) / "manual.pt"
+            latest_path.write_bytes(b"latest")
+            explicit_path.write_bytes(b"manual")
+
+            explicit = resolve_resume_checkpoint(
+                checkpoint_dir=checkpoint_dir,
+                resume_path=explicit_path,
+                auto_resume=True,
+            )
+            automatic = resolve_resume_checkpoint(
+                checkpoint_dir=checkpoint_dir,
+                resume_path=None,
+                auto_resume=True,
+            )
+            disabled = resolve_resume_checkpoint(
+                checkpoint_dir=checkpoint_dir,
+                resume_path=None,
+                auto_resume=False,
+            )
+
+        self.assertEqual(explicit, explicit_path)
+        self.assertEqual(automatic, latest_path)
+        self.assertIsNone(disabled)
+
+    def test_load_training_checkpoint_and_restore_training_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = GPTConfig(
+                vocab_size=17,
+                block_size=8,
+                n_embd=16,
+                n_head=4,
+                n_layer=2,
+                dropout=0.0,
+            )
+            dataset = self._make_dataset(temp_dir)
+            model = GPTLanguageModel(config)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+            train_step(
+                model=model,
+                optimizer=optimizer,
+                dataset=dataset,
+                batch_size=4,
+                block_size=config.block_size,
+            )
+            checkpoint_path = save_checkpoint(
+                checkpoint_dir=Path(temp_dir) / "checkpoint",
+                model=model,
+                optimizer=optimizer,
+                model_config=config,
+                train_config={"batch_size": 4},
+                step=9,
+                train_loss=1.1,
+                valid_loss=1.2,
+                checkpoint_name="latest.pt",
+            )
+
+            loaded_config, payload = load_training_checkpoint(checkpoint_path, device=torch.device("cpu"))
+            restored_model = GPTLanguageModel(loaded_config)
+            restored_optimizer = torch.optim.AdamW(restored_model.parameters(), lr=1e-3)
+            restored_step = restore_training_state(restored_model, restored_optimizer, payload)
+
+        self.assertEqual(loaded_config.vocab_size, config.vocab_size)
+        self.assertEqual(restored_step, 9)
+        self.assertTrue(torch.equal(model.token_embedding.weight, restored_model.token_embedding.weight))
+        self.assertGreater(len(restored_optimizer.state_dict()["state"]), 0)
+
+    def test_read_best_valid_loss_loads_best_checkpoint_metric(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config = GPTConfig(
+                vocab_size=17,
+                block_size=8,
+                n_embd=16,
+                n_head=4,
+                n_layer=2,
+                dropout=0.0,
+            )
+            model = GPTLanguageModel(config)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+            checkpoint_dir = Path(temp_dir) / "checkpoint"
+            save_checkpoint(
+                checkpoint_dir=checkpoint_dir,
+                model=model,
+                optimizer=optimizer,
+                model_config=config,
+                train_config={"batch_size": 4},
+                step=3,
+                train_loss=1.3,
+                valid_loss=0.9,
+                checkpoint_name="best.pt",
+            )
+
+            best_valid_loss = read_best_valid_loss(checkpoint_dir, device=torch.device("cpu"))
+
+        self.assertEqual(best_valid_loss, 0.9)
 
 
 if __name__ == "__main__":
