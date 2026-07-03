@@ -14,7 +14,9 @@ from lm.dataset import TokenDataset
 from lm.model import GPTConfig, GPTLanguageModel
 from lm.training import (
     append_metrics_history,
+    adjust_learning_rate_on_plateau,
     estimate_loss,
+    get_optimizer_learning_rate,
     load_training_checkpoint,
     read_best_valid_loss,
     resolve_resume_checkpoint,
@@ -235,6 +237,43 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(second_stale.stale_evals, 2)
         self.assertTrue(second_stale.should_stop)
         self.assertIn("valid_loss", second_stale.reason)
+
+    def test_adjust_learning_rate_on_plateau_reduces_optimizer_lr(self) -> None:
+        parameter = torch.nn.Parameter(torch.tensor(1.0))
+        optimizer = torch.optim.AdamW([parameter], lr=1e-3)
+
+        unchanged = adjust_learning_rate_on_plateau(
+            optimizer=optimizer,
+            improved=False,
+            stale_evals=2,
+            patience=3,
+            factor=0.5,
+            min_lr=1e-5,
+        )
+        reduced = adjust_learning_rate_on_plateau(
+            optimizer=optimizer,
+            improved=False,
+            stale_evals=3,
+            patience=3,
+            factor=0.5,
+            min_lr=1e-5,
+        )
+        floor = adjust_learning_rate_on_plateau(
+            optimizer=optimizer,
+            improved=False,
+            stale_evals=6,
+            patience=3,
+            factor=0.001,
+            min_lr=1e-5,
+        )
+
+        self.assertFalse(unchanged.reduced)
+        self.assertEqual(unchanged.current_lr, 1e-3)
+        self.assertTrue(reduced.reduced)
+        self.assertAlmostEqual(reduced.current_lr, 5e-4)
+        self.assertAlmostEqual(get_optimizer_learning_rate(optimizer), 1e-5)
+        self.assertTrue(floor.reduced)
+        self.assertIn("learning_rate", floor.reason)
 
     def test_should_stop_for_escape_key_uses_injected_reader(self) -> None:
         self.assertTrue(should_stop_for_escape_key(lambda: "\x1b"))

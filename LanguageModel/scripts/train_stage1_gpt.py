@@ -1,6 +1,9 @@
 #训练命令:
 #$env:PYTHONIOENCODING='utf-8'
-#D:\YueShaoPu\lutis\.venv\Scripts\python.exe D:\YueShaoPu\Web3D\LanguageModel\scripts\train_stage1_gpt.py --max-iters 0 --checkpoint-dir D:\YueShaoPu\Web3D\LanguageModel\checkpoints\stage1_char_gpt_v2_qa
+#D:\YueShaoPu\lutis\.venv\Scripts\python.exe D:\YueShaoPu\Web3D\LanguageModel\scripts\train_stage1_gpt.py --max-iters 0 --n-layer 8 --n-embd 256 --n-head 8 --block-size 256 --batch-size 16 --device auto
+
+#基于上一个基础上训练
+#D:\YueShaoPu\lutis\.venv\Scripts\python.exe D:\YueShaoPu\Web3D\LanguageModel\scripts\train_stage1_gpt.py --max-iters 0 --resume D:\YueShaoPu\Web3D\LanguageModel\checkpoints\stage1_char_gpt_v1\best.pt --block-size 256 --batch-size 16 --device auto
 from __future__ import annotations
 
 import argparse
@@ -19,8 +22,10 @@ from lm.dataset import TokenDataset
 from lm.model import GPTConfig, GPTLanguageModel
 from lm.tokenizer import CharTokenizer
 from lm.training import (
+    adjust_learning_rate_on_plateau,
     append_metrics_history,
     estimate_loss,
+    get_optimizer_learning_rate,
     load_training_checkpoint,
     read_best_valid_loss,
     resolve_resume_checkpoint,
@@ -82,6 +87,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--n-layer", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--learning-rate", type=float, default=3e-4)
+    parser.add_argument("--lr-scheduler", choices=["none", "plateau"], default="plateau")
+    parser.add_argument(
+        "--lr-plateau-patience",
+        type=int,
+        default=5,
+        help="For plateau scheduler: reduce learning rate after this many evaluations without valid_loss improvement.",
+    )
+    parser.add_argument(
+        "--lr-plateau-factor",
+        type=float,
+        default=0.5,
+        help="For plateau scheduler: multiply learning rate by this factor when valid_loss plateaus.",
+    )
+    parser.add_argument(
+        "--min-learning-rate",
+        type=float,
+        default=1e-5,
+        help="Lower bound for dynamic learning rate scheduling.",
+    )
     parser.add_argument("--weight-decay", type=float, default=0.1)
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument(
@@ -156,6 +180,10 @@ def main() -> int:
         "disable_esc_stop": args.disable_esc_stop,
         "batch_size": args.batch_size,
         "learning_rate": args.learning_rate,
+        "lr_scheduler": args.lr_scheduler,
+        "lr_plateau_patience": args.lr_plateau_patience,
+        "lr_plateau_factor": args.lr_plateau_factor,
+        "min_learning_rate": args.min_learning_rate,
         "weight_decay": args.weight_decay,
         "grad_clip": args.grad_clip,
     }
@@ -228,17 +256,6 @@ def main() -> int:
                     eval_iters=args.eval_iters,
                     generator=generator,
                 )
-                latest_checkpoint_path = save_checkpoint(
-                    checkpoint_dir=args.checkpoint_dir,
-                    model=model,
-                    optimizer=optimizer,
-                    model_config=model_config,
-                    train_config=train_config,
-                    step=step,
-                    train_loss=last_train_loss,
-                    valid_loss=last_valid_loss,
-                    checkpoint_name="latest.pt",
-                )
                 best_valid_loss, improved, saved_best_path = save_best_checkpoint_if_improved(
                     checkpoint_dir=args.checkpoint_dir,
                     model=model,
@@ -253,14 +270,45 @@ def main() -> int:
                 if saved_best_path is not None:
                     best_checkpoint_path = saved_best_path
 
-                early_stop = update_early_stopping(
-                    improved=improved,
-                    stale_evals=stale_evals,
-                    patience=args.early_stop_patience,
+                if args.early_stop_patience > 0:
+                    early_stop = update_early_stopping(
+                        improved=improved,
+                        stale_evals=stale_evals,
+                        patience=args.early_stop_patience,
+                    )
+                    stale_evals = early_stop.stale_evals
+                    if early_stop.should_stop:
+                        stop_reason = early_stop.reason
+                elif improved:
+                    stale_evals = 0
+                else:
+                    stale_evals += 1
+
+                lr_decision = None
+                if args.lr_scheduler == "plateau":
+                    lr_decision = adjust_learning_rate_on_plateau(
+                        optimizer=optimizer,
+                        improved=improved,
+                        stale_evals=stale_evals,
+                        patience=args.lr_plateau_patience,
+                        factor=args.lr_plateau_factor,
+                        min_lr=args.min_learning_rate,
+                    )
+                    if lr_decision.reduced:
+                        print(f"[lr] {lr_decision.reason}")
+
+                current_lr = get_optimizer_learning_rate(optimizer)
+                latest_checkpoint_path = save_checkpoint(
+                    checkpoint_dir=args.checkpoint_dir,
+                    model=model,
+                    optimizer=optimizer,
+                    model_config=model_config,
+                    train_config=train_config,
+                    step=step,
+                    train_loss=last_train_loss,
+                    valid_loss=last_valid_loss,
+                    checkpoint_name="latest.pt",
                 )
-                stale_evals = early_stop.stale_evals
-                if early_stop.should_stop:
-                    stop_reason = early_stop.reason
 
                 append_metrics_history(
                     metrics_history_path,
@@ -271,6 +319,9 @@ def main() -> int:
                         "best_valid_loss": best_valid_loss,
                         "stale_evals": stale_evals,
                         "is_best": improved,
+                        "learning_rate": current_lr,
+                        "lr_reduced": False if lr_decision is None else lr_decision.reduced,
+                        "lr_reason": None if lr_decision is None else lr_decision.reason,
                         "stop_reason": stop_reason,
                         "latest_checkpoint": str(latest_checkpoint_path),
                         "best_checkpoint": None if best_checkpoint_path is None else str(best_checkpoint_path),
@@ -281,10 +332,11 @@ def main() -> int:
                 elapsed_ms = (time.time() - step_started_at) * 1000
                 valid_part = "" if last_valid_loss is None else f", valid_loss={last_valid_loss:.4f}"
                 best_part = "" if best_valid_loss is None else f", best_valid_loss={best_valid_loss:.4f}"
-                stale_part = f", stale_evals={stale_evals}" if args.early_stop_patience > 0 else ""
+                stale_part = f", stale_evals={stale_evals}" if args.early_stop_patience > 0 or args.lr_scheduler == "plateau" else ""
+                lr_part = f", lr={get_optimizer_learning_rate(optimizer):.2e}"
                 print(
                     f"[step {step:05d}] train_loss={last_train_loss:.4f}"
-                    f"{valid_part}{best_part}{stale_part}, {elapsed_ms:.1f} ms"
+                    f"{valid_part}{best_part}{stale_part}{lr_part}, {elapsed_ms:.1f} ms"
                 )
 
             if stop_reason is not None:
@@ -321,6 +373,7 @@ def main() -> int:
                     "valid_loss": last_valid_loss,
                     "best_valid_loss": best_valid_loss,
                     "stale_evals": stale_evals,
+                    "learning_rate": get_optimizer_learning_rate(optimizer),
                     "stop_reason": stop_reason,
                     "latest_checkpoint": str(latest_checkpoint_path),
                     "best_checkpoint": None if best_checkpoint_path is None else str(best_checkpoint_path),

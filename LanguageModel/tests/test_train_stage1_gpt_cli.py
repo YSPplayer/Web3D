@@ -28,6 +28,17 @@ class TrainStage1GptCliTests(unittest.TestCase):
 
         self.assertEqual(args.early_stop_patience, 0)
 
+    def test_default_cli_enables_plateau_learning_rate_scheduler(self) -> None:
+        module = load_train_module()
+
+        with patch.object(sys, "argv", ["train_stage1_gpt.py"]):
+            args = module.parse_args()
+
+        self.assertEqual(args.lr_scheduler, "plateau")
+        self.assertEqual(args.lr_plateau_patience, 5)
+        self.assertAlmostEqual(args.lr_plateau_factor, 0.5)
+        self.assertAlmostEqual(args.min_learning_rate, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()

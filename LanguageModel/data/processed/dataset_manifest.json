@@ -17,6 +17,26 @@
       "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_qa\\zh_qa_generated_3000.json"
     ],
     "raw_synthetic_qa": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\synthetic_zh_qa.txt",
+    "raw_external_doc_sources": [
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0001.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0002.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0003.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0004.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0005.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0006.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0007.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0008.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0009.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0010.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0011.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0012.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0013.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0014.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0015.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0016.jsonl",
+      "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs\\zhwiki_20251201_100k_part_0017.jsonl"
+    ],
+    "raw_external_docs": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\raw\\external_docs.txt",
     "corpus": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\corpus.txt",
     "train": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\train.txt",
     "valid": "D:\\YueShaoPu\\Web3D\\LanguageModel\\data\\processed\\valid.txt",
@@ -24,13 +44,15 @@
   },
   "source_candidates_used": 80,
   "source_blocks_written": 80,
+  "external_doc_blocks_written": 100000,
   "synthetic_qa_blocks_written": 9000,
   "total": {
-    "blocks": 9080,
-    "chars": 2026075,
-    "kib": 1978.59,
+    "blocks": 109080,
+    "chars": 126199955,
+    "kib": 123242.14,
     "kinds": {
       "source_or_document": 80,
+      "external_document": 100000,
       "synthetic_learning_qa": 9000
     },
     "languages": {
@@ -43,58 +65,65 @@
       "python": 1,
       "yaml": 1,
       "json": 2,
+      "zh": 100000,
       "zh+en": 9000
     }
   },
   "splits": {
     "train": {
-      "blocks": 7273,
-      "chars": 1639553,
-      "kib": 1601.13,
+      "blocks": 97230,
+      "chars": 113394423,
+      "kib": 110736.74,
       "kinds": {
+        "external_document": 89958,
         "synthetic_learning_qa": 7200,
-        "source_or_document": 73
+        "source_or_document": 72
       },
       "languages": {
+        "zh": 89958,
         "zh+en": 7200,
-        "json": 2,
-        "cpp-header": 17,
         "cpp": 16,
-        "java": 16,
-        "vue": 2,
-        "typescript": 6,
-        "python": 1,
+        "java": 14,
+        "typescript": 8,
         "markdown": 12,
-        "yaml": 1
+        "cpp-header": 16,
+        "json": 2,
+        "yaml": 1,
+        "vue": 2,
+        "python": 1
       }
     },
     "valid": {
-      "blocks": 901,
-      "chars": 193354,
-      "kib": 188.82,
+      "blocks": 5909,
+      "chars": 6402847,
+      "kib": 6252.78,
       "kinds": {
+        "external_document": 5005,
         "synthetic_learning_qa": 900,
-        "source_or_document": 1
+        "source_or_document": 4
       },
       "languages": {
+        "zh": 5005,
         "zh+en": 900,
-        "cpp": 1
+        "cpp": 2,
+        "cpp-header": 1,
+        "vue": 1
       }
     },
     "test": {
-      "blocks": 906,
-      "chars": 193168,
-      "kib": 188.64,
+      "blocks": 5941,
+      "chars": 6402685,
+      "kib": 6252.62,
       "kinds": {
+        "external_document": 5037,
         "synthetic_learning_qa": 900,
-        "source_or_document": 6
+        "source_or_document": 4
       },
       "languages": {
+        "zh": 5037,
         "zh+en": 900,
-        "cpp-header": 2,
-        "vue": 1,
-        "typescript": 2,
-        "cpp": 1
+        "java": 2,
+        "cpp-header": 2
       }
     }
   },
@@ -258,6 +287,7 @@
     "Files are split by whole text blocks instead of random characters.",
     "The dataset is plain UTF-8 text for causal language model pretraining.",
     "Synthetic QA blocks are learning-oriented Chinese explanations with English programming terms.",
+    "External document JSONL files are serialized as source_or_document style blocks.",
     "Generated dependency/build/vendor/binary files are excluded."
   ]
 }

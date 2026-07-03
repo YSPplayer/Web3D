@@ -20,6 +20,52 @@ class EarlyStoppingDecision:
     reason: str | None
 
 
+@dataclass(frozen=True)
+class LearningRateDecision:
+    previous_lr: float
+    current_lr: float
+    reduced: bool
+    reason: str | None
+
+
+def get_optimizer_learning_rate(optimizer: torch.optim.Optimizer) -> float:
+    if not optimizer.param_groups:
+        raise ValueError("optimizer must have at least one parameter group")
+    return float(optimizer.param_groups[0]["lr"])
+
+
+def set_optimizer_learning_rate(optimizer: torch.optim.Optimizer, learning_rate: float) -> None:
+    for group in optimizer.param_groups:
+        group["lr"] = float(learning_rate)
+
+
+def adjust_learning_rate_on_plateau(
+    optimizer: torch.optim.Optimizer,
+    improved: bool,
+    stale_evals: int,
+    patience: int,
+    factor: float,
+    min_lr: float,
+) -> LearningRateDecision:
+    previous_lr = get_optimizer_learning_rate(optimizer)
+    if improved or patience <= 0 or stale_evals <= 0 or stale_evals % patience != 0:
+        return LearningRateDecision(previous_lr=previous_lr, current_lr=previous_lr, reduced=False, reason=None)
+    if factor <= 0.0 or factor >= 1.0:
+        return LearningRateDecision(previous_lr=previous_lr, current_lr=previous_lr, reduced=False, reason=None)
+
+    next_lr = max(previous_lr * factor, min_lr)
+    if next_lr >= previous_lr:
+        return LearningRateDecision(previous_lr=previous_lr, current_lr=previous_lr, reduced=False, reason=None)
+
+    set_optimizer_learning_rate(optimizer, next_lr)
+    return LearningRateDecision(
+        previous_lr=previous_lr,
+        current_lr=next_lr,
+        reduced=True,
+        reason=f"learning_rate reduced from {previous_lr:.6g} to {next_lr:.6g}",
+    )
+
+
 def train_step(
     model: GPTLanguageModel,
     optimizer: torch.optim.Optimizer,
