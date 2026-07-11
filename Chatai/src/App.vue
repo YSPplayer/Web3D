@@ -1,11 +1,13 @@
 <template>
     <div class ='container flex_row'>
         <leftmenu/>
+        <chatcontainer/>
     </div>
 
 </template>
 <script setup>
 import leftmenu from './component/leftmenu.vue';
+import chatcontainer from './component/chatcontainer.vue';
 </script>
 <style scoped>
 .leftmenu {
@@ -13,6 +15,11 @@ import leftmenu from './component/leftmenu.vue';
     height: 100%;
     background-color: #FFFFFF;
     border-right: 1px solid #ccc;
+}
+.chatcontainer {
+    width: 85%;
+    height: 100%;
+    background-color: #FFFFFF;
 }
 .container {
     background-color: #FFFFFF;

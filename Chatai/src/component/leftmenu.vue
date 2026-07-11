@@ -15,12 +15,19 @@
     </div>
     <div class="chat_config flex_colum">
         <div class="chat_line"></div>
-        <div></div>
+        <div class="chat_config_user flex_row">
+            <div class="user_img"></div>
+            <span>User</span>
+            <div class="user_edit flex_row_center">
+                <img :src="editChat" class="fill_img" />
+            </div>
+        </div>
     </div>
 </div>
 </template>
 <script setup>
  import svgChat from "@/assets/chat.svg";
+ import editChat from "@/assets/edit.svg";
  import { Search } from '@element-plus/icons-vue'
 </script>
 <style scoped>
@@ -28,10 +35,30 @@
      align-items: center; 
      gap: 0.625rem;
 }
+.chat_config_user {
+    width: 100%;
+    gap: 0.625rem;
+}
+.user_edit {
+    width:1.8rem;
+    aspect-ratio: 1 / 1;
+    margin-left: auto;
+    margin-right: 1.5rem;
+}
 .chat_title img {
-    height: 100%;
+    height: 2.403125rem;
     aspect-ratio: 1 / 1;  /*宽高相等*/
     object-fit: fill; 
+}
+.chat_config .flex_row {
+     align-items: center; 
+}
+.user_img {
+    border-radius: 50%;
+    width: 2.6rem;
+    aspect-ratio: 1 / 1;
+    background-color: #409EFF;
+    margin-left: 1rem;
 }
 .chat_title span {
     display: grid;
@@ -64,6 +91,7 @@
     background-color: #CCCCCC;
 }
 .chat_config {
+    gap: 0.625rem;
     margin-top: auto;
     width: 100%;
     height: 5%;
