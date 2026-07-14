@@ -1,40 +1,54 @@
-CREATE TABLE users { --用户表
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,--PRIMARY KEY 主键  AUTO_INCREMENT 自动递增
-    username VARCHAR(64) UNIQUE NOT NULL,--用户名 UNIQUE用户名不能重复
-    password_hash VARCHAR(255) NOT NULL,   -- 密码必须存哈希，不能存明文！
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP --自动填当前时间
-}
-CREATE TABLE model_configs { --模型配置表
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL, -- 外键，关联到 users 表的 i
-    model_type VARCHAR(32) NOT NULL, -- 模型类型，例如 "gpt"
-    model_name VARCHAR(64) NOT NULL, -- 模型名称，例如 "gpt-3.5-turbo"
-    api_key VARCHAR(255) NOT NULL, --API Key
-    is_online BOOLEAN DEFAULT TRUE, --在线/离线模型
-    is_active BOOLEAN DEFAULT TRUE, --是否启用
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE -- 外键约束，用户删除时，相关模型配置也会被删除
-}
+PRAGMA foreign_keys = ON;
 
-CREATE TABLE conversations { --会话表
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT NOT NULL,--外键，关联到 users 表的 id
-    model_config_id BIGINT NOT NULL,--外键，关联到 model_configs 表的 id
-    title VARCHAR(255) DEFAULT '新对话',--默认标题
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,--创建时间
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, --更新时间
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (model_config_id) REFERENCES model_configs(id) ON DELETE CASCADE
-    INDEX idx_user_id (user_id) -- 为 user_id 创建索引，加速查询
-}
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE TABLE messages { --消息表
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    conversation_id BIGINT NOT NULL,        -- 关联到 conversations.id（纯数字）
-    role ENUM('user', 'assistant') NOT NULL,   -- 'user' 是用户发的，'assistant' 是AI助手回复的
-    content TEXT NOT NULL DEFAULT '',                  -- 消息内容
-    tokens_used INT DEFAULT 0,              -- 每条消息单独记录
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-    INDEX idx_conversation_id (conversation_id)
-}
+CREATE TABLE IF NOT EXISTS model_configs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    model_type TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    is_online INTEGER NOT NULL DEFAULT 1
+        CHECK (is_online IN (0, 1)),
+    is_active INTEGER NOT NULL DEFAULT 1
+        CHECK (is_active IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    model_config_id INTEGER NOT NULL,
+    title TEXT NOT NULL DEFAULT '新对话',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_config_id)
+        REFERENCES model_configs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_user_id
+ON conversations(user_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL,
+    role TEXT NOT NULL
+        CHECK (role IN ('user', 'assistant')),
+    content TEXT NOT NULL DEFAULT '',
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id)
+        REFERENCES conversations(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
+ON messages(conversation_id);

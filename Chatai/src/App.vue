@@ -3,11 +3,19 @@
         <leftmenu/>
         <chatcontainer/>
     </div>
-
+    <login ref="loginRef"/>
 </template>
 <script setup>
 import leftmenu from './component/leftmenu.vue';
 import chatcontainer from './component/chatcontainer.vue';
+import login from './component/login.vue'
+import { ref, onMounted } from 'vue'
+const loginRef = ref(null)
+onMounted(()=>{
+    if (loginRef.value) {
+        loginRef.value.openDialog()
+    }
+})
 </script>
 <style scoped>
 .leftmenu {
