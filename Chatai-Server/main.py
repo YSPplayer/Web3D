@@ -17,6 +17,9 @@
 # )
 # # 获取回复
 # print(response.choices[0].message.content)
+#uv venv --python "D:\YueShaoPu\lutis\.venv\Scripts\python.exe" 
+#.venv\Scripts\activate
+#uv run python D:\YueShaoPu\Web3D\Chatai-Server\main.py
 import Server.server as server
 if __name__ == "__main__":
     server.run()

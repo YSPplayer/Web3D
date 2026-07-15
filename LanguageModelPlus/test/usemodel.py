@@ -9,7 +9,7 @@ model = AutoModelForCausalLM.from_pretrained(model_dir, local_files_only=True,
 #把模型设置为推理模式，而不是训练模式
 model.eval()
 messages = [
-    {"role": "user", "content": "你好，请用中文解释一下什么是 Transformer。"}
+    {"role": "user", "content": "帮我写一段C++代码,使用OpenGL绘制一个简单的立方体，可用使用三方库，把代码写出来给我"}
 ]
 #对话数据转为模型网络输入数据，不进行分词(是否序列化输入字符串为id形式)，让ai以回答用户的问题的方法来回答
 prompt = tokenizer.apply_chat_template(messages,
@@ -22,7 +22,7 @@ inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 with torch.no_grad():
      output_ids = model.generate(
         **inputs,
-        max_new_tokens=512,
+        max_new_tokens=5120,
         do_sample=True,
         temperature=0.7,
         top_p=0.9,
