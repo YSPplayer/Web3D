@@ -51,7 +51,10 @@ def error(message: str = "操作失败", code: int = 400) ->dict:
 @app.get("/chatai/health")
 async def health():
     return success("服务器访问正常")
-
+@app.get("/chatai/models") #获取到当前后端存储的所有类别的模型
+async def models():
+    models = db_manager.get_models()
+    return success("模型数据查询成功！",models)
 @app.post("/chatai/register")
 async def register(user:UserRegister):
     #获取前端传输数据
@@ -85,7 +88,7 @@ async def register(user:UserRegister):
 @app.post("/chatai/login")
 async def login(user:UserRegister):
     #获取前端传输数据
-    username = user.username
+    username = user.username.strip()
     password = user.password
     db_user = db_manager.get_user_by_username(user.username)
     if db_user is not None:

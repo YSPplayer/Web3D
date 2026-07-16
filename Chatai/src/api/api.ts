@@ -10,4 +10,7 @@ export const ChatAiApi = {
   async userLoginApi(user: UserRegister): Promise<any> {
     return await request.post('/chatai/login', user)
   },
+  async modelsApi():Promise<any> {
+    return await request.get('/chatai/models')
+  }
 }

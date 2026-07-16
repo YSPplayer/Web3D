@@ -18,7 +18,7 @@
         <div class="chat_config_user flex_row">
             <div class="user_img"></div>
             <span>User</span>
-            <div class="user_edit flex_row_center">
+            <div class="user_edit flex_row_center" @click="showConfigDialog">
                 <img :src="editChat" class="fill_img" />
             </div>
         </div>
@@ -29,6 +29,11 @@
  import svgChat from "@/assets/chat.svg";
  import editChat from "@/assets/edit.svg";
  import { Search } from '@element-plus/icons-vue'
+ import {defineEmits } from 'vue'
+ const emits = defineEmits(['showConfigDialog'])
+ const showConfigDialog = ()=> {
+    emits('showConfigDialog')
+ }
 </script>
 <style scoped>
 .leftmenu {
@@ -38,6 +43,9 @@
 .chat_config_user {
     width: 100%;
     gap: 0.625rem;
+}
+.user_edit:hover {
+   cursor: pointer;
 }
 .user_edit {
     width:1.8rem;

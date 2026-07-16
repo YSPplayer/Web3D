@@ -52,3 +52,9 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id
 ON messages(conversation_id);
+
+CREATE TABLE IF NOT EXISTS models (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_type TEXT NOT NULL,
+    model_name TEXT NOT NULL
+);

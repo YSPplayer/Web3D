@@ -38,3 +38,9 @@ CREATE TABLE messages { --消息表
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
     INDEX idx_conversation_id (conversation_id)
 }
+
+CREATE TABLE IF NOT EXISTS models {
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model_type TEXT NOT NULL,
+    model_name TEXT NOT NULL
+}

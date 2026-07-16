@@ -45,6 +45,15 @@ class DBManager:
                 conn.rollback()
                 raise
         print(f"数据库初始化成功，从 {sql_path} 加载")
+    def get_models(self):
+        with self.lock:
+            conn = self.get_db_connection()
+            rows = conn.execute(
+            """
+            SELECT model_type, model_name FROM models
+            """).fetchall()
+            return [dict(row) for row in rows] if rows else []
+
     def get_user_by_username(self, username: str):
         with self.lock:
             conn = self.get_db_connection()
