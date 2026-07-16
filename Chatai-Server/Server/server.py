@@ -6,7 +6,8 @@ from typing import Optional
 from Config.config import config
 import uvicorn
 import bcrypt
-import sqlite3
+import base64
+import mimetypes
 from Data.db_manager import db_manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +36,14 @@ def run():
 class UserRegister(BaseModel):
     username:str
     password:str
+class ModelConfig(BaseModel):
+    userid:int
+    modeltype:str
+    modelname:str
+    apikey:str
+    isonline:int
+    isactive:int
+
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -45,8 +54,45 @@ def success(message:str = "成功",data:any = None) ->dict:
 def error(message: str = "操作失败", code: int = 400) ->dict:
     return {
          "code": code,
-         "message": message
+         "detail": message
     }
+def check_result(result:dict):
+    if "code" in result:
+        if result["code"] == 409:
+            raise HTTPException(
+                status_code=409,
+                detail="账号已经存在"
+            )
+        elif result["code"] == 401:
+             raise HTTPException(
+                status_code=409,
+                detail="账号或密码不正确"
+            )
+        elif result["code"] == 500:
+            raise HTTPException(
+                status_code=409,
+                detail="数据库写入失败"
+            )
+        else:
+            raise HTTPException(
+                status_code=505,
+                detail="数据库操作失败"
+            )
+def image_to_data_url(logo_path: str)-> str:
+    # 数据库中是 /logo/glm.svg，去掉开头的斜杠
+    relative_path = logo_path.lstrip("/\\")
+    logo_root = (config.db_path / "images").resolve() 
+    image_path = (logo_root / relative_path).resolve()
+    if not image_path.is_relative_to(logo_root):
+        return ""
+    if not image_path.is_file():
+        print(f"模型Logo不存在：{image_path}")
+        return ""
+    mime_type, _ = mimetypes.guess_type(image_path.name)
+    mime_type = mime_type or "application/octet-stream"
+    image_bytes = image_path.read_bytes()
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
 
 @app.get("/chatai/health")
 async def health():
@@ -54,7 +100,32 @@ async def health():
 @app.get("/chatai/models") #获取到当前后端存储的所有类别的模型
 async def models():
     models = db_manager.get_models()
+    check_result(models)
+    logo_cache = {}
+    for model in models:
+        logo_path = model.get("logo_path")
+        if not logo_path:
+            model["logo_path"] = ""
+            continue
+        if logo_path not in logo_cache:
+            logo_cache[logo_path] = image_to_data_url(logo_path)
+        model["logo_path"] = logo_cache[logo_path]
     return success("模型数据查询成功！",models)
+
+@app.put("/chatai/saveModelConfig")
+async def save_model_config(config:ModelConfig):
+    salt = bcrypt.gensalt()
+    apikey_hash = bcrypt.hashpw(config.apikey.encode(), salt)
+    result = db_manager.create_model_config(
+        config.userid,config.modeltype,
+        config.modelname,apikey_hash,
+        config.isonline,config.isactive
+    )
+    check_result(result)
+    return success("配置保存成功",{
+        "userid": result["user_id"]
+    })
+
 @app.post("/chatai/register")
 async def register(user:UserRegister):
     #获取前端传输数据
@@ -68,19 +139,8 @@ async def register(user:UserRegister):
     # 1. 后端用 bcrypt 再加盐哈希（安全存储）
     salt = bcrypt.gensalt()
     final_hash = bcrypt.hashpw(password.encode(), salt)
-    try:
-        result = db_manager.create_user(username,final_hash)
-    except sqlite3.IntegrityError as exc:
-        if "UNIQUE constraint failed: users.username" in str(exc):
-            raise HTTPException(
-                status_code=409,
-                detail="账号已经存在"
-            )
-
-        raise HTTPException(
-            status_code=500,
-            detail="数据库写入失败"
-        )
+    result = db_manager.create_user(username,final_hash)
+    check_result(result)
     return success("注册成功",{
                 "username": result.username
     })
@@ -91,10 +151,11 @@ async def login(user:UserRegister):
     username = user.username.strip()
     password = user.password
     db_user = db_manager.get_user_by_username(user.username)
-    if db_user is not None:
-        if bcrypt.checkpw(password.encode(), db_user["password_hash"]):
+    check_result(db_user)
+    if bcrypt.checkpw(password.encode(), db_user["password_hash"]):
             return success("登录成功",{
-                "username": username
+                "id": db_user["id"],
+                "username": db_user["username"]
             })
     return error("登录失败，账号或密码不正确！",401)
 

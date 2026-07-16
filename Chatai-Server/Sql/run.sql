@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS model_configs (
     is_active INTEGER NOT NULL DEFAULT 1
         CHECK (is_active IN (0, 1)),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id)
         REFERENCES users(id) ON DELETE CASCADE
 );
@@ -56,5 +57,6 @@ ON messages(conversation_id);
 CREATE TABLE IF NOT EXISTS models (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     model_type TEXT NOT NULL,
-    model_name TEXT NOT NULL
+    model_name TEXT NOT NULL,
+    logo_path TEXT NOT NULL
 );

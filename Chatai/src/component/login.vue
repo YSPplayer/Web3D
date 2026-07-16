@@ -23,6 +23,7 @@
     import { ChatAiApi } from '@/api/api'
     import { ElMessage } from 'element-plus'
     import CryptoJS from 'crypto-js'
+    import {user} from '@/store/store'
     const dialogVisible = ref(true)
     const registerVisible = ref(false)
     const usernameRef = ref(null)
@@ -89,6 +90,9 @@
             password : CryptoJS.SHA256(loginForm.password).toString()
         })
         if(result.code == 200) {
+            const data = result.data
+            user.userid = data.id
+            user.username = data.username
             ElMessage.success('用户登录成功！')
             closeDialog()
         } else {

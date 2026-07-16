@@ -27,7 +27,35 @@ export class Request {
             const message = this.getErrorMessage(error)
             console.log('Backend request error:', error)
             ElMessage.error(message)
-            throw error
+            // throw error
+        }
+    }
+
+    async put<T = any>(url: string, data: any = {}): Promise<T> {
+        if (!this.axios) return Promise.reject(new Error('Please call create() first'))
+
+        try {
+            const response = await this.axios.put<T>(url, data)
+            return response.data
+        } catch (error) {
+            const message = this.getErrorMessage(error)
+            console.log('Backend request error:', error)
+            ElMessage.error(message)
+            //throw error
+        }
+    }
+
+    async delete<T = any>(url: string, params: any = {}): Promise<T> {
+        if (!this.axios) return Promise.reject(new Error('Please call create() first'))
+
+        try {
+            const response = await this.axios.delete<T>(url, { params })
+            return response.data
+        } catch (error) {
+            const message = this.getErrorMessage(error)
+            console.log('Backend request error:', error)
+            ElMessage.error(message)
+            //throw error
         }
     }
 
@@ -41,7 +69,7 @@ export class Request {
             const message = this.getErrorMessage(error)
             console.log('Backend request error:', error)
             ElMessage.error(message)
-            throw error
+            //throw error
         }
     }
 
