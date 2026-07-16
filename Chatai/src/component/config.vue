@@ -54,7 +54,6 @@
     import { ref,reactive,computed } from 'vue'
     import { ChatAiApi } from '@/api/api'
     import { user } from '@/store/store'
-    import CryptoJS from 'crypto-js'
     import { ElMessage } from 'element-plus'
     const modelSelectValue = ref([])
     const configForm = reactive({
@@ -98,7 +97,7 @@
                 userid:user.userid,
                 modeltype:modelSelectValue.value[0],
                 modelname:modelSelectValue.value[1],
-                apikey:CryptoJS.SHA256(configForm.apikey.value).toString(),
+                apikey:configForm.apikey,
                 isonline:onlineModel.value ? 1 : 0,
                 isactive:1
             } 

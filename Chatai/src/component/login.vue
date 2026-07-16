@@ -6,10 +6,10 @@
             <el-input v-if="registerVisible" placeholder="确认密码" v-model="loginForm.dfpassword" show-password
              ref="dfpasswordRef" class="login_input" @input="onUserDfPasswordInput"></el-input>
             <div class="flex_row_center" style="margin-top: 1rem">
-            <el-button v-if="!registerVisible" type="primary" class = 'login_button'
+            <el-button :loading="loginLoading"  v-if="!registerVisible" type="primary" class = 'login_button'
             @click = "clickLoginButton"  >登录</el-button>
             <a href="#" v-if="!registerVisible" class="a_link" @click="clickRegisterA">没有账号？去注册</a>
-            <el-button v-if="registerVisible" type="primary" class = 'register_button' @click = "clickRegisterButton" >注册</el-button>
+            <el-button :loading="registerLoading" v-if="registerVisible" type="primary" class = 'register_button' @click = "clickRegisterButton" >注册</el-button>
            <a href="#" v-if="registerVisible" class="a_link" @click="clickLoginA">返回登录</a>     
         </div>
 
@@ -24,6 +24,8 @@
     import { ElMessage } from 'element-plus'
     import CryptoJS from 'crypto-js'
     import {user} from '@/store/store'
+    const loginLoading = ref(false)
+    const registerLoading = ref(false)
     const dialogVisible = ref(true)
     const registerVisible = ref(false)
     const usernameRef = ref(null)
@@ -65,16 +67,18 @@
             ElMessage.error('密码不一致，请检查！')
             return
         }
+        loginLoading.value = true
         const result = await ChatAiApi.userRegisterApi({
             username : loginForm.username,
             password : CryptoJS.SHA256(loginForm.password).toString() //密码加密
         })
-        if(result.code == 200) {
+        if(result?.code == 200) {
             ElMessage.success('用户注册成功！')
             clickLoginA()
         } else {
             ElMessage.error('用户注册失败！')
         }
+        loginLoading.value = false
     }
     const clickLoginButton = async ()=> {
          if(loginForm.username === '') {
@@ -85,11 +89,12 @@
             ElMessage.warning('密码不能为空！')
             return
         }
+        loginLoading.value = true
         const result = await ChatAiApi.userLoginApi({
             username : loginForm.username,
             password : CryptoJS.SHA256(loginForm.password).toString()
         })
-        if(result.code == 200) {
+        if(result?.code == 200) {
             const data = result.data
             user.userid = data.id
             user.username = data.username
@@ -98,6 +103,7 @@
         } else {
             ElMessage.error('用户登录失败！')
         }
+        loginLoading.value = false
     }
     const clickRegisterA = ()=> {
         clearLoginForm()

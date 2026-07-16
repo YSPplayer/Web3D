@@ -9,6 +9,7 @@ import bcrypt
 import base64
 import mimetypes
 from Data.db_manager import db_manager
+from Data.key import key
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
@@ -114,11 +115,12 @@ async def models():
 
 @app.put("/chatai/saveModelConfig")
 async def save_model_config(config:ModelConfig):
-    salt = bcrypt.gensalt()
-    apikey_hash = bcrypt.hashpw(config.apikey.encode(), salt)
+    encrypted_api_key = key.encrypt_api_key(
+        config.apikey
+    )
     result = db_manager.create_model_config(
         config.userid,config.modeltype,
-        config.modelname,apikey_hash,
+        config.modelname,encrypted_api_key,
         config.isonline,config.isactive
     )
     check_result(result)
@@ -142,7 +144,7 @@ async def register(user:UserRegister):
     result = db_manager.create_user(username,final_hash)
     check_result(result)
     return success("注册成功",{
-                "username": result.username
+                "username": result["username"]
     })
 
 @app.post("/chatai/login")
