@@ -17,7 +17,7 @@
         <div class="chat_line"></div>
         <div class="chat_config_user flex_row">
             <div class="user_img"></div>
-            <span>User</span>
+            <span>{{userName}}</span>
             <div class="user_edit flex_row_center" @click="showConfigDialog">
                 <img :src="editChat" class="fill_img" />
             </div>
@@ -29,11 +29,17 @@
  import svgChat from "@/assets/chat.svg";
  import editChat from "@/assets/edit.svg";
  import { Search } from '@element-plus/icons-vue'
- import {defineEmits } from 'vue'
+ import {defineEmits,ref,watch } from 'vue'
+ import {user} from '@/store/store'
+ const userName = ref('')
  const emits = defineEmits(['showConfigDialog'])
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
  }
+watch(() => user.username,(newName) => {
+       userName.value = newName
+    }
+)
 </script>
 <style scoped>
 .leftmenu {
