@@ -124,19 +124,25 @@ async def get_model_config_state(userid:int,
     else:
         return  success("当前用户模型配置查询成功！",{
             "apikey":key.string_to_base64(key.decrypt_api_key(config_state["api_key"])),
-            "isonline":config_state["is_online"]
+            "isonline":config_state["is_online"],
+            "logo":image_to_data_url(config_state["logo_path"])
         })
 
 @app.get("/chatai/user/modelConfg") #获取到当前用户的模型配置
 async def get_user_model_config(userid:int):
     config = db_manager.get_model_config_by_userid(userid)
     check_result(config)
-    return success("当前用户模型配置查询成功！",{
-        "apikey":key.string_to_base64(key.decrypt_api_key(config["api_key"])),
-        "isonline":config["is_online"],
-        "modeltype":config["model_type"],
-        "modelname": config["model_name"]
-    })
+    if not config:
+        return success("当前用户模型配置数据不存在！")
+    else:
+        return success("当前用户模型配置查询成功！",{
+            "apikey":key.string_to_base64(key.decrypt_api_key(config["api_key"])),
+            "isonline":config["is_online"],
+            "modeltype":config["model_type"],
+            "modelname": config["model_name"],
+            "logo":image_to_data_url(config["logo_path"])
+        })
+    
 @app.put("/chatai/saveModelConfig")
 async def save_model_config(config:ModelConfig):
     encrypted_api_key = key.encrypt_api_key(

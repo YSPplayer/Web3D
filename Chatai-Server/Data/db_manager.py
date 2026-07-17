@@ -93,9 +93,18 @@ class DBManager:
                     """,
                     (user_id,model_type, model_name)
                 ).fetchone()
+                imgs = conn.execute(
+                    """
+                    SELECT logo_path
+                    FROM models
+                    WHERE model_type = ? AND model_name = ? 
+                    """,
+                    (model_type, model_name)
+                ).fetchone()
                 if row is None:
                     return {}
-                return dict(row)
+                result = {**dict(row), **dict(imgs)} if imgs else dict(row)
+                return result
             except Exception as exc:
                 print(f"数据库操作错误: {exc}")
                 return {
@@ -113,7 +122,18 @@ class DBManager:
                     """,
                     (user_id,)
                 ).fetchone()
-                return dict(row)
+                if row is None:
+                    return {}
+                imgs = conn.execute(
+                    """
+                    SELECT logo_path
+                    FROM models
+                    WHERE model_type = ? AND model_name = ? 
+                    """,
+                    (row["model_type"], row["model_name"])
+                ).fetchone()
+                result = {**dict(row), **dict(imgs)} if imgs else dict(row)
+                return result
             except Exception as exc:
                 print(f"数据库操作错误: {exc}")
                 return {

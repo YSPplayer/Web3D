@@ -38,6 +38,7 @@
                                 </div>
                             </template>
                         </el-cascader>
+                        <img v-if="modelImageUrl != ''" class="model_logo_img" :src="modelImageUrl">
                     </div>
                 </div>
             </el-tab-pane>
@@ -62,6 +63,7 @@
         apikey: '',
     })
     const activeName = ref('model')
+    const modelImageUrl = ref('')
     const onlineModel = ref(true)
     const modelOptions = ref([])
     const dialogVisible = ref(false)
@@ -75,9 +77,11 @@
             if(Util.isEmptyObject(data)) {
                  onlineModel.value = false
                  configForm.apikey = ''
+                 modelImageUrl.value = ''
             }
             onlineModel.value = data.isonline
             configForm.apikey = Util.base64ToString(data.apikey)
+            modelImageUrl.value = data.logo
         } 
     }
     const handleOpen = async ()=> {
@@ -108,9 +112,17 @@
       const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
       if(userconfig.code == 200) {
             const data = userconfig.data
-            onlineModel.value = data.isonline
-            configForm.apikey = Util.base64ToString(data.apikey)
-            modelSelectValue.value = [data.modeltype,data.modelname]
+            if(Util.isEmptyObject(data)) {
+                onlineModel.value = false
+                configForm.apikey = ''
+                modelSelectValue.value = []
+                modelImageUrl.value = ''
+            } else {
+                onlineModel.value = data.isonline
+                configForm.apikey = Util.base64ToString(data.apikey)
+                modelSelectValue.value = [data.modeltype,data.modelname]
+                modelImageUrl.value = data.logo  
+            }
       }
     } 
     const saveConfig = async () => {
@@ -142,6 +154,12 @@
     })
 </script>
 <style>
+.model_logo_img {
+    height: 30px;
+    aspect-ratio: 1 / 1;
+    object-fit: fill;
+    margin-left: 1rem;
+}
 .config_tab .model_apikey {
     width: 500px;
     margin-left: 1rem;
