@@ -140,6 +140,7 @@ async def get_user_model_config(userid:int):
             "isonline":config["is_online"],
             "modeltype":config["model_type"],
             "modelname": config["model_name"],
+            "modelconfigid":config["model_config_id"],
             "logo":image_to_data_url(config["logo_path"])
         })
     

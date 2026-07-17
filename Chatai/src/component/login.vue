@@ -19,7 +19,7 @@
 
 </template>
 <script setup>
-    import { ref,reactive,computed  } from 'vue'
+    import { ref,reactive,computed, defineEmits } from 'vue'
     import { ChatAiApi } from '@/api/api'
     import { ElMessage } from 'element-plus'
     import CryptoJS from 'crypto-js'
@@ -31,6 +31,7 @@
     const usernameRef = ref(null)
     const passwordRef = ref(null)
     const dfpasswordRef = ref(null)
+    const emits = defineEmits(['updateUserModelConfig'])
     const dialogTitle = computed(() => {
     return registerVisible.value ? '账号注册' : '账号登录'
     })
@@ -103,6 +104,7 @@
         } else {
             ElMessage.error('用户登录失败！')
         }
+        emits('updateUserModelConfig')
         loginLoading.value = false
     }
     const clickRegisterA = ()=> {

@@ -3,7 +3,7 @@
         <leftmenu @showConfigDialog= 'showConfigDialog'  />
         <chatcontainer/>
     </div>
-    <login ref="loginRef"/>
+    <login ref="loginRef" @updateUserModelConfig = 'updateUserModelConfig'/>
     <config ref="configRef"/>
 </template>
 <script setup>
@@ -15,15 +15,14 @@ import { ref, onMounted } from 'vue'
 const loginRef = ref(null)
 const configRef = ref(null)
 const showConfigDialog = ()=>{
-    if(configRef.value) {
-        configRef.value.openDialog()
-    }
+   configRef.value?.openDialog()
 }
 onMounted(()=>{
-    if (loginRef.value) {
-        loginRef.value.openDialog()
-    }
+   loginRef.value?.openDialog()
 })
+const updateUserModelConfig = async ()=> {
+    await configRef.value?.updateUserModelConfig() 
+}
 </script>
 <style scoped>
 .leftmenu {

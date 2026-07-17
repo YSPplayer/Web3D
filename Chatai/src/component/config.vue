@@ -108,6 +108,9 @@
             })
         });
       }
+      await updateUserModelConfig()
+    } 
+    const updateUserModelConfig = async ()=> {
       //设置当前的激活模型
       const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
       if(userconfig.code == 200) {
@@ -123,8 +126,9 @@
                 modelSelectValue.value = [data.modeltype,data.modelname]
                 modelImageUrl.value = data.logo  
             }
+            user.modelconfigid = data.modelconfigid
       }
-    } 
+    }
     const saveConfig = async () => {
         saveconfigLoading.value = true
         if(activeName.value === 'model') {
@@ -150,7 +154,8 @@
     }
     defineExpose({
     openDialog,
-    closeDialog
+    closeDialog,
+    updateUserModelConfig
     })
 </script>
 <style>

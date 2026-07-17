@@ -197,6 +197,28 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def create_conversation(self,user_id:int,model_config_id:int,title:str):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO conversations (user_id, model_config_id,title)
+                    VALUES (?, ?, ?)
+                    """,
+                    (user_id, model_config_id,title)
+                )
+                conn.commit()
+                new_id = cursor.lastrowid
+                return {
+                    "conversation_id": new_id
+                }
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
+                 return {
+                    "code":500
+                }
     def create_user(self,username:str, password_hash: str):
          with self.lock:
             conn = self.get_db_connection()
