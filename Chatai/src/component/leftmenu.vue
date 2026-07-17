@@ -4,14 +4,20 @@
         <img :src="svgChat" alt="聊天图标">
         <span> 智能聊天助手 </span>
     </div>
-    <el-button type="primary">+ 新建对话</el-button>
+    <el-button type="primary" @click="newChatButton">+ 新建对话</el-button>
     <el-input placeholder="搜索对话">
         <template #prefix>
             <el-icon><Search /></el-icon>
         </template>
     </el-input>
-    <div class="chat_menu">
-
+    <div class="chat_menu scroll_container flex_colum">
+         <div 
+            v-for="item in chatList" 
+            :key="item.id"
+            class="chat_box"
+        >
+            <span> {{item.name}} </span>
+        </div>
     </div>
     <div class="chat_config flex_colum">
         <div class="chat_line"></div>
@@ -32,9 +38,19 @@
  import {defineEmits,ref,watch } from 'vue'
  import {user} from '@/store/store'
  const userName = ref('')
+ const chatList = ref([])
  const emits = defineEmits(['showConfigDialog'])
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
+ }
+ const newChatButton = ()=> {
+    const lastid = chatList.value.length > 0 ?
+    chatList.value[chatList.value.length - 1].id 
+        : 0
+    chatList.value.push({
+        id: lastid + 1,
+        name:'新对话'
+    })
  }
 watch(() => user.username,(newName) => {
        userName.value = newName
@@ -42,6 +58,22 @@ watch(() => user.username,(newName) => {
 )
 </script>
 <style scoped>
+.chat_box {
+   width: calc(100% - 2rem);
+   height: 40px;
+   flex: 0 0 40px;
+   border-radius: 3px;
+   border: 1px solid #409EFF;
+   margin: 0 1rem;
+   background-color: rgba(239,246,255, 0.5); 
+}
+.chat_menu .chat_box span {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    margin-left: 1rem;
+}
 .leftmenu {
      align-items: center; 
      gap: 0.625rem;
@@ -96,7 +128,10 @@ watch(() => user.username,(newName) => {
 .chat_menu {
     flex: 1; /* 撑满剩余空间 */
     width: 100%;
+    min-height: 0;
+    gap:0.5rem;
     height: auto;
+    align-items: center; 
 
 }
 .chat_line {
