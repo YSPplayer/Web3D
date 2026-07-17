@@ -41,7 +41,8 @@ class DBManager:
             try:
                 conn.executescript(sql_script)
                 conn.commit()
-            except Exception:
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
                 conn.rollback()
                 raise
         print(f"数据库初始化成功，从 {sql_path} 加载")
@@ -54,9 +55,10 @@ class DBManager:
                 SELECT model_type, model_name,logo_path FROM models
                 """).fetchall()
                 return [dict(row) for row in rows] if rows else []
-            except Exception:
+            except Exception as exc:
+                 print(f"数据库操作错误: {exc}")
                  return {
-                    "code":505
+                    "code":500
                 }
 
     def get_user_by_username(self, username: str):
@@ -73,15 +75,65 @@ class DBManager:
                     (username,)
                 ).fetchone()
                 return dict(row) if row else {"code":401}
-            except Exception:
+            except Exception as exc:
+                 print(f"数据库操作错误: {exc}")
                  return {
-                    "code":505
+                    "code":500
                 }
-    def create_model_config(self,user_id:int,model_type:str,model_name:str,
-              api_key:str, is_online:int, is_active:int):
+    def get_model_config_state_by_user_par(self,user_id:int,
+            model_type:str,model_name:str):
         with self.lock:
             conn = self.get_db_connection()
             try:
+                row = conn.execute(
+                    """
+                    SELECT api_key,is_online
+                    FROM model_configs
+                    WHERE user_id = ? AND model_type = ? AND model_name = ? 
+                    """,
+                    (user_id,model_type, model_name)
+                ).fetchone()
+                if row is None:
+                    return {}
+                return dict(row)
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }   
+    def get_model_config_by_userid(self,user_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT *
+                    FROM model_configs
+                    WHERE user_id = ? AND is_active = 1
+                    """,
+                    (user_id,)
+                ).fetchone()
+                return dict(row)
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }   
+    def create_model_config(self,user_id:int,model_type:str,model_name:str,
+              api_key:str, is_online:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                # 1. 当前用户的所有模型先取消激活
+                conn.execute(
+                    """
+                    UPDATE model_configs
+                    SET is_active = 0,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                    """,
+                    (user_id,)
+                )
                 existing = conn.execute(
                 """
                 SELECT id FROM model_configs 
@@ -90,14 +142,15 @@ class DBManager:
                     (user_id, model_type, model_name)
                 ).fetchone()
                 if existing:
+                    config_id = existing["id"]
                     # 2. 存在则更新
                     conn.execute(
                     """
                     UPDATE model_configs 
-                    SET api_key = ?, is_online = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE user_id = ? AND model_type = ? AND model_name = ?
+                    SET api_key = ?, is_online = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
                     """,
-                    (api_key, is_online, is_active, user_id, model_type, model_name)
+                    (api_key, is_online,config_id)
                      )
                 else:
                     cursor = conn.execute(
@@ -106,21 +159,23 @@ class DBManager:
                         VALUES (?,?,?,?,?,?)
                         """,
                         (user_id, model_type,model_name,api_key,
-                        is_online,is_active)
+                        is_online,1)
                     )
                 conn.commit()
                 row = conn.execute(
                     """
                     SELECT *
                     FROM model_configs
-                    WHERE user_id = ?
+                    WHERE user_id = ? AND model_type = ? AND model_name = ?
                     """,
-                    (user_id,)
+                    (user_id, model_type, model_name)
                 ).fetchone()
                 return dict(row)
-            except Exception:
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
                  return {
-                    "code":505
+                    "code":500
                 }
     def create_user(self,username:str, password_hash: str):
          with self.lock:
@@ -145,6 +200,8 @@ class DBManager:
                 ).fetchone()
                 return dict(row)
             except sqlite3.IntegrityError as exc:
+                conn.rollback()
+                print(f"数据库操作错误: {exc}")
                 if "UNIQUE constraint failed: users.username" in str(exc):
                     return {
                         "code":409
@@ -152,9 +209,11 @@ class DBManager:
                 return {
                     "code":500
                 }
-            except Exception:
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
                  return {
-                    "code":505
+                    "code":500
                 }
 
 db_manager = DBManager()

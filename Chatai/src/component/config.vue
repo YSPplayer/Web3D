@@ -22,6 +22,7 @@
                             v-model="modelSelectValue"
                             :options="modelOptions"
                             :props="{ expandTrigger: 'hover' }"
+                            @change='modelSelectChange'
                             >
                             <template #default="{ data }">
                                 <div class="model_option ">
@@ -55,6 +56,7 @@
     import { ChatAiApi } from '@/api/api'
     import { user } from '@/store/store'
     import { ElMessage } from 'element-plus'
+    import { Util } from '@/shared/util.ts'
     const modelSelectValue = ref([])
     const configForm = reactive({
         apikey: '',
@@ -64,6 +66,20 @@
     const modelOptions = ref([])
     const dialogVisible = ref(false)
     const saveconfigLoading = ref(false)
+    const modelSelectChange = async ()=> {
+        const config = await ChatAiApi.getModelConfigState(user.userid,
+            modelSelectValue.value[0],modelSelectValue.value[1]
+        )
+        if(config.code == 200) {
+            const data = config.data
+            if(Util.isEmptyObject(data)) {
+                 onlineModel.value = false
+                 configForm.apikey = ''
+            }
+            onlineModel.value = data.isonline
+            configForm.apikey = Util.base64ToString(data.apikey)
+        } 
+    }
     const handleOpen = async ()=> {
       modelOptions.value = []
       const modelDatas = await ChatAiApi.modelsApi()
@@ -88,7 +104,14 @@
             })
         });
       }
-
+      //设置当前的激活模型
+      const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
+      if(userconfig.code == 200) {
+            const data = userconfig.data
+            onlineModel.value = data.isonline
+            configForm.apikey = Util.base64ToString(data.apikey)
+            modelSelectValue.value = [data.modeltype,data.modelname]
+      }
     } 
     const saveConfig = async () => {
         saveconfigLoading.value = true
@@ -97,9 +120,8 @@
                 userid:user.userid,
                 modeltype:modelSelectValue.value[0],
                 modelname:modelSelectValue.value[1],
-                apikey:configForm.apikey,
-                isonline:onlineModel.value ? 1 : 0,
-                isactive:1
+                apikey:Util.stringToBase64(configForm.apikey),
+                isonline:onlineModel.value ? 1 : 0
             } 
             const result = await ChatAiApi.saveModelConfigApi(config)
             if(result?.code == 200) {

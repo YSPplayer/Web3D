@@ -56,6 +56,7 @@ ON messages(conversation_id);
 
 CREATE TABLE IF NOT EXISTS models (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider_type TEXT NOT NULL,
     model_type TEXT NOT NULL,
     model_name TEXT NOT NULL,
     logo_path TEXT NOT NULL

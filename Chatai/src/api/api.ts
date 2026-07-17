@@ -9,9 +9,9 @@ interface ModelConfig {
     modelname:string
     apikey:string
     isonline:number
-    isactive:number
 }
 export const ChatAiApi = {
+  //post
   async userRegisterApi(user: UserRegister): Promise<any> {
     
     return await request.post('/chatai/register', user)
@@ -19,10 +19,26 @@ export const ChatAiApi = {
   async userLoginApi(user: UserRegister): Promise<any> {
     return await request.post('/chatai/login', user)
   },
+
+  //put
+  async saveModelConfigApi(config: ModelConfig):Promise<any> {
+    return await request.put('/chatai/saveModelConfig',config)
+  },
+  
+  //get
   async modelsApi():Promise<any> {
     return await request.get('/chatai/models')
   },
-  async saveModelConfigApi(config: ModelConfig):Promise<any> {
-    return await request.put('/chatai/saveModelConfig',config)
-  }
+  async getUserModelConfigApi(userid:number) {
+    return await request.get('/chatai/user/modelConfg',{
+    params: { userid }
+  })
+  },
+  async getModelConfigState(userid:number,modeltype:string,modelname:string) {
+    return await request.get('/chatai/user/modelConfgState',{
+    params: { userid,modeltype,modelname }
+  })
+  },
+
+
 }
