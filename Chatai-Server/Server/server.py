@@ -140,10 +140,13 @@ async def get_user_model_config(userid:int):
             "isonline":config["is_online"],
             "modeltype":config["model_type"],
             "modelname": config["model_name"],
-            "modelconfigid":config["model_config_id"],
+            "modelconfigid":config["id"],
             "logo":image_to_data_url(config["logo_path"])
         })
-    
+
+@app.post("/chatai/conversation")
+async def create_conversation():
+
 @app.put("/chatai/saveModelConfig")
 async def save_model_config(config:ModelConfig):
     encrypted_api_key = key.encrypt_api_key(

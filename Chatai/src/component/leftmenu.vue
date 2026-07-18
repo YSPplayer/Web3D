@@ -143,7 +143,7 @@ watch(() => user.username,(newName) => {
     gap: 0.625rem;
     margin-top: auto;
     width: 100%;
-    height: 5%;
     align-items: center; 
+    margin-bottom: 0.5rem;
 }
 </style>
