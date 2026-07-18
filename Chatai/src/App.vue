@@ -1,6 +1,6 @@
 <template>
     <div class ='container flex_row'>
-        <leftmenu @showConfigDialog= 'showConfigDialog'  />
+        <leftmenu ref="leftmenuRef" @showConfigDialog= 'showConfigDialog'  />
         <chatcontainer/>
     </div>
     <login ref="loginRef" @updateUserModelConfig = 'updateUserModelConfig'/>
@@ -12,8 +12,11 @@ import chatcontainer from './component/chatcontainer.vue';
 import login from './component/login.vue'
 import config from './component/config.vue'
 import { ref, onMounted } from 'vue'
+import { ChatAiApi } from '@/api/api.ts';
+import { user } from './store/store.ts';
 const loginRef = ref(null)
 const configRef = ref(null)
+const leftmenuRef = ref(null)
 const showConfigDialog = ()=>{
    configRef.value?.openDialog()
 }
@@ -22,6 +25,16 @@ onMounted(()=>{
 })
 const updateUserModelConfig = async ()=> {
     await configRef.value?.updateUserModelConfig() 
+    //获取到用户的最新的会话记录
+    const result = await ChatAiApi.getConversationApi(user.userid,
+        user.modelconfigid
+    )
+    if(result.code == 200) {
+        const data = result.data
+        if(!data) return 
+        leftmenuRef.value?.updateChatList(data)
+
+    }
 }
 </script>
 <style scoped>

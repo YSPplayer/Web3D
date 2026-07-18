@@ -44,6 +44,10 @@ class ModelConfig(BaseModel):
     apikey:str
     isonline:int
 
+class Conversation(BaseModel):
+    userid: int
+    modelconfigid: int
+    title: str
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -93,7 +97,7 @@ def image_to_data_url(logo_path: str)-> str:
     image_bytes = image_path.read_bytes()
     encoded = key.img_bytes_to_base64(image_bytes)
     return f"data:{mime_type};base64,{encoded}"
-
+##get
 @app.get("/chatai/health")
 async def health():
     return success("服务器访问正常")
@@ -144,9 +148,15 @@ async def get_user_model_config(userid:int):
             "logo":image_to_data_url(config["logo_path"])
         })
 
-@app.post("/chatai/conversation")
-async def create_conversation():
-
+@app.get("/chatai/user/getConversation")
+async def get_conversation(userid:int,modelconfigid:int):
+    result = db_manager.get_conversation(userid,modelconfigid)
+    check_result(result)
+    if not result:
+        return success("当前用户会话记录不存在！")
+    else:
+        return success("当前用户会话记录查询成功！",result)
+##put
 @app.put("/chatai/saveModelConfig")
 async def save_model_config(config:ModelConfig):
     encrypted_api_key = key.encrypt_api_key(
@@ -160,6 +170,15 @@ async def save_model_config(config:ModelConfig):
     check_result(result)
     return success("配置保存成功",{
         "userid": result["user_id"]
+    })
+
+##post
+@app.post("/chatai/user/conversation")
+async def create_conversation(conversation:Conversation):
+    result = db_manager.create_conversation(conversation.userid,conversation.modelconfigid,conversation.title)
+    check_result(result)
+    return success("会话新建成功！",{
+        "conversationid": result["conversation_id"]
     })
 
 @app.post("/chatai/register")

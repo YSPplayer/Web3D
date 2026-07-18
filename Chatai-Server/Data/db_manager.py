@@ -197,6 +197,27 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def get_conversation(self,user_id:int,model_config_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT id,title
+                    FROM conversations
+                    WHERE user_id = ? AND model_config_id = ?
+                    """,
+                    (user_id, model_config_id)
+                ).fetchall()
+                if row is None:
+                    return {}
+                return dict(row)
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
+                 return {
+                    "code":500
+                }
     def create_conversation(self,user_id:int,model_config_id:int,title:str):
         with self.lock:
             conn = self.get_db_connection()

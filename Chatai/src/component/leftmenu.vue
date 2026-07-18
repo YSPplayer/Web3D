@@ -37,25 +37,50 @@
  import { Search } from '@element-plus/icons-vue'
  import {defineEmits,ref,watch } from 'vue'
  import {user} from '@/store/store'
+ import { ChatAiApi } from "@/api/api";
  const userName = ref('')
  const chatList = ref([])
  const emits = defineEmits(['showConfigDialog'])
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
  }
- const newChatButton = ()=> {
-    const lastid = chatList.value.length > 0 ?
-    chatList.value[chatList.value.length - 1].id 
-        : 0
-    chatList.value.push({
-        id: lastid + 1,
-        name:'新对话'
-    })
+ const newChatButton = async ()=> {
+    const newtitle = '新对话'
+    const result =  await ChatAiApi.createConversationApi({
+        userid : user.userid,
+        modelconfigid : user.modelconfigid,
+        title : newtitle
+    }
+    ) 
+    if(result.code == 200) {
+        const data = result.data
+        pushValueToChatList(newtitle)
+    }
  }
+const pushValueToChatList = (value)=> {
+  const lastid = chatList.value.length > 0 ?
+        chatList.value[chatList.value.length - 1].id 
+            : 0
+  chatList.value.push({
+            id: lastid + 1,
+            name:value
+        })
+}
+const updateChatList = (data)=> {
+    chatList.value = []
+    user.conversationsid = []
+    for(const key in data) {
+        user.conversationsid.push(key)
+        pushValueToChatList(data[key])
+    }
+}
 watch(() => user.username,(newName) => {
        userName.value = newName
     }
 )
+defineExpose({
+  updateChatList
+})
 </script>
 <style scoped>
 .chat_box {
