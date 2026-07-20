@@ -7,13 +7,13 @@
     <config ref="configRef"/>
 </template>
 <script setup>
-import leftmenu from './component/leftmenu.vue';
-import chatcontainer from './component/chatcontainer.vue';
-import login from './component/login.vue'
-import config from './component/config.vue'
+import leftmenu from '@/component/leftmenu.vue';
+import chatcontainer from '@/component/chatcontainer.vue';
+import login from '@/component/login.vue'
+import config from '@/component/config.vue'
 import { ref, onMounted } from 'vue'
 import { ChatAiApi } from '@/api/api.ts';
-import { user } from './store/store.ts';
+import { user } from '@/store/store.ts';
 const loginRef = ref(null)
 const configRef = ref(null)
 const leftmenuRef = ref(null)
