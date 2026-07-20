@@ -1,11 +1,14 @@
 <template>
     <div class="chatcontainer flex_colum_center">
         <div class="chat_main">
-            <div class="chat_main_container flex_colum">
+            <div ref="chatMainRef" class="chat_main_container flex_colum"
+            @wheel.passive="handleChatWheel"
+            @scroll.passive="handleChatScroll"
+            >
                 <chatrolecontainer
                 v-for="message in messages"
                 :key="message.id"
-                :is-user="message.role === 'user'"
+                :isUser="message.role === 'user'"
                 :message="message.content"
                 />
             </div>
@@ -17,7 +20,6 @@
             </div>
             <img class="chat_post" :src="postChat" :class="fill_img"
             @click="sendChatMessage">
-
             </img>
         </div>
     </div>
@@ -25,12 +27,56 @@
 
 <script setup>
  import postChat from "@/assets/post.svg";
- import { ref,reactive  } from 'vue'
+ import { ref,reactive,nextTick   } from 'vue'
  import {user} from '@/store/store'
  import {ChatAiApi} from '@/api/api'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
  const inputChatText = ref('')
+ const chatMainRef = ref(null)
  const messages = ref([])
+ const autoFollow = ref(true) // 是否自动跟随最新消息
+ // 距离底部小于这个值，认为用户已经到底部
+ const BOTTOM_DISTANCE = 40
+ const isAtBottom = () => {
+    const element = chatMainRef.value
+    if (!element) {
+        return true
+    }
+    const distanceToBottom =
+        element.scrollHeight -
+        element.scrollTop -
+        element.clientHeight
+    return distanceToBottom <= BOTTOM_DISTANCE
+}
+const handleChatWheel = event => {
+    if (event.deltaY < 0) {
+        autoFollow.value = false
+    }
+}
+const handleChatScroll = () => {
+    autoFollow.value = isAtBottom()
+}
+ //让当前的滚动的位置始终处于底层
+ const scrollToBottom = (force = false) => {
+    // 用户主动发送消息时，可以强制重新开启跟随
+    if (force) {
+        autoFollow.value = true
+    }
+    if (!autoFollow.value) {
+        return
+    }
+    nextTick(() => {
+        // nextTick 执行前用户可能已经向上滚动，因此再次判断
+        if (!autoFollow.value) {
+            return
+        }
+        const element = chatMainRef.value
+        if (!element) {
+            return
+        }
+        element.scrollTop = element.scrollHeight
+    })
+}
  const generating = ref(false)
  let abortController = null;
  const lastid = messages.value.length > 0 ?
@@ -50,6 +96,7 @@
         streaming: true
     })
     messages.value.push(aiMessage)
+    scrollToBottom(true)
     inputChatText.value = ''
     generating.value = true
     abortController = new AbortController()
@@ -70,6 +117,7 @@
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message
                 }
+                scrollToBottom()
             },
             abortController.signal
         )
@@ -91,12 +139,37 @@
     flex: 1; 
     border: 1px solid #ccc;
     border-radius: 10px;
+    /* 允许 flex 子元素收缩 */
+    min-height: 0;
+    /* 内容不能撑开外层 */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 .chat_main .chat_main_container  {
     margin-top: 1.5rem;
     margin-left: 1rem;
     margin-right: 1rem;
     gap: 1.5rem;
+
+    flex: 1;
+    min-height: 0;
+    
+ /* 保留滚轮滚动 */
+    overflow-x: hidden;
+    overflow-y: auto;
+
+    /* Firefox 隐藏滚动条 */
+    scrollbar-width: none;
+
+    /* 旧版 IE、Edge */
+    -ms-overflow-style: none;
+
+    /* 移动端惯性滚动 */
+    -webkit-overflow-scrolling: touch;
+
+    /* 防止滚动传递给整个页面 */
+    overscroll-behavior: contain;
 }
 .chat_input {
     flex: 1;
@@ -116,5 +189,15 @@
     margin-bottom: 0.5rem;
     width: 2.5rem;
     height: 2.5rem;
+}
+.chat_post:hover {
+   cursor: pointer;
+}
+
+/* Chrome、Edge、Safari 隐藏滚动条 */
+.chat_main_container::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 </style>
