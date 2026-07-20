@@ -10,7 +10,7 @@
             <div class="chat_role_context">
                 <div class ="chat_role_context_mr flex_colum">
                     <div class="chat_role_span flex_row">
-                            <span class="chat_role_span_title">助手</span>
+                            <span class="chat_role_span_title">{{chatName}}</span>
                             <span>{{timeText}}</span>
                     </div>
                   <div class="chat_message markdown_body"
@@ -39,6 +39,10 @@
         default:''
     },
     timeText: {
+        type:String,
+        default:''
+    },
+    chatName: {
         type:String,
         default:''
     }

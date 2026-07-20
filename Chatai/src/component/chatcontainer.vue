@@ -11,6 +11,7 @@
                 :isUser="message.role === 'user'"
                 :message="message.content"
                 :timeText="message.timeText"
+                :chatName="message.role === 'user' ? user.username : ''"
                 />
             </div>
         </div>
