@@ -12,9 +12,13 @@
     </el-input>
     <div class="chat_menu scroll_container flex_colum">
          <div 
-            v-for="item in chatList" 
+            v-for="(item, index) in chatList" 
             :key="item.id"
             class="chat_box"
+            :class="{'chat_box_activate': activeId
+                 === item.id 
+            }"
+            @click="selectChat(item.id,index)"
         >
             <span> {{item.name}} </span>
         </div>
@@ -40,9 +44,14 @@
  import { ChatAiApi } from "@/api/api";
  const userName = ref('')
  const chatList = ref([])
+ const activeId = ref(chatList.value[0]?.id || null)
  const emits = defineEmits(['showConfigDialog'])
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
+ }
+ const selectChat = (id,index) => {
+    activeId.value = id
+    user.conversationid = user.conversationsid[index]
  }
  const newChatButton = async ()=> {
     const newtitle = '新对话'
@@ -73,6 +82,9 @@ const updateChatList = (data)=> {
         user.conversationsid.push(key)
         pushValueToChatList(data[key])
     }
+    //默认激活第一个会话
+    activeId.value = 1
+    user.conversationid = user.conversationsid[0]
 }
 watch(() => user.username,(newName) => {
        userName.value = newName
@@ -83,14 +95,22 @@ defineExpose({
 })
 </script>
 <style scoped>
+.chat_box_activate {
+   border: 1px solid #409EFF;
+   background-color: rgba(239,246,255, 0.5);
+}
+.chat_box:not(.chat_box_activate):hover {
+    background-color: #F1F3F5
+}
+.chat_box:hover {
+    cursor: pointer;
+}
 .chat_box {
    width: calc(100% - 2rem);
    height: 40px;
-   flex: 0 0 40px;
+   flex: 0 0 45px;
    border-radius: 3px;
-   border: 1px solid #409EFF;
    margin: 0 1rem;
-   background-color: rgba(239,246,255, 0.5); 
 }
 .chat_menu .chat_box span {
     width: 100%;
@@ -154,7 +174,7 @@ defineExpose({
     flex: 1; /* 撑满剩余空间 */
     width: 100%;
     min-height: 0;
-    gap:0.5rem;
+    /* gap:0.5rem; */
     height: auto;
     align-items: center; 
 

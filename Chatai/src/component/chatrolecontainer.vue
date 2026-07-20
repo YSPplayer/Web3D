@@ -14,6 +14,7 @@
                             <span>09:30</span>
                     </div>
                   <div class="chat_message">
+                     {{ message }}
                   </div>
                 </div>    
             </div>
@@ -28,6 +29,10 @@
     isUser: {
         type: Boolean,
         default: false
+    },
+    message:{
+        type:String,
+        default:''
     }
 })
 </script>

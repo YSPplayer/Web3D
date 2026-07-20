@@ -3,12 +3,14 @@ export interface User {
     userid:number
     modelconfigid:number,
     conversationsid:Array<number>
-    username:string
+    conversationid:number
+    username:string 
 }
 
 export const user = reactive<User>({
     userid: -1,
     conversationsid:[],
     modelconfigid:-1,
+    conversationid:-1,
     username: ""
 })

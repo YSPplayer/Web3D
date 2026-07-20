@@ -2,8 +2,12 @@
     <div class="chatcontainer flex_colum_center">
         <div class="chat_main">
             <div class="chat_main_container flex_colum">
-                <chatrolecontainer :isUser="false"/>
-                 <chatrolecontainer :isUser="true" />
+                <chatrolecontainer
+                v-for="message in messages"
+                :key="message.id"
+                :is-user="message.role === 'user'"
+                :message="message.content"
+                />
             </div>
         </div>
         <div class="chat_input_container flex_row">
@@ -11,7 +15,8 @@
                 <textarea  v-model="inputChatText">
                 </textarea>
             </div>
-            <img class="chat_post" :src="postChat" :class="fill_img">
+            <img class="chat_post" :src="postChat" :class="fill_img"
+            @click="sendChatMessage">
 
             </img>
         </div>
@@ -20,9 +25,59 @@
 
 <script setup>
  import postChat from "@/assets/post.svg";
- import { ref } from 'vue'
+ import { ref,reactive  } from 'vue'
+ import {user} from '@/store/store'
+ import {ChatAiApi} from '@/api/api'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
  const inputChatText = ref('')
+ const messages = ref([])
+ const generating = ref(false)
+ let abortController = null;
+ const lastid = messages.value.length > 0 ?
+ messages.value[messages.value.length - 1].id : 0
+ const sendChatMessage = async () => {
+    const userContent = inputChatText.value.trim()
+    if (!userContent || generating.value) return
+    messages.value.push({  //增加用户的会话
+        id: lastid + 1,
+        role: 'user',
+        content: userContent
+    })
+   const aiMessage = reactive({
+        id: lastid + 2,
+        role: 'assistant',
+        content: '',
+        streaming: true
+    })
+    messages.value.push(aiMessage)
+    inputChatText.value = ''
+    generating.value = true
+    abortController = new AbortController()
+    try {
+        await ChatAiApi.create_chat_messageApi(
+            {
+                userid: user.userid,
+                modelconfigid: user.modelconfigid,
+                conversationid:user.conversationid,
+                message: userContent
+            },
+            event => {
+                if (event.type === 'delta') {
+                    aiMessage.content += event.content
+                } else if (event.type === 'done') {
+                    aiMessage.streaming = false
+                } else if (event.type === 'error') {
+                    aiMessage.streaming = false
+                    aiMessage.content ||= event.message
+                }
+            },
+            abortController.signal
+        )
+    } finally {
+        generating.value = false
+        aiMessage.streaming = false
+    }
+ } 
 </script>
 
 <style scoped>

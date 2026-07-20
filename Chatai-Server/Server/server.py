@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+import asyncio
+import json
 from Config.config import config
 import uvicorn
 import mimetypes
@@ -48,6 +51,12 @@ class Conversation(BaseModel):
     userid: int
     modelconfigid: int
     title: str
+
+class ChatMessage(BaseModel):
+    userid: int
+    modelconfigid: int
+    conversationid:int
+    message:str   
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -180,6 +189,63 @@ async def create_conversation(conversation:Conversation):
     return success("会话新建成功！",{
         "conversationid": result["conversation_id"]
     })
+
+@app.post("/chatai/user/chat")
+async def create_chat_message(chatMessage:ChatMessage):
+    user_message = chatMessage.message.strip()
+    # 必须在流开始前完成参数校验
+    if not user_message:
+        raise HTTPException(
+            status_code=400,
+            detail="消息不能为空"
+        )
+    model_name = "zai/glm-5.2"
+    api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
+    async def generate():
+        full_content: list[str] = []
+        try:
+            async for content in modelApi.chat_stream(
+                model_name,
+                api_key,
+                user_message
+            ):
+                full_content.append(content)
+                yield json.dumps(
+                    {
+                        "type": "delta",
+                        "content": content
+                    },
+                    ensure_ascii=False
+                ) + "\n"
+            ai_message = "".join(full_content)
+            # 后续可以在这里把完整 AI 消息存入数据库
+            yield json.dumps(
+                {
+                    "type": "done"
+                },
+                ensure_ascii=False
+            ) + "\n"
+        except asyncio.CancelledError:
+            # 前端断开或用户点击“停止生成”
+            raise
+        except Exception as exc:
+            print(f"模型流式调用失败: {exc}")
+
+            yield json.dumps(
+                {
+                    "type": "error",
+                    "message": "模型生成失败"
+                },
+                ensure_ascii=False
+            ) + "\n"
+    return StreamingResponse(
+        generate(),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 @app.post("/chatai/register")
 async def register(user:UserRegister):
