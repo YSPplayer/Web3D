@@ -201,7 +201,7 @@ class DBManager:
         with self.lock:
             conn = self.get_db_connection()
             try:
-                row = conn.execute(
+                rows = conn.execute(
                     """
                     SELECT id,title
                     FROM conversations
@@ -209,15 +209,55 @@ class DBManager:
                     """,
                     (user_id, model_config_id)
                 ).fetchall()
-                if row is None:
-                    return {}
-                return dict(row)
+                return [dict(row) for row in rows] if rows else []
             except Exception as exc:
                  conn.rollback()
                  print(f"数据库操作错误: {exc}")
                  return {
                     "code":500
                 }
+    def get_messages(self,conversation_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT * FROM messages 
+                    WHERE conversation_id = ? 
+                    ORDER BY id ASC
+                    """,
+                    (conversation_id,)
+                ).fetchall()
+                return [dict(row) for row in rows] if rows else []
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
+                 return {
+                    "code":500
+                }
+    def create_messages(self,conversation_id:int,role: str,content:str, tokens_used: int = 0):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO messages (conversation_id, role, content,tokens_used)
+                    VALUES (?, ?,?, ?)
+                    """,
+                    (conversation_id, role, content, tokens_used)
+                )
+                conn.commit()
+                new_id = cursor.lastrowid
+                return {
+                    "message_id" : new_id
+                }
+            except Exception as exc:
+                conn.rollback()
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }
+
     def create_conversation(self,user_id:int,model_config_id:int,title:str):
         with self.lock:
             conn = self.get_db_connection()

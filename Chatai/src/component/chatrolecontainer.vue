@@ -73,23 +73,16 @@ const copyText = async text => {
         await navigator.clipboard.writeText(text)
         return
     }
-
-    const textarea =
-        document.createElement('textarea')
-
+    const textarea = document.createElement('textarea')
     textarea.value = text
     textarea.style.position = 'fixed'
     textarea.style.left = '-9999px'
-
     document.body.appendChild(textarea)
-
     textarea.select()
-
     const success =
         document.execCommand('copy')
 
     textarea.remove()
-
     if (!success) {
         throw new Error('复制失败')
     }
@@ -98,26 +91,20 @@ const copyText = async text => {
 const downloadText = (text, language) => {
     const extension =
         extensionMap[language] || 'txt'
-
     const blob = new Blob(
         [text],
         {
             type: 'text/plain;charset=utf-8'
         }
     )
-
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-
     link.href = url
     link.download =
         `snippet-${Date.now()}.${extension}`
-
     document.body.appendChild(link)
-
     link.click()
     link.remove()
-
     window.setTimeout(() => {
         URL.revokeObjectURL(url)
     }, 100)

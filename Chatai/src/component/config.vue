@@ -69,7 +69,7 @@
     const dialogVisible = ref(false)
     const saveconfigLoading = ref(false)
     const modelSelectChange = async ()=> {
-        const config = await ChatAiApi.getModelConfigState(user.userid,
+        const config = await ChatAiApi.getModelConfigStateApi(user.userid,
             modelSelectValue.value[0],modelSelectValue.value[1]
         )
         if(config.code == 200) {

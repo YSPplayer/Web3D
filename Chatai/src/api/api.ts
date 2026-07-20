@@ -106,7 +106,7 @@ export const ChatAiApi = {
     params: { userid }
   })
   },
-  async getModelConfigState(userid:number,modeltype:string,modelname:string):Promise<any> {
+  async getModelConfigStateApi(userid:number,modeltype:string,modelname:string):Promise<any> {
     return await request.get('/chatai/user/modelConfgState',{
     params: { userid,modeltype,modelname }
   })
@@ -116,5 +116,11 @@ export const ChatAiApi = {
       {params:{userid,modelconfigid}}
     )
   },
+  async getChatMessageApi(conversationid:number) {
+      return await request.get('/chatai/user/chatMessages',
+      {params:{conversationid}}
+    )
+  }
+
 
 }

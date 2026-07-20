@@ -1,5 +1,11 @@
 import litellm
 class ModelApi:
+    def get_token_count(self,model:str,message: str):
+        return litellm.token_counter(
+        model=model,
+        text=message
+    )
+
     def chat(self,model: str, api_key: str, message: str):
         response = litellm.completion(
             model = model,
@@ -8,6 +14,7 @@ class ModelApi:
             api_key = api_key
         )
         print(response.choices[0].message.content)
+    
     async def chat_stream(self, model: str, api_key: str, message: str):
         response  = await litellm.acompletion(
             model = model,

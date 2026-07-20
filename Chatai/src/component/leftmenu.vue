@@ -75,7 +75,7 @@ const pushValueToChatList = (value)=> {
             name:value
         })
 }
-const updateChatList = (data)=> {
+const updateChatList = async (data)=> {
     chatList.value = []
     user.conversationsid = []
     for(const key in data) {
@@ -85,6 +85,12 @@ const updateChatList = (data)=> {
     //默认激活第一个会话
     activeId.value = 1
     user.conversationid = user.conversationsid[0]
+    //获取到当前默认会话id下的聊天记录
+    const result = await ChatAiApi.getChatMessageApi(user.conversationid)
+    if(result.code == 200) {
+        const data = result.data
+        console.log("message log:",data)
+    }
 }
 watch(() => user.username,(newName) => {
        userName.value = newName

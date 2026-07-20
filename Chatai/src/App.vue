@@ -32,8 +32,7 @@ const updateUserModelConfig = async ()=> {
     if(result.code == 200) {
         const data = result.data
         if(!data) return 
-        leftmenuRef.value?.updateChatList(data)
-
+        await leftmenuRef.value?.updateChatList(data)
     }
 }
 </script>

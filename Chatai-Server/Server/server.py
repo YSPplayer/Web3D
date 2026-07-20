@@ -12,6 +12,7 @@ import mimetypes
 from Data.db_manager import db_manager
 from Model.key import key
 from Model.modelapi import modelApi
+from datetime import datetime
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
@@ -31,9 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 def run():
-   # modelApi.chat("zai/glm-5.2","5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T","你好，请问数学中的函数指代什么？")
     uvicorn.run("Server.server:app", host=config.server_ip, port=config.server_port, reload=False)
 # ---- API 接口 ----
 #请求体模型
@@ -126,6 +125,16 @@ async def models():
         model["logo_path"] = logo_cache[logo_path]
     return success("模型数据查询成功！",models)
 
+@app.get("/chatai/user/chatMessages") #获取当前模型的会话记录
+async def get_model_chat_message(conversationid:int):
+    messages = db_manager.get_messages(conversationid)
+    check_result(messages)
+    if not messages:
+        return success("当前会话中的消息不存在！")
+    else:
+         return  success("当前会话消息查询成功！",messages)
+    
+    
 @app.get("/chatai/user/modelConfgState") #获取到模型配置
 async def get_model_config_state(userid:int,
             modeltype:str,modelname:str):
@@ -201,6 +210,13 @@ async def create_chat_message(chatMessage:ChatMessage):
         )
     model_name = "zai/glm-5.2"
     api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
+    user_tokens_used = modelApi.get_token_count(model_name,
+    user_message)
+    # 先保存用户消息
+    user_result = db_manager.create_messages(
+        chatMessage.conversationid,"user",
+        user_message,user_tokens_used)
+    check_result(user_result)
     async def generate():
         full_content: list[str] = []
         try:
@@ -218,7 +234,14 @@ async def create_chat_message(chatMessage:ChatMessage):
                     ensure_ascii=False
                 ) + "\n"
             ai_message = "".join(full_content)
-            # 后续可以在这里把完整 AI 消息存入数据库
+            # 把完整 AI 消息存入数据库
+            user_tokens_used = modelApi.get_token_count(model_name,
+            ai_message)
+            # 先保存用户消息
+            ai_result = db_manager.create_messages(
+                chatMessage.conversationid,"assistant",
+                ai_message,user_tokens_used)
+            check_result(ai_result)
             yield json.dumps(
                 {
                     "type": "done"
@@ -230,7 +253,6 @@ async def create_chat_message(chatMessage:ChatMessage):
             raise
         except Exception as exc:
             print(f"模型流式调用失败: {exc}")
-
             yield json.dumps(
                 {
                     "type": "error",
