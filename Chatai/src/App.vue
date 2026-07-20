@@ -1,7 +1,7 @@
 <template>
     <div class ='container flex_row'>
-        <leftmenu ref="leftmenuRef" @showConfigDialog= 'showConfigDialog'  />
-        <chatcontainer/>
+        <leftmenu ref="leftmenuRef" @showConfigDialog= 'showConfigDialog' @updateChatMessage = 'updateChatMessage'  />
+        <chatcontainer ref="chatcontainerRef"/>
     </div>
     <login ref="loginRef" @updateUserModelConfig = 'updateUserModelConfig'/>
     <config ref="configRef"/>
@@ -17,12 +17,16 @@ import { user } from '@/store/store.ts';
 const loginRef = ref(null)
 const configRef = ref(null)
 const leftmenuRef = ref(null)
+const chatcontainerRef = ref(null)
 const showConfigDialog = ()=>{
    configRef.value?.openDialog()
 }
 onMounted(()=>{
    loginRef.value?.openDialog()
 })
+const updateChatMessage = (data) => {
+    chatcontainerRef.value?.updateChatMessage(data)
+}
 const updateUserModelConfig = async ()=> {
     await configRef.value?.updateUserModelConfig() 
     //获取到用户的最新的会话记录

@@ -11,7 +11,7 @@
                 <div class ="chat_role_context_mr flex_colum">
                     <div class="chat_role_span flex_row">
                             <span class="chat_role_span_title">助手</span>
-                            <span>09:30</span>
+                            <span>{{timeText}}</span>
                     </div>
                   <div class="chat_message markdown_body"
                     v-html="renderedMessage"
@@ -35,6 +35,10 @@
         default: false
     },
     message:{
+        type:String,
+        default:''
+    },
+    timeText: {
         type:String,
         default:''
     }

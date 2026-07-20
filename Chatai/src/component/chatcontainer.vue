@@ -10,6 +10,7 @@
                 :key="message.id"
                 :isUser="message.role === 'user'"
                 :message="message.content"
+                :timeText="message.timeText"
                 />
             </div>
         </div>
@@ -29,6 +30,7 @@
  import postChat from "@/assets/post.svg";
  import { ref,reactive,nextTick   } from 'vue'
  import {user} from '@/store/store'
+ import { Util } from "@/shared/util";
  import {ChatAiApi} from '@/api/api'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
  const inputChatText = ref('')
@@ -81,14 +83,28 @@ const handleChatScroll = () => {
  let abortController = null;
  const lastid = messages.value.length > 0 ?
  messages.value[messages.value.length - 1].id : 0
+ const updateChatMessage = (data) => {  
+    messages.value = []
+    let lastid = 0
+    data.forEach((item) => {
+       messages.value.push({
+           id: lastid + 1,
+           role:item.role,
+           content:item.content,
+           timeText:Util.extractTime(item.created_at) 
+       })
+       lastid = lastid + 1
+    })
+ }
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()
     if (!userContent || generating.value) return
-    messages.value.push({  //增加用户的会话
+    const userMessage = reactive({
         id: lastid + 1,
         role: 'user',
         content: userContent
     })
+   messages.value.push(userMessage) //增加用户对话
    const aiMessage = reactive({
         id: lastid + 2,
         role: 'assistant',
@@ -113,6 +129,8 @@ const handleChatScroll = () => {
                     aiMessage.content += event.content
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false
+                    userMessage.timeText = event.user_created_at
+                    aiMessage.content = event.ai_created_at
                 } else if (event.type === 'error') {
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message
@@ -126,6 +144,9 @@ const handleChatScroll = () => {
         aiMessage.streaming = false
     }
  } 
+ defineExpose({
+    updateChatMessage
+ })
 </script>
 
 <style scoped>

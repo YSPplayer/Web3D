@@ -1,4 +1,7 @@
 export const Util = {
+    extractTime(datetimeStr:string) {
+        return datetimeStr.slice(11, 16)
+    },
     isEmptyObject(obj:any) {
         return obj && typeof obj === 'object' && Object.keys(obj).length === 0
     },

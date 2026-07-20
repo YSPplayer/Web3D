@@ -217,6 +217,7 @@ async def create_chat_message(chatMessage:ChatMessage):
         chatMessage.conversationid,"user",
         user_message,user_tokens_used)
     check_result(user_result)
+    user_created_at = user_result["created_at"]
     async def generate():
         full_content: list[str] = []
         try:
@@ -244,7 +245,9 @@ async def create_chat_message(chatMessage:ChatMessage):
             check_result(ai_result)
             yield json.dumps(
                 {
-                    "type": "done"
+                    "type": "done",
+                    "user_created_at":user_created_at,
+                    "ai_created_at":ai_result["created_at"]
                 },
                 ensure_ascii=False
             ) + "\n"

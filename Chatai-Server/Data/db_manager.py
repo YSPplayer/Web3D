@@ -3,6 +3,7 @@ import os
 import threading
 from contextlib import contextmanager
 from Config.config import config
+from datetime import datetime
 class DBManager:
     def __init__(self):
         self.db_path = config.db_path / "chat_data.db"
@@ -247,9 +248,11 @@ class DBManager:
                     (conversation_id, role, content, tokens_used)
                 )
                 conn.commit()
+                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 new_id = cursor.lastrowid
                 return {
-                    "message_id" : new_id
+                    "message_id" : new_id,
+                    "created_at": now
                 }
             except Exception as exc:
                 conn.rollback()

@@ -45,7 +45,7 @@
  const userName = ref('')
  const chatList = ref([])
  const activeId = ref(chatList.value[0]?.id || null)
- const emits = defineEmits(['showConfigDialog'])
+ const emits = defineEmits(['showConfigDialog','updateChatMessage'])
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
  }
@@ -78,10 +78,10 @@ const pushValueToChatList = (value)=> {
 const updateChatList = async (data)=> {
     chatList.value = []
     user.conversationsid = []
-    for(const key in data) {
-        user.conversationsid.push(key)
-        pushValueToChatList(data[key])
-    }
+    data.forEach((item) => {
+        user.conversationsid.push(item.id)
+       pushValueToChatList(item.title)
+    })
     //默认激活第一个会话
     activeId.value = 1
     user.conversationid = user.conversationsid[0]
@@ -89,7 +89,7 @@ const updateChatList = async (data)=> {
     const result = await ChatAiApi.getChatMessageApi(user.conversationid)
     if(result.code == 200) {
         const data = result.data
-        console.log("message log:",data)
+        emits('updateChatMessage',data)
     }
 }
 watch(() => user.username,(newName) => {
