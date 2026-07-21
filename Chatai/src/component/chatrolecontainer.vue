@@ -205,6 +205,7 @@ const handleMarkdownClick = async event => {
 .chat_role_container {
     gap: 1rem;
     width: 100%;
+    margin-bottom: 1rem;
 }
 .chat_role_reverse {
     justify-content: flex-start;
@@ -254,6 +255,7 @@ const handleMarkdownClick = async event => {
 .markdown_body {
     white-space: normal;
 }
+
 
 /* 段落 */
 .markdown_body :deep(p) {

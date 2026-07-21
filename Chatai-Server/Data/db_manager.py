@@ -4,6 +4,7 @@ import threading
 from contextlib import contextmanager
 from Config.config import config
 from datetime import datetime
+from Data.cache_manager import cache_manager
 class DBManager:
     def __init__(self):
         self.db_path = config.db_path / "chat_data.db"
@@ -31,6 +32,7 @@ class DBManager:
                 print("数据库连接已关闭")
 
     def init_db(self):
+        cache_manager.clear()
         sql_path = config.sql_path / "run.sql"
         if not os.path.exists(sql_path):
             raise FileNotFoundError(f"SQL文件不存在: {sql_path}")
@@ -115,6 +117,9 @@ class DBManager:
         with self.lock:
             conn = self.get_db_connection()
             try:
+                cache_config = cache_manager.get(("model_config", user_id))
+                if cache_config is not None:
+                    return cache_config
                 row = conn.execute(
                     """
                     SELECT *
@@ -127,13 +132,14 @@ class DBManager:
                     return {}
                 imgs = conn.execute(
                     """
-                    SELECT logo_path
+                    SELECT logo_path,provider_type
                     FROM models
                     WHERE model_type = ? AND model_name = ? 
                     """,
                     (row["model_type"], row["model_name"])
                 ).fetchone()
                 result = {**dict(row), **dict(imgs)} if imgs else dict(row)
+                cache_manager.set(("model_config", user_id),result)
                 return result
             except Exception as exc:
                 print(f"数据库操作错误: {exc}")
@@ -191,7 +197,19 @@ class DBManager:
                     """,
                     (user_id, model_type, model_name)
                 ).fetchone()
-                return dict(row)
+                if row is None:
+                    return {}
+                imgs = conn.execute(
+                    """
+                    SELECT logo_path,provider_type
+                    FROM models
+                    WHERE model_type = ? AND model_name = ? 
+                    """,
+                    (row["model_type"], row["model_name"])
+                ).fetchone()
+                result = {**dict(row), **dict(imgs)} if imgs else dict(row)
+                cache_manager.set(("model_config", user_id),result)
+                return result
             except Exception as exc:
                  conn.rollback()
                  print(f"数据库操作错误: {exc}")

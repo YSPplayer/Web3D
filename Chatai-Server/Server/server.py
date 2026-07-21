@@ -208,8 +208,12 @@ async def create_chat_message(chatMessage:ChatMessage):
             status_code=400,
             detail="消息不能为空"
         )
-    model_name = "zai/glm-5.2"
-    api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
+    model_config = db_manager.get_model_config_by_userid(chatMessage.userid)
+    check_result(model_config)
+    model_name = f"{model_config['provider_type']}/{model_config['model_name']}"
+    api_key = key.decrypt_api_key(model_config['api_key'])
+    # model_name = "zai/glm-5.2"
+    # api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
     user_tokens_used = modelApi.get_token_count(model_name,
     user_message)
     # 先保存用户消息

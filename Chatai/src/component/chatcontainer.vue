@@ -97,6 +97,7 @@ const handleChatScroll = () => {
        })
        lastid = lastid + 1
     })
+    scrollToBottom(true)
  }
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()
@@ -131,8 +132,8 @@ const handleChatScroll = () => {
                     aiMessage.content += event.content
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false
-                    userMessage.timeText = event.user_created_at
-                    aiMessage.timeText = event.ai_created_at
+                    userMessage.timeText = Util.extractTime(event.user_created_at)
+                    aiMessage.timeText =  Util.extractTime(event.ai_created_at)
                 } else if (event.type === 'error') {
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message

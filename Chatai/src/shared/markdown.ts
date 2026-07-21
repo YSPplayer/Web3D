@@ -125,8 +125,16 @@ markdown.renderer.rules.fence = (tokens, index) => {
     ].join('')
 }
 
+function normalizeMarkdown(source: string): string {
+    return source.replace(
+        /([\u4e00-\u9fa5])(\*\*)(?=["“‘])/g,
+        '$1 $2'
+    )
+}
+
 export function renderMarkdown(source: string): string {
-    const html = markdown.render(source || '')
+    const normalized = normalizeMarkdown(source || '')
+    const html = markdown.render(normalized)
 
     return DOMPurify.sanitize(html)
 }
