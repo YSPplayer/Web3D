@@ -25,7 +25,6 @@
 </template>
 
 <script setup>
- import svgChat from "@/assets/chat.svg";
  import { computed } from 'vue'
  import { renderMarkdown } from '@/shared/markdown'
  import { ElMessage } from 'element-plus'
@@ -43,6 +42,10 @@
         default:''
     },
     chatName: {
+        type:String,
+        default:''
+    },
+    svgChat: {
         type:String,
         default:''
     }

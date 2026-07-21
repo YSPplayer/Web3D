@@ -120,13 +120,18 @@
                 configForm.apikey = ''
                 modelSelectValue.value = []
                 modelImageUrl.value = ''
+                user.modelconfigid = -1
+                user.modeltype = ''
+                user.modellogo = ''
             } else {
                 onlineModel.value = data.isonline
                 configForm.apikey = Util.base64ToString(data.apikey)
                 modelSelectValue.value = [data.modeltype,data.modelname]
                 modelImageUrl.value = data.logo  
+                user.modelconfigid = data.modelconfigid
+                user.modeltype = data.modeltype
+                user.modellogo = data.logo
             }
-            user.modelconfigid = data.modelconfigid
       }
     }
     const saveConfig = async () => {

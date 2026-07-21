@@ -11,7 +11,8 @@
                 :isUser="message.role === 'user'"
                 :message="message.content"
                 :timeText="message.timeText"
-                :chatName="message.role === 'user' ? user.username : ''"
+                :chatName="message.role === 'user' ? user.username : `聊天助手[${user.modeltype}]`"
+                :svgChat = "message.role === 'user' ? user.userlogo : user.modellogo "
                 />
             </div>
         </div>
@@ -131,7 +132,7 @@ const handleChatScroll = () => {
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false
                     userMessage.timeText = event.user_created_at
-                    aiMessage.content = event.ai_created_at
+                    aiMessage.timeText = event.ai_created_at
                 } else if (event.type === 'error') {
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message

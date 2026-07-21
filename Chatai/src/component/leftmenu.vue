@@ -4,8 +4,8 @@
         <img :src="svgChat" alt="聊天图标">
         <span> 智能聊天助手 </span>
     </div>
-    <el-button type="primary" @click="newChatButton">+ 新建对话</el-button>
-    <el-input placeholder="搜索对话">
+    <el-button type="primary" @click="newChatButton" style="height: 35.89px;">+ 新建对话</el-button>
+    <el-input placeholder="搜索对话" style="height: 35.89px;">
         <template #prefix>
             <el-icon><Search /></el-icon>
         </template>
