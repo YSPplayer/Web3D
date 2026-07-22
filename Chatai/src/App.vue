@@ -29,10 +29,8 @@ const updateChatMessage = (data) => {
 }
 const updateUserModelConfig = async ()=> {
     await configRef.value?.updateUserModelConfig() 
-    //获取到用户的最新的会话记录
-    const result = await ChatAiApi.getConversationApi(user.userid,
-        user.modelconfigid
-    )
+    //获取到用户的最新的会话记录，不过滤modelconfigid user.modelconfigid
+    const result = await ChatAiApi.getConversationByUserIdApi(user.userid)
     if(result.code == 200) {
         const data = result.data
         if(!data) return 

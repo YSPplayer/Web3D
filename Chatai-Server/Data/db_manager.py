@@ -132,7 +132,7 @@ class DBManager:
                     return {}
                 imgs = conn.execute(
                     """
-                    SELECT logo_path,provider_type
+                    SELECT id AS model_id,logo_path,provider_type
                     FROM models
                     WHERE model_type = ? AND model_name = ? 
                     """,
@@ -201,7 +201,7 @@ class DBManager:
                     return {}
                 imgs = conn.execute(
                     """
-                    SELECT logo_path,provider_type
+                    SELECT id AS model_id,logo_path,provider_type
                     FROM models
                     WHERE model_type = ? AND model_name = ? 
                     """,
@@ -235,6 +235,26 @@ class DBManager:
                 return {
                     "code":500
                 }
+    def get_conversation_by_user_id(self,user_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT id,title
+                    FROM conversations
+                    WHERE user_id = ?
+                    """,
+                    (user_id,)
+                ).fetchall()
+                return [dict(row) for row in rows] if rows else []
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
+                 return {
+                    "code":500
+                }
+
 
     def get_conversation(self,user_id:int,model_config_id:int):
         with self.lock:
@@ -274,16 +294,16 @@ class DBManager:
                  return {
                     "code":500
                 }
-    def create_messages(self,conversation_id:int,role: str,content:str, tokens_used: int = 0):
+    def create_messages(self,model_id:int,conversation_id:int,role: str,content:str, tokens_used: int = 0):
         with self.lock:
             conn = self.get_db_connection()
             try:
                 cursor = conn.execute(
                     """
-                    INSERT INTO messages (conversation_id, role, content,tokens_used)
-                    VALUES (?, ?,?, ?)
+                    INSERT INTO messages (model_id,conversation_id, role, content,tokens_used)
+                    VALUES (?, ?,?, ?, ?)
                     """,
-                    (conversation_id, role, content, tokens_used)
+                    (model_id,conversation_id, role, content, tokens_used)
                 )
                 conn.commit()
                 now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

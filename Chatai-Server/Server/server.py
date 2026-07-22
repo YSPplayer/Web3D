@@ -165,6 +165,15 @@ async def get_user_model_config(userid:int):
             "modelconfigid":config["id"],
             "logo":image_to_data_url(config["logo_path"])
         })
+    
+@app.get("/chatai/user/getConversationByUserId")
+async def get_conversation_by_user_id(userid:int):
+    result = db_manager.get_conversation_by_user_id(userid)
+    check_result(result)
+    if not result:
+        return success("当前用户会话记录不存在！", [])
+    else:
+        return success("当前用户会话记录查询成功！",result)
 
 @app.get("/chatai/user/getConversation")
 async def get_conversation(userid:int,modelconfigid:int):
@@ -225,6 +234,7 @@ async def create_chat_message(chatMessage:ChatMessage):
     user_message)
     # 先保存用户消息
     user_result = db_manager.create_messages(
+        model_config["model_id"],
         chatMessage.conversationid,"user",
         user_message,user_tokens_used)
     check_result(user_result)
@@ -251,6 +261,7 @@ async def create_chat_message(chatMessage:ChatMessage):
             ai_message)
             # 先保存用户消息
             ai_result = db_manager.create_messages(
+                model_config["model_id"],
                 chatMessage.conversationid,"assistant",
                 ai_message,user_tokens_used)
             check_result(ai_result)

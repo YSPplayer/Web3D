@@ -121,6 +121,11 @@ export const ChatAiApi = {
       {params:{userid,modelconfigid}}
     )
   },
+  async getConversationByUserIdApi(userid: number):Promise<any> {
+    return await request.get('/chatai/user/getConversationByUserId',
+      {params:{userid}}
+    )
+  },
   async getChatMessageApi(conversationid:number) {
       return await request.get('/chatai/user/chatMessages',
       {params:{conversationid}}
