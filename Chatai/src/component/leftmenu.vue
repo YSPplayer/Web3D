@@ -14,13 +14,18 @@
          <div 
             v-for="(item, index) in chatList" 
             :key="item.id"
-            class="chat_box"
+            class="chat_box flex_row_center"
             :class="{'chat_box_activate': activeId
                  === item.id 
             }"
             @click="selectChat(item.id,index)"
         >
             <span> {{item.name}} </span>
+            <el-button v-if="activeId
+                 === item.id "  type="primary"class='chat_box_button_delete'
+                 @click = "deleteSelectChat(item.id,index)">
+                <el-icon><Delete /></el-icon>
+            </el-button>
         </div>
     </div>
     <div class="chat_config flex_colum">
@@ -42,6 +47,8 @@
  import {defineEmits,ref,watch } from 'vue'
  import {user} from '@/store/store'
  import { ChatAiApi } from "@/api/api";
+ import { Delete } from '@element-plus/icons-vue'
+ import { ElMessageBox, ElMessage } from 'element-plus'
  const userName = ref('')
  const chatList = ref([])
  const activeId = ref(chatList.value[0]?.id || null)
@@ -49,10 +56,33 @@
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
  }
- const selectChat = (id,index) => {
+ const deleteSelectChat = async (id,index) => {
+    ElMessageBox.confirm('是否删除当前会话？','提示',
+        {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        }
+    ).then(async ()=>{
+        const result = await ChatAiApi.deleteCconversationApi(user.conversationid)
+    if(result.code == 200) {
+        ElMessage.success('会话删除成功！')
+        //删除掉对应的会话
+        chatList.value = chatList.value.filter(item => item.id !== id)
+        user.conversationsid = user.conversationsid.filter(item => item !== user.conversationid)
+        const newindex = Math.min(index,chatList.value.length - 1)
+        const newid = chatList.value[newindex].id
+        await selectChat(newid,newindex)
+    }   
+    })
+ }
+
+ const selectChat = async (id,index) => {
+    if(activeId.value === id) return 
     activeId.value = id
     user.conversationid = user.conversationsid[index]
- }
+    await updateChatMessage()
+}
  const newChatButton = async ()=> {
     const newtitle = '新对话'
     const result =  await ChatAiApi.createConversationApi({
@@ -63,6 +93,7 @@
     ) 
     if(result.code == 200) {
         const data = result.data
+        user.conversationsid.push(data.conversationid)
         pushValueToChatList(newtitle)
     }
  }
@@ -82,10 +113,14 @@ const updateChatList = async (data)=> {
         user.conversationsid.push(item.id)
        pushValueToChatList(item.title)
     })
+    if(chatList.value.length <= 0) return
     //默认激活第一个会话
     activeId.value = 1
     user.conversationid = user.conversationsid[0]
-    //获取到当前默认会话id下的聊天记录
+    await updateChatMessage()
+}
+const updateChatMessage = async ()=> {
+    //获取到当前默认会话id下的聊天记录  
     const result = await ChatAiApi.getChatMessageApi(user.conversationid)
     if(result.code == 200) {
         const data = result.data
@@ -124,6 +159,33 @@ defineExpose({
     display: flex;
     align-items: center;
     margin-left: 1rem;
+}
+.chat_box .chat_box_button_delete {
+    width: 35px;
+    height: 35px;
+    /* margin-right: 1px; */
+      /* 去除背景和边框 !important 强制生效 */
+    background: transparent !important;
+    border: none !important;
+    /* 让按钮只占图标大小 */
+    padding: 4px;
+    min-width: auto;
+    width: 32px;
+    height: 32px;
+    
+    /* 让图标居中 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 图标默认颜色（灰色） */
+.chat_box_button_delete .el-icon {
+  font-size: 20px;
+  color: #909399;
+}
+.chat_box_button_delete:hover .el-icon {
+     color: #409EFF;
 }
 .leftmenu {
      align-items: center; 

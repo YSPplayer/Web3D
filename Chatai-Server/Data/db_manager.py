@@ -216,6 +216,26 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def delete_conversation(self,conversation_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                conn.execute(
+                """
+                DELETE FROM conversations
+                WHERE id = ?
+                """,
+                (conversation_id,)
+                )
+                conn.commit()
+                return {}
+            except Exception as exc:
+                conn.rollback()
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }
+
     def get_conversation(self,user_id:int,model_config_id:int):
         with self.lock:
             conn = self.get_db_connection()

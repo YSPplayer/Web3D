@@ -61,7 +61,7 @@ def success(message:str = "成功",data:any = None) ->dict:
     return {
         "code": 200,
         "message": message,
-        "data": data or {}
+        "data": data if data is not None else {}
     }
 def error(message: str = "操作失败", code: int = 400) ->dict:
     return {
@@ -130,7 +130,7 @@ async def get_model_chat_message(conversationid:int):
     messages = db_manager.get_messages(conversationid)
     check_result(messages)
     if not messages:
-        return success("当前会话中的消息不存在！")
+        return success("当前会话中的消息不存在！",[])
     else:
          return  success("当前会话消息查询成功！",messages)
     
@@ -171,7 +171,7 @@ async def get_conversation(userid:int,modelconfigid:int):
     result = db_manager.get_conversation(userid,modelconfigid)
     check_result(result)
     if not result:
-        return success("当前用户会话记录不存在！")
+        return success("当前用户会话记录不存在！", [])
     else:
         return success("当前用户会话记录查询成功！",result)
 ##put
@@ -189,6 +189,13 @@ async def save_model_config(config:ModelConfig):
     return success("配置保存成功",{
         "userid": result["user_id"]
     })
+
+##delete
+@app.delete("/chatai/user/conversation")
+async def delete_conversation(conversationid:int):
+    result = db_manager.delete_conversation(conversationid)
+    check_result(result)
+    return success('会话删除操作成功')
 
 ##post
 @app.post("/chatai/user/conversation")

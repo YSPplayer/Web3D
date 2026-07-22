@@ -91,7 +91,12 @@ export const ChatAiApi = {
       onEvent(JSON.parse(buffer))
     }
   },
-
+  //delete
+  async deleteCconversationApi(conversationid:number):Promise<any> {
+    return await request.delete('/chatai/user/conversation', {
+      params: { conversationid }
+    })
+  },
   //put
   async saveModelConfigApi(config: ModelConfig):Promise<any> {
     return await request.put('/chatai/saveModelConfig',config)

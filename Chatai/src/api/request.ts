@@ -17,11 +17,11 @@ export class Request {
         })
     }
 
-    async get<T = any>(url: string, params: any = {}): Promise<T> {
+    async get<T = any>(url: string, data: any = {}): Promise<any> {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
         try {
-            const response = await this.axios.get<T>(url, params)
+            const response = await this.axios.get<T>(url, data)
             return response.data
         } catch (error) {
             const message = this.getErrorMessage(error)
@@ -31,7 +31,7 @@ export class Request {
         }
     }
 
-    async put<T = any>(url: string, data: any = {}): Promise<T> {
+    async put<T = any>(url: string, data: any = {}): Promise<any> {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
         try {
@@ -45,11 +45,11 @@ export class Request {
         }
     }
 
-    async delete<T = any>(url: string, params: any = {}): Promise<T> {
+    async delete<T = any>(url: string, data: any = {}): Promise<any> {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
         try {
-            const response = await this.axios.delete<T>(url, { params })
+            const response = await this.axios.delete<T>(url, data)
             return response.data
         } catch (error) {
             const message = this.getErrorMessage(error)
@@ -59,7 +59,7 @@ export class Request {
         }
     }
 
-    async post<T = any>(url: string, data: any = {}): Promise<T> {
+    async post<T = any>(url: string, data: any = {}): Promise<any> {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
         try {
