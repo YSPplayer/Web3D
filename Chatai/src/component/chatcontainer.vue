@@ -15,6 +15,16 @@
                 :svgChat = "message.role === 'user' ? user.userlogo : user.modellogo "
                 />
             </div>
+            <div v-show="!autoFollow"  class="flex_row_center scroll_bottom_btn">
+                <el-button
+                    type="primary"
+                    circle
+                    size="large"
+                    @click="scrollToBottom(true)">
+                    <el-icon><ArrowDown /></el-icon>
+                </el-button>
+                <span @click="scrollToBottom(true)">回到底部</span>
+            </div>
         </div>
         <div class="chat_input_container flex_row">
             <div class="chat_input">
@@ -34,10 +44,12 @@
  import {user} from '@/store/store'
  import { Util } from "@/shared/util";
  import {ChatAiApi} from '@/api/api'
+  import { ArrowDown } from '@element-plus/icons-vue'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
  const inputChatText = ref('')
  const chatMainRef = ref(null)
  const messages = ref([])
+ const showScrollBtn = ref(false)
  const autoFollow = ref(true) // 是否自动跟随最新消息
  // 距离底部小于这个值，认为用户已经到底部
  const BOTTOM_DISTANCE = 40
@@ -57,6 +69,7 @@ const handleChatWheel = event => {
         autoFollow.value = false
     }
 }
+
 const handleChatScroll = () => {
     autoFollow.value = isAtBottom()
 }
@@ -156,7 +169,27 @@ const handleChatScroll = () => {
 .chatcontainer {
     gap:1rem;
 }
+.scroll_bottom_btn {
+    position: absolute;  /* 添加：脱离文档流 */
+    bottom: 1rem;        /* 添加：距离底部 */
+    right: 1rem;         /* 添加：距离右侧 */
+    margin: 0;           /* 修改：移除原有 margin */
+    z-index: 10;
+    gap: 0.5rem;
+}
+.scroll_bottom_btn span {
+    color: #409EFF;
+}
+
+.scroll_bottom_btn:hover {
+    cursor: pointer;
+}
+
+.scroll_bottom_btn:hover span {
+    color:rgb(240, 173, 78);
+}
 .chat_main {
+    position: relative;
     margin-top: 1rem;
     width: 95%;
     /* 自动占用剩余高度 */
