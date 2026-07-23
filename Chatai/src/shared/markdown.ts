@@ -44,7 +44,7 @@ const markdown = new MarkdownIt({
 })
 
 markdown.use(katex, {
-    delimiters: 'dollars',
+    delimiters: 'all',
     throwOnError: false,
     strict: false
 })
@@ -132,8 +132,17 @@ function normalizeMarkdown(source: string): string {
     )
 }
 
+function normalizeMath(source: string): string {
+    return source.replace(
+        /(^|[^!\\])\[\s*([^\]\n]*\\[a-zA-Z]+[^\]\n]*)\s*\](?!\()/g,
+        (_, prefix, body) => `${prefix}$$${body}$$`
+    )
+}
+
 export function renderMarkdown(source: string): string {
-    const normalized = normalizeMarkdown(source || '')
+    const normalized = normalizeMath(
+        normalizeMarkdown(source || '')
+    )
     const html = markdown.render(normalized)
 
     return DOMPurify.sanitize(html)
