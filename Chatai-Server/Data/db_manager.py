@@ -10,7 +10,8 @@ class DBManager:
         self.db_path = config.db_path / "chat_data.db"
         self.conn = None
         self.lock = threading.RLock()
-
+    def now_time(self):
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     def get_db_connection(self):
         """获取数据库连接"""
         with self.lock:
@@ -149,6 +150,7 @@ class DBManager:
     def create_model_config(self,user_id:int,model_type:str,model_name:str,
               api_key:str, is_online:int):
         with self.lock:
+            now = self.now_time()
             conn = self.get_db_connection()
             try:
                 # 1. 当前用户的所有模型先取消激活
@@ -156,12 +158,12 @@ class DBManager:
                     """
                     UPDATE model_configs
                     SET is_active = 0,
-                        updated_at = CURRENT_TIMESTAMP
+                        updated_at = ?
                     WHERE user_id = ?
                     """,
-                    (user_id,)
+                    (now,user_id,)
                 )
-                existing = conn.execute(
+                existing = conn.sexecute(
                 """
                 SELECT id FROM model_configs 
                 WHERE user_id = ? AND model_type = ? AND model_name = ?
@@ -174,19 +176,19 @@ class DBManager:
                     conn.execute(
                     """
                     UPDATE model_configs 
-                    SET api_key = ?, is_online = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP
+                    SET api_key = ?, is_online = ?, is_active = 1, updated_at = ?
                     WHERE id = ?
                     """,
-                    (api_key, is_online,config_id)
+                    (api_key, is_online,now,config_id)
                      )
                 else:
                     cursor = conn.execute(
                         """
-                        INSERT INTO model_configs (user_id, model_type, model_name, api_key, is_online, is_active)
-                        VALUES (?,?,?,?,?,?)
+                        INSERT INTO model_configs (user_id, model_type, model_name, api_key, is_online, is_active,updated_at,updated_at)
+                        VALUES (?,?,?,?,?,?,?,?)
                         """,
                         (user_id, model_type,model_name,api_key,
-                        is_online,1)
+                        is_online,1,now,now)
                     )
                 conn.commit()
                 row = conn.execute(
@@ -297,15 +299,15 @@ class DBManager:
         with self.lock:
             conn = self.get_db_connection()
             try:
+                now = self.now_time()
                 cursor = conn.execute(
                     """
-                    INSERT INTO messages (model_id,conversation_id, role, content,tokens_used)
-                    VALUES (?, ?,?, ?, ?)
+                    INSERT INTO messages (model_id,conversation_id, role, content,tokens_used,created_at)
+                    VALUES (?, ?,?, ?, ?, ?)
                     """,
-                    (model_id,conversation_id, role, content, tokens_used)
+                    (model_id,conversation_id, role, content, tokens_used,now)
                 )
                 conn.commit()
-                now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 new_id = cursor.lastrowid
                 return {
                     "message_id" : new_id,
@@ -322,12 +324,13 @@ class DBManager:
         with self.lock:
             conn = self.get_db_connection()
             try:
+                now = self.now_time()
                 cursor = conn.execute(
                     """
-                    INSERT INTO conversations (user_id, model_config_id,title)
-                    VALUES (?, ?, ?)
+                    INSERT INTO conversations (user_id, model_config_id,title,created_at,updated_at)
+                    VALUES (?, ?, ?,?,?,?)
                     """,
-                    (user_id, model_config_id,title)
+                    (user_id, model_config_id,title,now,now)
                 )
                 conn.commit()
                 new_id = cursor.lastrowid
@@ -344,12 +347,13 @@ class DBManager:
          with self.lock:
             conn = self.get_db_connection()
             try:
+                now = self.now_time()
                 cursor = conn.execute(
                     """
-                    INSERT INTO users (username, password_hash)
-                    VALUES (?, ?)
+                    INSERT INTO users (username, password_hash,created_at)
+                    VALUES (?, ?,?)
                     """,
-                    (username, password_hash)
+                    (username, password_hash,now)
                 )
                 user_id = cursor.lastrowid
                 conn.commit()
