@@ -115,14 +115,12 @@ const handleChatScroll = () => {
  }
  const getChatName = (role,id)=> {
     if(role === 'user') return user.username
-    const modelid = id == -1 ? user.modelid : id
-    const model = user.models.find(item => item.id === modelid)
+    const model = user.models.find(item => item.id === id)
     return `聊天助手[${model.model_name}]`
  }
   const getSvg = (role,id)=> {
     if(role === 'user') return user.userlogo
-    const modelid = id == -1 ? user.modelid : id
-    const model = user.models.find(item => item.id === modelid)
+    const model = user.models.find(item => item.id === id)
     return model.logo_path
  }
  const sendChatMessage = async () => {
@@ -131,14 +129,16 @@ const handleChatScroll = () => {
     const userMessage = reactive({
         id: lastid + 1,
         role: 'user',
-        content: userContent
+        content: userContent,
+        modelid: user.modelid
     })
    messages.value.push(userMessage) //增加用户对话
    const aiMessage = reactive({
         id: lastid + 2,
         role: 'assistant',
         content: '',
-        streaming: true
+        streaming: true,
+        modelid: user.modelid
     })
     messages.value.push(aiMessage)
     scrollToBottom(true)

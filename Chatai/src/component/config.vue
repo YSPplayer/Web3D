@@ -153,6 +153,8 @@
             const result = await ChatAiApi.saveModelConfigApi(config)
             if(result?.code == 200) {
                 ElMessage.success('配置保存成功！')
+                const data = result.data
+                user.modelid = data.modelid
             }
         }
         saveconfigLoading.value = false
