@@ -276,6 +276,39 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def get_messages_page(self,conversation_id:int,limit: int , before_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                if(before_id == -1): 
+                    before_id = None
+                limit = max(1, min(limit, 100))
+                rows = conn.execute(
+                """
+                SELECT *
+                FROM messages
+                WHERE conversation_id = ?
+                  AND (? IS NULL OR id < ?)
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (conversation_id, before_id, before_id, limit + 1)
+                ).fetchall()
+                has_more = len(rows) > limit
+                rows = rows[:limit]
+                messages = [dict(row) for row in reversed(rows)]
+                return {
+                "messages": messages,
+                "has_more": has_more,
+                "next_before_id": messages[0]["id"] if messages else -1
+                }
+            except Exception as exc:
+                conn.rollback()
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code": 500
+                }
+            
     def get_messages(self,conversation_id:int):
         with self.lock:
             conn = self.get_db_connection()

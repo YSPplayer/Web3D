@@ -134,7 +134,12 @@ async def get_model_chat_message(conversationid:int):
     else:
          return  success("当前会话消息查询成功！",messages)
     
-    
+@app.get("/chatai/user/chatPageMessages") 
+async def get_model_chat_message_page(conversationid:int,limit: int,beforeid:int):#获取当前模型的会话记录，分页查询
+    messages = db_manager.get_messages_page(conversationid,limit,beforeid)
+    check_result(messages)
+    return success("当前会话消息查询成功！",messages)
+
 @app.get("/chatai/user/modelConfgState") #获取到模型配置
 async def get_model_config_state(userid:int,
             modeltype:str,modelname:str):
