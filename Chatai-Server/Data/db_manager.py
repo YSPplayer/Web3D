@@ -55,7 +55,7 @@ class DBManager:
                 conn = self.get_db_connection()
                 rows = conn.execute(
                 """
-                SELECT model_type, model_name,logo_path FROM models
+                SELECT id,model_type, model_name,logo_path FROM models
                 """).fetchall()
                 return [dict(row) for row in rows] if rows else []
             except Exception as exc:
@@ -254,7 +254,6 @@ class DBManager:
                  return {
                     "code":500
                 }
-
 
     def get_conversation(self,user_id:int,model_config_id:int):
         with self.lock:

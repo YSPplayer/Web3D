@@ -85,10 +85,17 @@
         } 
     }
     const handleOpen = async ()=> {
+      await updateUserModelConfig()
+    } 
+    const updateUserModelConfig = async ()=> {
+      //获取到所有模型
       modelOptions.value = []
       const modelDatas = await ChatAiApi.modelsApi()
       if(modelDatas.code == 200) {
-        modelDatas?.data.forEach(item => {
+        const data = modelDatas.data
+        if(!data) return
+        user.models = data //设置当前的所有模型
+        data.forEach(item => {
             const modelType = item.model_type
             const modelName = item.model_name
             let target = modelOptions.value.find(item => item.value === modelType)
@@ -108,9 +115,6 @@
             })
         });
       }
-      await updateUserModelConfig()
-    } 
-    const updateUserModelConfig = async ()=> {
       //设置当前的激活模型
       const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
       if(userconfig.code == 200) {
@@ -123,6 +127,7 @@
                 user.modelconfigid = -1
                 user.modeltype = ''
                 user.modellogo = ''
+                user.modelid = -1
             } else {
                 onlineModel.value = data.isonline
                 configForm.apikey = Util.base64ToString(data.apikey)
@@ -131,6 +136,7 @@
                 user.modelconfigid = data.modelconfigid
                 user.modeltype = data.modeltype
                 user.modellogo = data.logo
+                user.modelid = data.modelid
             }
       }
     }

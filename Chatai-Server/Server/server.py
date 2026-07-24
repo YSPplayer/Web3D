@@ -163,6 +163,7 @@ async def get_user_model_config(userid:int):
             "modeltype":config["model_type"],
             "modelname": config["model_name"],
             "modelconfigid":config["id"],
+            "modelid":config["model_id"],
             "logo":image_to_data_url(config["logo_path"])
         })
     

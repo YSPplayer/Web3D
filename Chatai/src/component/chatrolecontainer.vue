@@ -48,6 +48,10 @@
     svgChat: {
         type:String,
         default:''
+    },
+    modelid:{
+        type:Number,
+        default:-1
     }
 })
 const renderedMessage = computed(() => {

@@ -11,8 +11,8 @@
                 :isUser="message.role === 'user'"
                 :message="message.content"
                 :timeText="message.timeText"
-                :chatName="message.role === 'user' ? user.username : `聊天助手[${user.modeltype}]`"
-                :svgChat = "message.role === 'user' ? user.userlogo : user.modellogo "
+                :chatName="getChatName(message.role,message.modelid)"
+                :svgChat = "getSvg(message.role,message.modelid) "
                 />
             </div>
             <div v-show="!autoFollow"  class="flex_row_center scroll_bottom_btn">
@@ -44,7 +44,7 @@
  import {user} from '@/store/store'
  import { Util } from "@/shared/util";
  import {ChatAiApi} from '@/api/api'
-  import { ArrowDown } from '@element-plus/icons-vue'
+ import { ArrowDown } from '@element-plus/icons-vue'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
  const inputChatText = ref('')
  const chatMainRef = ref(null)
@@ -106,11 +106,24 @@ const handleChatScroll = () => {
            id: lastid + 1,
            role:item.role,
            content:item.content,
-           timeText:Util.extractTime(item.created_at) 
+           timeText:Util.extractTime(item.created_at),
+           modelid:item.model_id
        })
        lastid = lastid + 1
     })
     scrollToBottom(true)
+ }
+ const getChatName = (role,id)=> {
+    if(role === 'user') return user.username
+    const modelid = id == -1 ? user.modelid : id
+    const model = user.models.find(item => item.id === modelid)
+    return `聊天助手[${model.model_name}]`
+ }
+  const getSvg = (role,id)=> {
+    if(role === 'user') return user.userlogo
+    const modelid = id == -1 ? user.modelid : id
+    const model = user.models.find(item => item.id === modelid)
+    return model.logo_path
  }
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()
