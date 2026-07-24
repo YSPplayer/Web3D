@@ -15,7 +15,7 @@
                 :svgChat = "getSvg(message.role,message.modelid) "
                 />
             </div>
-            <div v-show="!autoFollow"  class="flex_row_center scroll_bottom_btn">
+            <div v-show="showScrollBtn"  class="flex_row_center scroll_bottom_btn">
                 <el-button
                     type="primary"
                     circle
@@ -53,6 +53,14 @@
  const autoFollow = ref(true) // 是否自动跟随最新消息
  // 距离底部小于这个值，认为用户已经到底部
  const BOTTOM_DISTANCE = 40
+ const canScroll = () => {
+    const element = chatMainRef.value
+    if (!element) {
+        return false
+    }
+
+    return element.scrollHeight > element.clientHeight + 1
+}
  const isAtBottom = () => {
     const element = chatMainRef.value
     if (!element) {
@@ -65,19 +73,28 @@
     return distanceToBottom <= BOTTOM_DISTANCE
 }
 const handleChatWheel = event => {
+    if (!canScroll()) {
+        autoFollow.value = true
+        showScrollBtn.value = false
+        return
+    }
+
     if (event.deltaY < 0) {
         autoFollow.value = false
+        showScrollBtn.value = true
     }
 }
 
 const handleChatScroll = () => {
     autoFollow.value = isAtBottom()
+    showScrollBtn.value = canScroll() && !autoFollow.value
 }
  //让当前的滚动的位置始终处于底层
  const scrollToBottom = (force = false) => {
     // 用户主动发送消息时，可以强制重新开启跟随
     if (force) {
         autoFollow.value = true
+        showScrollBtn.value = false
     }
     if (!autoFollow.value) {
         return
@@ -92,6 +109,7 @@ const handleChatScroll = () => {
             return
         }
         element.scrollTop = element.scrollHeight
+        showScrollBtn.value = canScroll() && !isAtBottom()
     })
 }
  const generating = ref(false)
