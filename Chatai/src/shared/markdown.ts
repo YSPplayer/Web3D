@@ -126,17 +126,65 @@ markdown.renderer.rules.fence = (tokens, index) => {
 }
 
 function normalizeMarkdown(source: string): string {
-    return source.replace(
-        /([\u4e00-\u9fa5])(\*\*)(?=["“‘])/g,
-        '$1 $2'
-    )
+    return source
+        .replace(
+            /([\u4e00-\u9fa5])(\*\*)(?=["“‘])/g,
+            '$1 $2'
+        )
+        .replace(
+            /(\*\*["“‘][^*\n]+?\*\*)(?=[\u4e00-\u9fa5])/g,
+            '$1 '
+        )
 }
 
 function normalizeMath(source: string): string {
-    return source.replace(
-        /(^|[^!\\])\[\s*([^\]\n]*\\[a-zA-Z]+[^\]\n]*)\s*\](?!\()/g,
-        (_, prefix, body) => `${prefix}$$${body}$$`
-    )
+    const normalizedNestedDollars = source
+        .replace(
+            /\$([^$\n]*?)\$\$([^$\n]+?)\$\$([^$\n]*?)\$/g,
+            (_, before, middle, after) => `$${before}${middle}${after}$`
+        )
+        .split('\n')
+        .map((line) => {
+            const trimmed = line.trim()
+
+            if (
+                !trimmed ||
+                trimmed.startsWith('$') ||
+                trimmed.startsWith('\\[') ||
+                trimmed.startsWith('\\(')
+            ) {
+                return line
+            }
+
+            if (
+                line.includes('$$') &&
+                /\\(?:lim|frac|left|right|Delta|int|sum|sqrt|cdot|to)\b/.test(line)
+            ) {
+                const indent = line.match(/^\s*/)?.[0] || ''
+                return `${indent}$$${trimmed.replace(/\$\$/g, '')}$$`
+            }
+
+            return line
+        })
+        .join('\n')
+
+    return normalizedNestedDollars
+        .split(/(\$\$[\s\S]*?\$\$|\$[^\n$]*?\$|\\\[[\s\S]*?\\\]|\\\([^\n]*?\\\))/g)
+        .map((part) => {
+            if (
+                part.startsWith('$') ||
+                part.startsWith('\\[') ||
+                part.startsWith('\\(')
+            ) {
+                return part
+            }
+
+            return part.replace(
+                /(^|[^!\\])\[\s*([^\]\n]*\\[a-zA-Z]+[^\]\n]*)\s*\](?!\()/g,
+                (_, prefix, body) => `${prefix}$$${body}$$`
+            )
+        })
+        .join('')
 }
 
 export function renderMarkdown(source: string): string {

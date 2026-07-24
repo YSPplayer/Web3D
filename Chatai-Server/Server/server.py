@@ -197,7 +197,8 @@ async def save_model_config(config:ModelConfig):
     )
     check_result(result)
     return success("配置保存成功",{
-        "userid": result["user_id"]
+        "userid": result["user_id"],
+        "modelid":result["model_id"]
     })
 
 ##delete
