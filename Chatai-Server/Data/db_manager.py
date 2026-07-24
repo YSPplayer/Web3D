@@ -328,7 +328,7 @@ class DBManager:
                 cursor = conn.execute(
                     """
                     INSERT INTO conversations (user_id, model_config_id,title,created_at,updated_at)
-                    VALUES (?, ?, ?,?,?,?)
+                    VALUES (?, ?, ?,?,?)
                     """,
                     (user_id, model_config_id,title,now,now)
                 )
