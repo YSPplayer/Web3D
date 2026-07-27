@@ -6,6 +6,18 @@ class ModelApi:
         model=model,
         text=message
     )
+    def build_messages(self,user_message:str,history_messages:dict):
+        model_messages = []
+        for item in history_messages:
+            model_messages.append({
+                "role": item["role"],
+                "content": item["content"]
+            })
+        model_messages.append({
+            "role": "user",
+            "content": user_message
+        })
+        return model_messages
 
     def chat(self,model: str, api_key: str, message: str):
         response = litellm.completion(
@@ -16,12 +28,12 @@ class ModelApi:
         )
         print(response.choices[0].message.content)
     
-    async def chat_stream(self, model: str, api_key: str, message: str):
+    async def chat_stream(self, model: str, api_key: str, message: list[dict]):
         response = None
         try:
             response  = await litellm.acompletion(
                 model = model,
-                messages = [{"role": "user", "content": message}],
+                messages = message,
                 temperature=0.6,
                 api_key = api_key,
                 stream=True

@@ -276,6 +276,27 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def get_recent_messages_for_context(self, conversation_id: int, limit: int = 20):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT role, content
+                    FROM messages
+                    WHERE conversation_id = ?
+                    ORDER BY id DESC
+                    LIMIT ?
+                    """,
+                    (conversation_id, limit)
+                ).fetchall()
+                messages = [dict(row) for row in reversed(rows)] #这里倒叙查询要二次反转作为输入
+                return messages
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code": 500
+                }
     def get_messages_page(self,conversation_id:int,limit: int , before_id:int):
         with self.lock:
             conn = self.get_db_connection()

@@ -231,6 +231,12 @@ async def create_chat_message(chatMessage:ChatMessage):
             status_code=400,
             detail="消息不能为空"
         )
+    # 查询历史上下文
+    history_messages = db_manager.get_recent_messages_for_context(
+        chatMessage.conversationid,
+        limit=20
+    )
+    check_result(history_messages)
     model_config = db_manager.get_model_config_by_userid(chatMessage.userid)
     check_result(model_config)
     model_name = f"{model_config['provider_type']}/{model_config['model_name']}"
@@ -239,6 +245,7 @@ async def create_chat_message(chatMessage:ChatMessage):
     # api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
     user_tokens_used = modelApi.get_token_count(model_name,
     user_message)
+    model_messages = modelApi.build_messages(user_message,history_messages)
     # 先保存用户消息
     user_result = db_manager.create_messages(
         model_config["model_id"],
@@ -252,7 +259,7 @@ async def create_chat_message(chatMessage:ChatMessage):
             async for content in modelApi.chat_stream(
                 model_name,
                 api_key,
-                user_message
+                model_messages
             ):
                 full_content.append(content)
                 yield json.dumps(
