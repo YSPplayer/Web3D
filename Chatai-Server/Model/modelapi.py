@@ -1,4 +1,5 @@
 import litellm
+import asyncio
 class ModelApi:
     def get_token_count(self,model:str,message: str):
         return litellm.token_counter(
@@ -16,15 +17,24 @@ class ModelApi:
         print(response.choices[0].message.content)
     
     async def chat_stream(self, model: str, api_key: str, message: str):
-        response  = await litellm.acompletion(
-            model = model,
-            messages = [{"role": "user", "content": message}],
-            temperature=0.6,
-            api_key = api_key,
-            stream=True
-        )
-        async for chunk in response:
-            content = chunk.choices[0].delta.content
-            if content:
-                yield content #逐步返回
+        response = None
+        try:
+            response  = await litellm.acompletion(
+                model = model,
+                messages = [{"role": "user", "content": message}],
+                temperature=0.6,
+                api_key = api_key,
+                stream=True
+            )
+            async for chunk in response:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content #逐步返回
+        except asyncio.CancelledError: #用户取消模型生成
+            print("模型流式生成已取消")
+            raise
+        finally:
+            close = getattr(response, "aclose", None)
+            if close:
+                await close()
 modelApi = ModelApi()

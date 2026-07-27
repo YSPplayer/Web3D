@@ -35,8 +35,8 @@
                 <textarea  v-model="inputChatText">
                 </textarea>
             </div>
-            <img class="chat_post" :src="postChat" :class="fill_img"
-            @click="sendChatMessage">
+            <img class="chat_post" :src="generating ? stopChat : postChat" :class="fill_img"
+            @click="generating ? stopChatMessage() : sendChatMessage() ">
             </img>
         </div>
     </div>
@@ -44,12 +44,14 @@
 
 <script setup>
  import postChat from "@/assets/post.svg";
+ import stopChat from "@/assets/stop.svg";
  import { ref,reactive,nextTick   } from 'vue'
  import {user} from '@/store/store'
  import { Util } from "@/shared/util";
  import {ChatAiApi} from '@/api/api'
  import { ArrowDown } from '@element-plus/icons-vue'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
+import { ca } from "element-plus/es/locales.mjs";
  const inputChatText = ref('')
  const chatMainRef = ref(null)
  const messages = ref([])
@@ -207,6 +209,13 @@ const handleChatScroll = async () => {
     const model = user.models.find(item => item.id === id)
     return model.logo_path
  }
+ const stopChatMessage = ()=> {
+    if(abortController) {
+        abortController.abort()
+        abortController = null
+    }
+    generating.value = false
+ }
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()
     if (!userContent || generating.value) return
@@ -249,14 +258,19 @@ const handleChatScroll = async () => {
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message
                 }
-                aiMessage.showloding = false
                 scrollToBottom()
             },
             abortController.signal
         )
+    } catch(error) {
+        if (error.name === 'AbortError') {
+            return
+        }
     } finally {
         generating.value = false
         aiMessage.streaming = false
+        aiMessage.showloding = false
+        abortController = null
     }
  } 
  defineExpose({
@@ -366,5 +380,31 @@ const handleChatScroll = async () => {
     display: none;
     width: 0;
     height: 0;
+}
+
+.chat_input textarea {
+    width: calc(100% - 1.2rem);
+    height: calc(100% - 1.2rem);
+    margin: 0.6rem;
+
+    border: none;
+    outline: none;
+    resize: none;
+
+    color: #1f2328;
+    background: transparent;
+
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Microsoft YaHei",
+        sans-serif;
+    font-size: 1rem;
+    line-height: 1.75;
+
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 </style>
