@@ -107,16 +107,20 @@ const sleep = (ms) => {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 const lodingShowMore = async () => {
-    if(!user.hasmore || isLoding.value) return
+    const conversationid = user.conversationid
+    const hasmore = user.hasmores[user.conversationid]
+    if(!hasmore || isLoding.value) return
     isLoding.value = true
     const startTime = Date.now()
-    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,user.pagenextid)
-    if(result.code == 200) {
+    let pagenextid = user.pagenextids[user.conversationid]
+    if(!pagenextid) pagenextid = -1
+    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,pagenextid)
+    if(result.code == 200 && user.conversationid === conversationid) {
         const element = chatMainRef.value
         const oldScrollHeight = element ? element.scrollHeight : 0
         const data = result.data
-        user.pagenextid = data.next_before_id
-        user.hasmore = data.has_more
+        user.pagenextids[user.conversationid] = data.next_before_id
+        user.hasmores[user.conversationid] = data.has_more
         updateChatMessage(data.messages,true)
         nextTick(() => {
             const element = chatMainRef.value
@@ -124,7 +128,7 @@ const lodingShowMore = async () => {
                 const newScrollHeight = element.scrollHeight
                 element.scrollTop = newScrollHeight - oldScrollHeight
             }
-            showLoadMore.value =  user.hasmore && canScroll() && isAtTop() 
+            showLoadMore.value = user.hasmores[user.conversationid] && canScroll() && isAtTop() 
         })
     }
     const elapsed = Date.now() - startTime
@@ -135,9 +139,10 @@ const lodingShowMore = async () => {
     isLoding.value = false
 }
 const handleChatScroll = async () => {
+     const hasmore = user.hasmores[user.conversationid]
     autoFollow.value = isAtBottom()
     showScrollBtn.value = canScroll() && !autoFollow.value
-    showLoadMore.value =  user.hasmore && canScroll() && isAtTop() 
+    showLoadMore.value =  hasmore && canScroll() && isAtTop() 
     if(showLoadMore.value)  {
        await lodingShowMore()
     } 

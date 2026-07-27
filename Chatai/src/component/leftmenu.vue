@@ -70,6 +70,7 @@
         //删除掉对应的会话
         chatList.value = chatList.value.filter(item => item.id !== id)
         user.conversationsid = user.conversationsid.filter(item => item !== user.conversationid)
+        user.pagenextids.delete(user.conversationid)
         const newindex = Math.min(index,chatList.value.length - 1)
         const newid = chatList.value[newindex].id
         await selectChat(newid,newindex)
@@ -120,12 +121,14 @@ const updateChatList = async (data)=> {
     await updateChatMessage()
 }
 const updateChatMessage = async ()=> {
+    const conversationid = user.conversationid
     //获取到当前默认会话id下的聊天记录  
-    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,user.pagenextid)
+    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,-1)
     if(result.code == 200) {
+        if (user.conversationid !== conversationid) return //防止用户切换对话
         const data = result.data
-        user.pagenextid = data.next_before_id
-        user.hasmore = data.has_more
+        user.pagenextids[user.conversationid] = data.next_before_id
+        user.hasmores[user.conversationid] = data.has_more
         emits('updateChatMessage',data.messages)
     }
 }
