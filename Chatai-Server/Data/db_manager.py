@@ -163,7 +163,7 @@ class DBManager:
                     """,
                     (now,user_id,)
                 )
-                existing = conn.sexecute(
+                existing = conn.execute(
                 """
                 SELECT id FROM model_configs 
                 WHERE user_id = ? AND model_type = ? AND model_name = ?

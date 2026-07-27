@@ -20,6 +20,10 @@
                 </div>
                 </div>    
             </div>
+            <div v-if="showloding" class="chat_role_think">
+                 <el-icon class="chat_is_loading is-loading"><Loading /></el-icon>
+                <span>思考中...</span>
+            </div>
         </div>
     </div>
 </template>
@@ -28,6 +32,7 @@
  import { computed } from 'vue'
  import { renderMarkdown } from '@/shared/markdown'
  import { ElMessage } from 'element-plus'
+ import { Loading } from '@element-plus/icons-vue'
  const props = defineProps({
     isUser: {
         type: Boolean,
@@ -52,6 +57,10 @@
     modelid:{
         type:Number,
         default:-1
+    },
+    showloding: {
+        type: Boolean,
+        default: false
     }
 })
 const renderedMessage = computed(() => {
@@ -206,6 +215,24 @@ const handleMarkdownClick = async event => {
 }
 </script>
 <style scoped>
+.chat_role_think {
+    display: inline-flex;
+    gap: 0.2rem;
+    line-height: 1;
+}
+.chat_role_think span {
+    color: #b4b0b0;
+    font-size: 14px;
+    line-height: 1;
+}
+:deep(.chat_is_loading) {
+    color: #b4b0b0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    
+}
 .chat_role_container {
     gap: 1rem;
     width: 100%;

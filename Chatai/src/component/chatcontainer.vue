@@ -16,6 +16,7 @@
                 :timeText="message.timeText"
                 :chatName="getChatName(message.role,message.modelid)"
                 :svgChat = "getSvg(message.role,message.modelid) "
+                :showloding="message.showloding"
                 />
             </div>
             <div v-show="showScrollBtn"  class="flex_row_center scroll_bottom_btn">
@@ -213,7 +214,7 @@ const handleChatScroll = async () => {
         id: lastid + 1,
         role: 'user',
         content: userContent,
-        modelid: user.modelid
+        modelid: user.modelid,
     })
    messages.value.push(userMessage) //增加用户对话
    const aiMessage = reactive({
@@ -221,7 +222,8 @@ const handleChatScroll = async () => {
         role: 'assistant',
         content: '',
         streaming: true,
-        modelid: user.modelid
+        modelid: user.modelid,
+        showloding:true
     })
     messages.value.push(aiMessage)
     scrollToBottom(true)
@@ -247,6 +249,7 @@ const handleChatScroll = async () => {
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message
                 }
+                aiMessage.showloding = false
                 scrollToBottom()
             },
             abortController.signal
