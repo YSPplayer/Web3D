@@ -1,10 +1,13 @@
 <template>
     <div class="chatcontainer flex_colum_center">
-        <div class="chat_main">
+        <div class="chat_main" v-loading="isLoding" >
             <div ref="chatMainRef" class="chat_main_container flex_colum"
             @wheel.passive="handleChatWheel"
             @scroll.passive="handleChatScroll"
             >
+                <!-- <div class="loding_more" v-if="showLoadMore"> 
+                    <span  @click="lodingShowMore">▲加载更多</span>
+                    </div> -->
                 <chatrolecontainer
                 v-for="message in messages"
                 :key="message.id"
@@ -49,10 +52,14 @@
  const inputChatText = ref('')
  const chatMainRef = ref(null)
  const messages = ref([])
+ const isLoding = ref(false)
+ const showLoadMore = ref(false)
  const showScrollBtn = ref(false)
  const autoFollow = ref(true) // 是否自动跟随最新消息
  // 距离底部小于这个值，认为用户已经到底部
  const BOTTOM_DISTANCE = 40
+ const TOP_DISTANCE = 10
+ const minLoadingTime = 300 //最小加载时间
  const canScroll = () => {
     const element = chatMainRef.value
     if (!element) {
@@ -72,6 +79,15 @@
         element.clientHeight
     return distanceToBottom <= BOTTOM_DISTANCE
 }
+
+const isAtTop = () => {
+    const element = chatMainRef.value
+    if (!element) {
+        return true
+    }
+    return element.scrollTop <= TOP_DISTANCE 
+}
+
 const handleChatWheel = event => {
     if (!canScroll()) {
         autoFollow.value = true
@@ -84,10 +100,44 @@ const handleChatWheel = event => {
         showScrollBtn.value = true
     }
 }
-
-const handleChatScroll = () => {
+const sleep = (ms) => {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+const lodingShowMore = async () => {
+    if(!user.hasmore || isLoding.value) return
+    isLoding.value = true
+    const startTime = Date.now()
+    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,user.pagenextid)
+    if(result.code == 200) {
+        const element = chatMainRef.value
+        const oldScrollHeight = element ? element.scrollHeight : 0
+        const data = result.data
+        user.pagenextid = data.next_before_id
+        user.hasmore = data.has_more
+        updateChatMessage(data.messages,true)
+        nextTick(() => {
+            const element = chatMainRef.value
+            if (element) {
+                const newScrollHeight = element.scrollHeight
+                element.scrollTop = newScrollHeight - oldScrollHeight
+            }
+            showLoadMore.value =  user.hasmore && canScroll() && isAtTop() 
+        })
+    }
+    const elapsed = Date.now() - startTime
+    const remain = minLoadingTime - elapsed
+    if (remain > 0) {
+            await sleep(remain)
+    }
+    isLoding.value = false
+}
+const handleChatScroll = async () => {
     autoFollow.value = isAtBottom()
     showScrollBtn.value = canScroll() && !autoFollow.value
+    showLoadMore.value =  user.hasmore && canScroll() && isAtTop() 
+    if(showLoadMore.value)  {
+       await lodingShowMore()
+    } 
 }
  //让当前的滚动的位置始终处于底层
  const scrollToBottom = (force = false) => {
@@ -116,20 +166,35 @@ const handleChatScroll = () => {
  let abortController = null;
  const lastid = messages.value.length > 0 ?
  messages.value[messages.value.length - 1].id : 0
- const updateChatMessage = (data) => {  
+ const updateChatMessage = (data,insert = false) => {
+    let oldmessages = []
+    if(insert) oldmessages = [...messages.value]
     messages.value = []
     let lastid = 0
     data.forEach((item) => {
-       messages.value.push({
-           id: lastid + 1,
-           role:item.role,
-           content:item.content,
-           timeText:Util.extractTime(item.created_at),
-           modelid:item.model_id
-       })
-       lastid = lastid + 1
+    messages.value.push({
+        id: lastid + 1,
+        role:item.role,
+        content:item.content,
+        timeText:Util.extractTime(item.created_at),
+        modelid:item.model_id
     })
-    scrollToBottom(true)
+    lastid = lastid + 1
+    })
+    if(oldmessages.length > 0) {
+        oldmessages.forEach((item) => {
+        messages.value.push({
+            id: lastid + 1,
+            role:item.role,
+            content:item.content,
+            timeText:item.timeText,
+            modelid:item.modelid
+        })
+        lastid = lastid + 1
+        })
+    } else {
+        scrollToBottom(true)
+    }
  }
  const getChatName = (role,id)=> {
     if(role === 'user') return user.username
@@ -213,6 +278,17 @@ const handleChatScroll = () => {
 }
 
 .scroll_bottom_btn:hover {
+    cursor: pointer;
+}
+
+.chat_main_container .loding_more span {
+    display: block; /*行元素转块元素*/
+    width: 100%;
+    text-align: center;
+    color: #409EFF;
+}
+.chat_main_container .loding_more span:hover {
+    color:rgb(240, 173, 78);
     cursor: pointer;
 }
 

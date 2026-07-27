@@ -10,6 +10,9 @@ export interface User {
     conversationsid:Array<number> //所有会话id
     conversationid:number //激活的会话id
     username:string //用户名称
+    pagenumber:number //单页查询的数量
+    pagenextid:number //下一页的起始索引
+    hasmore:boolean //是否还有下一页的数据
 }
 
 export const user = reactive<User>({
@@ -22,5 +25,8 @@ export const user = reactive<User>({
     modelid: -1,
     modelconfigid:-1,
     conversationid:-1,
-    username: ''
+    username: '',
+    pagenumber:20,
+    pagenextid:-1,
+    hasmore:true
 })

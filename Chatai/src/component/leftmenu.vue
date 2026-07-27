@@ -121,10 +121,12 @@ const updateChatList = async (data)=> {
 }
 const updateChatMessage = async ()=> {
     //获取到当前默认会话id下的聊天记录  
-    const result = await ChatAiApi.getChatMessageApi(user.conversationid)
+    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,user.pagenextid)
     if(result.code == 200) {
         const data = result.data
-        emits('updateChatMessage',data)
+        user.pagenextid = data.next_before_id
+        user.hasmore = data.has_more
+        emits('updateChatMessage',data.messages)
     }
 }
 watch(() => user.username,(newName) => {
