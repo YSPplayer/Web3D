@@ -1,4 +1,9 @@
 import { reactive } from 'vue'
+export interface Conversation { //会话对象
+    pagenextid:number,//下一页的起始索引
+    hasmore:boolean,//是否还有下一页的数据
+    isnew:boolean,//是否为新建的对话
+}
 export interface User {
     userid:number //用户名
     userlogo:string //用户图像
@@ -11,8 +16,7 @@ export interface User {
     conversationid:number //激活的会话id
     username:string //用户名称
     pagenumber:number //单页查询的数量
-    pagenextids:Map<number,number> //下一页的起始索引
-    hasmores:Map<number,boolean> //是否还有下一页的数据
+    conversations:Map<number,Conversation>//会话数据
 }
 
 export const user = reactive<User>({
@@ -27,6 +31,5 @@ export const user = reactive<User>({
     conversationid:-1,
     username: '',
     pagenumber:20,
-    pagenextids:new Map(),
-    hasmores:new Map()
+    conversations:new Map()
 })

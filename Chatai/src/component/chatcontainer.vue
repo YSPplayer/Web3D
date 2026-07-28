@@ -51,7 +51,8 @@
  import {ChatAiApi} from '@/api/api'
  import { ArrowDown } from '@element-plus/icons-vue'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
-import { ca } from "element-plus/es/locales.mjs";
+ import { ca } from "element-plus/es/locales.mjs";
+ const emits = defineEmits(['updateTitleMessage']) 
  const inputChatText = ref('')
  const chatMainRef = ref(null)
  const messages = ref([])
@@ -108,19 +109,17 @@ const sleep = (ms) => {
 }
 const lodingShowMore = async () => {
     const conversationid = user.conversationid
-    const hasmore = user.hasmores[user.conversationid]
-    if(!hasmore || isLoding.value) return
+    const conversation = user.conversations[user.conversationid]
+    if(!conversation.hasmore || isLoding.value) return
     isLoding.value = true
     const startTime = Date.now()
-    let pagenextid = user.pagenextids[user.conversationid]
-    if(!pagenextid) pagenextid = -1
     const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,pagenextid)
     if(result.code == 200 && user.conversationid === conversationid) {
         const element = chatMainRef.value
         const oldScrollHeight = element ? element.scrollHeight : 0
         const data = result.data
-        user.pagenextids[user.conversationid] = data.next_before_id
-        user.hasmores[user.conversationid] = data.has_more
+        conversation.pagenextid = data.next_before_id
+        conversation.hasmore = data.has_more
         updateChatMessage(data.messages,true)
         nextTick(() => {
             const element = chatMainRef.value
@@ -128,7 +127,7 @@ const lodingShowMore = async () => {
                 const newScrollHeight = element.scrollHeight
                 element.scrollTop = newScrollHeight - oldScrollHeight
             }
-            showLoadMore.value = user.hasmores[user.conversationid] && canScroll() && isAtTop() 
+            showLoadMore.value = conversation.hasmore && canScroll() && isAtTop() 
         })
     }
     const elapsed = Date.now() - startTime
@@ -139,7 +138,7 @@ const lodingShowMore = async () => {
     isLoding.value = false
 }
 const handleChatScroll = async () => {
-     const hasmore = user.hasmores[user.conversationid]
+    const hasmore = user.conversations[user.conversationid].hasmore
     autoFollow.value = isAtBottom()
     showScrollBtn.value = canScroll() && !autoFollow.value
     showLoadMore.value =  hasmore && canScroll() && isAtTop() 
@@ -221,6 +220,32 @@ const handleChatScroll = async () => {
     }
     generating.value = false
  }
+ //生成总结性会话标题
+const getTitleMessage = async ()=> {
+    let title = ''
+    try {
+        await ChatAiApi.create_chat_messageApi({
+            userid: user.userid,
+            modelconfigid: user.modelconfigid,
+            conversationid:user.conversationid,
+            message:'基于上面的对话生成一个此次会话的简短的总结性的标题，只需要文字，不需要有任何其他的符号',
+            istiTle:true
+        },
+        event => {
+            if (event.type === 'delta') {
+                title += event.content
+            } else if(event.type === 'done') {
+
+            } else if(event.type === 'error') {
+                title = ''
+            }
+        }
+    )
+    } catch(error) {
+        title = ''
+    } 
+    return title
+}
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()
     if (!userContent || generating.value) return
@@ -250,7 +275,8 @@ const handleChatScroll = async () => {
                 userid: user.userid,
                 modelconfigid: user.modelconfigid,
                 conversationid:user.conversationid,
-                message: userContent
+                message: userContent,
+                istiTle:false
             },
             event => {
                 if (event.type === 'delta') {
@@ -272,12 +298,20 @@ const handleChatScroll = async () => {
             return
         }
     } finally {
+        const conversation =  user.conversations[user.conversationid]
+        if(conversation && conversation.isnew) {
+            conversation.isnew = false
+            const titlemessage = await getTitleMessage()
+            if(titlemessage !== '') {
+                await emits('updateTitleMessage',titlemessage)
+            }
+        }
         generating.value = false
         aiMessage.streaming = false
         aiMessage.showloding = false
         abortController = null
     }
- } 
+} 
  defineExpose({
     updateChatMessage
  })

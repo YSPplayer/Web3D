@@ -55,7 +55,8 @@ class ChatMessage(BaseModel):
     userid: int
     modelconfigid: int
     conversationid:int
-    message:str   
+    message:str
+    istiTle:bool   
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -247,12 +248,13 @@ async def create_chat_message(chatMessage:ChatMessage):
     user_message)
     model_messages = modelApi.build_messages(user_message,history_messages)
     # 先保存用户消息
-    user_result = db_manager.create_messages(
-        model_config["model_id"],
-        chatMessage.conversationid,"user",
-        user_message,user_tokens_used)
-    check_result(user_result)
-    user_created_at = user_result["created_at"]
+    if not chatMessage.istiTle:
+        user_result = db_manager.create_messages(
+            model_config["model_id"],
+            chatMessage.conversationid,"user",
+            user_message,user_tokens_used)
+        check_result(user_result)
+        user_created_at = user_result["created_at"]
     async def generate():
         full_content: list[str] = []
         try:
@@ -273,20 +275,28 @@ async def create_chat_message(chatMessage:ChatMessage):
             # 把完整 AI 消息存入数据库
             user_tokens_used = modelApi.get_token_count(model_name,
             ai_message)
-            # 先保存用户消息
-            ai_result = db_manager.create_messages(
-                model_config["model_id"],
-                chatMessage.conversationid,"assistant",
-                ai_message,user_tokens_used)
-            check_result(ai_result)
-            yield json.dumps(
-                {
-                    "type": "done",
-                    "user_created_at":user_created_at,
-                    "ai_created_at":ai_result["created_at"]
-                },
-                ensure_ascii=False
-            ) + "\n"
+            if not chatMessage.istiTle:
+                # 先保存用户消息
+                ai_result = db_manager.create_messages(
+                    model_config["model_id"],
+                    chatMessage.conversationid,"assistant",
+                    ai_message,user_tokens_used)
+                check_result(ai_result)
+                yield json.dumps(
+                    {
+                        "type": "done",
+                        "user_created_at":user_created_at,
+                        "ai_created_at":ai_result["created_at"]
+                    },
+                    ensure_ascii=False
+                ) + "\n"
+            else:
+                yield json.dumps(
+                   {
+                        "type": "done",
+                   },
+                   ensure_ascii=False
+                ) + "\n"
         except asyncio.CancelledError:
             # 前端断开或用户点击“停止生成”
             raise

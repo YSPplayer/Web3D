@@ -22,6 +22,7 @@ interface ChatMessage {
   modelconfigid: number
   conversationid: number
   message: string
+  istiTle:boolean
 }
 
 type ChatStreamEvent =

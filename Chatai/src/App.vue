@@ -1,7 +1,7 @@
 <template>
     <div class ='container flex_row'>
         <leftmenu ref="leftmenuRef" @showConfigDialog= 'showConfigDialog' @updateChatMessage = 'updateChatMessage'  />
-        <chatcontainer ref="chatcontainerRef"/>
+        <chatcontainer ref="chatcontainerRef" @updateTitleMessage ='updateTitleMessage'/>
     </div>
     <login ref="loginRef" @updateUserModelConfig = 'updateUserModelConfig'/>
     <config ref="configRef"/>
@@ -24,6 +24,9 @@ const showConfigDialog = ()=>{
 onMounted(()=>{
    loginRef.value?.openDialog()
 })
+const updateTitleMessage = async (message) => {
+    leftmenuRef.value?.updateTitleMessage(message)
+}
 const updateChatMessage = (data) => {
     chatcontainerRef.value?.updateChatMessage(data)
 }

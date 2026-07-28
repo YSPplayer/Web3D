@@ -70,7 +70,7 @@
         //删除掉对应的会话
         chatList.value = chatList.value.filter(item => item.id !== id)
         user.conversationsid = user.conversationsid.filter(item => item !== user.conversationid)
-        user.pagenextids.delete(user.conversationid)
+        user.conversations.delete(user.conversationid)
         const newindex = Math.min(index,chatList.value.length - 1)
         const newid = chatList.value[newindex].id
         await selectChat(newid,newindex)
@@ -84,6 +84,11 @@
     user.conversationid = user.conversationsid[index]
     await updateChatMessage()
 }
+ const updateTitleMessage = async (message)=> {
+    const conversationid = user.conversationid
+    const target = chatList.value.find(item => item.id === conversationid)
+    if(target) target.name = message
+}
  const newChatButton = async ()=> {
     const newtitle = '新对话'
     const result =  await ChatAiApi.createConversationApi({
@@ -95,28 +100,37 @@
     if(result.code == 200) {
         const data = result.data
         user.conversationsid.push(data.conversationid)
-        pushValueToChatList(newtitle)
+        user.conversations[data.conversationid] = {
+            pagenextid:-1,
+            hasmore:false,
+            isnew:true
+        }
+        activeId.value = data.conversationid
+        pushValueToChatList(newtitle,data.conversationid)
     }
  }
-const pushValueToChatList = (value)=> {
-  const lastid = chatList.value.length > 0 ?
-        chatList.value[chatList.value.length - 1].id 
-            : 0
+const pushValueToChatList = (value,conversationid)=> {
   chatList.value.push({
-            id: lastid + 1,
+            id:conversationid,
             name:value
         })
 }
+
 const updateChatList = async (data)=> {
     chatList.value = []
     user.conversationsid = []
     data.forEach((item) => {
-        user.conversationsid.push(item.id)
-       pushValueToChatList(item.title)
+       user.conversationsid.push(item.id)
+       user.conversations[item.id] = {
+            pagenextid:-1,
+            hasmore:true,
+            isnew:false
+       }
+       pushValueToChatList(item.title,item.id)
     })
     if(chatList.value.length <= 0) return
     //默认激活第一个会话
-    activeId.value = 1
+    activeId.value = chatList.value[0].id
     user.conversationid = user.conversationsid[0]
     await updateChatMessage()
 }
@@ -127,8 +141,9 @@ const updateChatMessage = async ()=> {
     if(result.code == 200) {
         if (user.conversationid !== conversationid) return //防止用户切换对话
         const data = result.data
-        user.pagenextids[user.conversationid] = data.next_before_id
-        user.hasmores[user.conversationid] = data.has_more
+        const conversation = user.conversations[user.conversationid]
+        conversation.pagenextid = data.next_before_id
+        conversation.hasmore = data.has_more
         emits('updateChatMessage',data.messages)
     }
 }
@@ -137,7 +152,8 @@ watch(() => user.username,(newName) => {
     }
 )
 defineExpose({
-  updateChatList
+  updateChatList,
+  updateTitleMessage
 })
 </script>
 <style scoped>
