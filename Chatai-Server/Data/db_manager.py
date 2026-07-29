@@ -147,6 +147,31 @@ class DBManager:
                 return {
                     "code":500
                 }   
+    def update_conversation_title(self,conversationid:int,title:str):
+        with self.lock:
+            now = self.now_time()
+            conn = self.get_db_connection()
+            try:
+                # 1. 当前用户的所有模型先取消激活
+                conn.execute(
+                    """
+                    UPDATE conversations
+                    SET title = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (title,now,conversationid)
+                )
+                conn.commit()
+                return {
+                    "code":200
+                }
+            except Exception as exc:
+                 conn.rollback()
+                 print(f"数据库操作错误: {exc}")
+                 return {
+                    "code":500
+                }
     def create_model_config(self,user_id:int,model_type:str,model_name:str,
               api_key:str, is_online:int):
         with self.lock:

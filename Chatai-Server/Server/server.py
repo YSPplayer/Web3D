@@ -86,6 +86,8 @@ def check_result(result:dict):
                 status_code=500,
                 detail="数据库写入失败"
             )
+        elif result["code"] == 200:
+            return
         else:
             raise HTTPException(
                 status_code=500,
@@ -291,6 +293,10 @@ async def create_chat_message(chatMessage:ChatMessage):
                     ensure_ascii=False
                 ) + "\n"
             else:
+                #替换会话
+                title_result = db_manager.update_conversation_title(chatMessage.conversationid,
+                                          ai_message)
+                check_result(title_result)
                 yield json.dumps(
                    {
                         "type": "done",

@@ -113,7 +113,7 @@ const lodingShowMore = async () => {
     if(!conversation.hasmore || isLoding.value) return
     isLoding.value = true
     const startTime = Date.now()
-    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,pagenextid)
+    const result = await ChatAiApi.getChatMessagePageApi(user.conversationid,user.pagenumber,conversation.pagenextid)
     if(result.code == 200 && user.conversationid === conversationid) {
         const element = chatMainRef.value
         const oldScrollHeight = element ? element.scrollHeight : 0

@@ -106,6 +106,7 @@
             isnew:true
         }
         activeId.value = data.conversationid
+        emits('updateChatMessage',[])
         pushValueToChatList(newtitle,data.conversationid)
     }
  }
