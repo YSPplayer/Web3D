@@ -32,11 +32,11 @@
         </div>
         <div class="chat_input_container flex_row">
             <div class="chat_input">
-                <textarea  v-model="inputChatText">
+                <textarea  v-model="inputChatText" @keydown.enter.exact.prevent ="handleEnter()">
                 </textarea>
             </div>
             <img class="chat_post" :src="generating ? stopChat : postChat" :class="fill_img"
-            @click="generating ? stopChatMessage() : sendChatMessage() ">
+            @click="generating ? stopChatMessage() : sendChatMessage() " >
             </img>
         </div>
     </div>
@@ -71,6 +71,10 @@
     }
 
     return element.scrollHeight > element.clientHeight + 1
+}
+const handleEnter = (event) => {
+  if (generating.value) return
+  sendChatMessage()
 }
  const isAtBottom = () => {
     const element = chatMainRef.value

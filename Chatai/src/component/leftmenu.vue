@@ -1,13 +1,23 @@
-<template>
+﻿<template>
 <div class="leftmenu flex_colum">
     <div class="chat_title flex_row">
         <img :src="svgChat" alt="聊天图标">
         <span> 智能聊天助手 </span>
     </div>
     <el-button type="primary" @click="newChatButton" style="height: 35.89px;">+ 新建对话</el-button>
-    <el-input placeholder="搜索对话" style="height: 35.89px;">
-        <template #prefix>
-            <el-icon><Search /></el-icon>
+    <el-input
+        v-model="searchText"
+        placeholder="搜索对话"
+        style="height: 35.89px;"
+        clearable
+        @keyup.enter="searchChat"
+    >
+        <template #suffix>
+            <div class="search_suffix">
+                <el-icon class="search_icon" @click="searchChat">
+                    <Search />
+                </el-icon>
+            </div>
         </template>
     </el-input>
     <div class="chat_menu scroll_container flex_colum">
@@ -50,7 +60,9 @@
  import { Delete } from '@element-plus/icons-vue'
  import { ElMessageBox, ElMessage } from 'element-plus'
  const userName = ref('')
+ const searchText = ref('')
  const chatList = ref([])
+ const rawChatList = ref([])
  const activeId = ref(chatList.value[0]?.id || null)
  const emits = defineEmits(['showConfigDialog','updateChatMessage'])
  const showConfigDialog = ()=> {
@@ -69,6 +81,7 @@
         ElMessage.success('会话删除成功！')
         //删除掉对应的会话
         chatList.value = chatList.value.filter(item => item.id !== id)
+        rawChatList.value = rawChatList.value.filter(item => item.id !== id)
         user.conversationsid = user.conversationsid.filter(item => item !== user.conversationid)
         user.conversations.delete(user.conversationid)
         const newindex = Math.min(index,chatList.value.length - 1)
@@ -76,6 +89,17 @@
         await selectChat(newid,newindex)
     }   
     })
+ }
+ //检索会话
+ const searchChat = () => {
+    const keyword = searchText.value.trim()
+    if (!keyword) {
+        chatList.value = [...rawChatList.value]
+        return
+    }
+    chatList.value = rawChatList.value.filter(item =>
+        item.name.includes(keyword)
+    )
  }
 
  const selectChat = async (id,index) => {
@@ -87,7 +111,9 @@
  const updateTitleMessage = async (message)=> {
     const conversationid = user.conversationid
     const target = chatList.value.find(item => item.id === conversationid)
+    const rawTarget = rawChatList.value.find(item => item.id === conversationid)
     if(target) target.name = message
+    if(rawTarget) rawTarget.name = message
 }
  const newChatButton = async ()=> {
     const newtitle = '新对话'
@@ -106,19 +132,23 @@
             isnew:true
         }
         activeId.value = data.conversationid
+        user.conversationid = data.conversationid
         emits('updateChatMessage',[])
         pushValueToChatList(newtitle,data.conversationid)
     }
  }
 const pushValueToChatList = (value,conversationid)=> {
-  chatList.value.push({
+  const item = {
             id:conversationid,
             name:value
-        })
+        }
+  chatList.value.push(item)
+  rawChatList.value.push(item)
 }
 
 const updateChatList = async (data)=> {
     chatList.value = []
+    rawChatList.value = []
     user.conversationsid = []
     data.forEach((item) => {
        user.conversationsid.push(item.id)
@@ -158,6 +188,29 @@ defineExpose({
 })
 </script>
 <style scoped>
+:deep(.el-input__suffix-inner) {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+:deep(.el-input__clear) {
+    margin-right: 6px;
+}
+
+.search_suffix {
+    display: inline-flex;
+    align-items: center;
+}
+
+.search_icon {
+    cursor: pointer;
+    color: #909399;
+}
+
+.search_icon:hover {
+    color: #409EFF;
+}
 .chat_box_activate {
    border: 1px solid #409EFF;
    background-color: rgba(239,246,255, 0.5);
