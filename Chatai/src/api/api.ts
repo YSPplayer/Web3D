@@ -9,6 +9,9 @@ interface ModelConfig {
     modelname:string
     apikey:string
     isonline:number
+    proxyhost:string
+    proxyport:number
+    proxyactive:number
 }
 
 interface Conversation {
@@ -42,7 +45,7 @@ export const ChatAiApi = {
   async createConversationApi(conversation:Conversation) : Promise<any> {
     return await request.post('/chatai/user/conversation',conversation)
   },
-  async create_chat_messageApi(data:ChatMessage,
+  async createChatMessageApi(data:ChatMessage,
     onEvent:(event:ChatStreamEvent)=>void,signal?: AbortSignal) {
     const apiUrl = import.meta.env.VITE_SERVER_API_URL.replace(/\/$/, '')
     const response = await fetch(

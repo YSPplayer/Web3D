@@ -64,3 +64,16 @@ CREATE TABLE IF NOT EXISTS models (
     model_name TEXT NOT NULL,
     logo_path TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS proxy_configs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    proxy_host TEXT NOT NULL,
+    proxy_port INTEGER NOT NULL,
+    is_active INTEGER NOT NULL DEFAULT 0
+        CHECK (is_active IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+)

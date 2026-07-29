@@ -1,7 +1,7 @@
 <template>
    <el-dialog @open="handleOpen" v-model="dialogVisible" title="系统设置" class="config_dialog" align-center :close-on-click-modal="false">
     <div class="flex_colum_center">
-        <el-tabs v-model="activeName" class="config_tab" tab-position='left' style="height: 200px;">
+        <el-tabs v-model="activeName" class="config_tab" tab-position='left'>
             <el-tab-pane name="model">
                  <template #label>
                         <span class="config_tab_label">模型管理</span>
@@ -40,6 +40,19 @@
                         </el-cascader>
                         <img v-if="modelImageUrl != ''" class="model_logo_img" :src="modelImageUrl">
                     </div>
+                    <div class="flex_row">
+                        <span class="center_span tab_span">代理</span>
+                        <el-switch style="margin-left: 1rem;"
+                        v-model="proxyActive"
+                        active-text="启用代理">
+                        </el-switch>
+                    </div>
+                    <div class="flex_row">
+                        <span class="center_span tab_span" style="margin-left: 3rem;">IP</span>
+                            <el-input class = "model_apiip" v-model="configForm.agentip" @input="formatIpInput"></el-input>
+                            <span class="center_span tab_span" style="margin-left: 1rem;">端口</span>
+                            <el-input class = "model_apiport" v-model="configForm.agentport" @input="formatPortInput"></el-input>
+                    </div>
                 </div>
             </el-tab-pane>
         </el-tabs>
@@ -61,10 +74,13 @@
     const modelSelectValue = ref([])
     const configForm = reactive({
         apikey: '',
+        agentip:'',
+        agentport:''
     })
     const activeName = ref('model')
     const modelImageUrl = ref('')
     const onlineModel = ref(true)
+    const proxyActive = ref(false)
     const modelOptions = ref([])
     const dialogVisible = ref(false)
     const saveconfigLoading = ref(false)
@@ -122,6 +138,9 @@
             if(Util.isEmptyObject(data)) {
                 onlineModel.value = false
                 configForm.apikey = ''
+                configForm.agentip = ''
+                configForm.agentport = ''
+                proxyActive.value = false
                 modelSelectValue.value = []
                 modelImageUrl.value = ''
                 user.modelconfigid = -1
@@ -129,7 +148,7 @@
                 user.modellogo = ''
                 user.modelid = -1
             } else {
-                onlineModel.value = data.isonline
+                onlineModel.value = data.isonline === 1
                 configForm.apikey = Util.base64ToString(data.apikey)
                 modelSelectValue.value = [data.modeltype,data.modelname]
                 modelImageUrl.value = data.logo  
@@ -137,8 +156,17 @@
                 user.modeltype = data.modeltype
                 user.modellogo = data.logo
                 user.modelid = data.modelid
+                configForm.agentip = data.proxyhost
+                configForm.agentport = String(data.proxyport)
+                proxyActive.value = data.proxyactive === 1
             }
       }
+    }
+    const formatIpInput = (value) => {
+        configForm.agentip = value.replace(/[^0-9.:]/g, '')
+    }
+    const formatPortInput = (value) => {
+        configForm.agentport = value.replace(/[^0-9.:]/g, '')
     }
     const saveConfig = async () => {
         saveconfigLoading.value = true
@@ -148,7 +176,10 @@
                 modeltype:modelSelectValue.value[0],
                 modelname:modelSelectValue.value[1],
                 apikey:Util.stringToBase64(configForm.apikey),
-                isonline:onlineModel.value ? 1 : 0
+                isonline:onlineModel.value ? 1 : 0,
+                proxyhost:configForm.agentip,
+                proxyport:Number(configForm.agentport),
+                proxyactive:proxyActive.value ? 1 : 0
             } 
             const result = await ChatAiApi.saveModelConfigApi(config)
             if(result?.code == 200) {
@@ -182,6 +213,14 @@
     width: 500px;
     margin-left: 1rem;
 }
+.config_tab .model_apiip {
+    width: 300px;
+    margin-left: 0.5rem;
+}
+.config_tab .model_apiport {
+    width: 100px;
+    margin-left: 0.5rem;
+}
 .config_tab .model_select {
     width: 200px;
     margin-left: 1rem;
@@ -197,6 +236,9 @@
 }
 .config_tab .tab_span {
      font-size: 0.95rem;
+}
+.config_tab .tab_child_span {
+     font-size: 0.75rem;
 }
 .config_model {
     width: 100%;

@@ -228,7 +228,7 @@ const handleChatScroll = async () => {
 const getTitleMessage = async ()=> {
     let title = ''
     try {
-        await ChatAiApi.create_chat_messageApi({
+        await ChatAiApi.createChatMessageApi({
             userid: user.userid,
             modelconfigid: user.modelconfigid,
             conversationid:user.conversationid,
@@ -274,7 +274,7 @@ const getTitleMessage = async ()=> {
     generating.value = true
     abortController = new AbortController()
     try {
-        await ChatAiApi.create_chat_messageApi(
+        await ChatAiApi.createChatMessageApi(
             {
                 userid: user.userid,
                 modelconfigid: user.modelconfigid,

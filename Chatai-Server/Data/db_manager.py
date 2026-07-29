@@ -172,6 +172,83 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def get_proxy_config_by_user_id(self,user_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                cache_config = cache_manager.get(("proxy_config", user_id))
+                if cache_config is not None:
+                    return cache_config
+                row = conn.execute(
+                    """
+                    SELECT *
+                    FROM proxy_configs
+                    WHERE user_id = ?
+                    """,
+                    (user_id,)
+                ).fetchone()
+                if row is None:
+                    return {}
+                result = dict(row)
+                cache_manager.set(("proxy_config", user_id),result)
+                return result
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }   
+
+    def create_proxy_config(self,user_id:int,proxy_host:str,proxy_port:int,is_active:int):
+        with self.lock:
+            now = self.now_time()
+            conn = self.get_db_connection()
+            try:
+                existing = conn.execute(
+                    """
+                    SELECT id FROM proxy_configs 
+                    WHERE user_id = ?
+                    """,
+                        (user_id,)
+                    ).fetchone()
+                if existing:
+                    proxy_id = existing["id"]
+                    conn.execute(
+                            """
+                            UPDATE proxy_configs 
+                            SET proxy_host = ?, proxy_port = ?, is_active = ?, updated_at = ?
+                            WHERE id = ?
+                            """,
+                            (proxy_host,proxy_port, is_active,now,proxy_id)
+                        )
+                else:
+                    cursor = conn.execute(
+                        """
+                        INSERT INTO proxy_configs (user_id, proxy_host, proxy_port, is_active ,created_at,updated_at)
+                        VALUES (?,?,?,?,?,?)
+                        """,
+                        (user_id, proxy_host,proxy_port,is_active,now,now)
+                    )
+                conn.commit()
+                row = conn.execute(
+                        """
+                        SELECT *
+                        FROM proxy_configs
+                        WHERE user_id = ?
+                        """,
+                        (user_id,)
+                    ).fetchone()
+                if row is None:
+                    return {}
+                result = dict(row)
+                cache_manager.set(("proxy_config", user_id),result)
+                return result
+            except Exception as exc:
+                conn.rollback()
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }
+
     def create_model_config(self,user_id:int,model_type:str,model_name:str,
               api_key:str, is_online:int):
         with self.lock:
@@ -209,7 +286,7 @@ class DBManager:
                 else:
                     cursor = conn.execute(
                         """
-                        INSERT INTO model_configs (user_id, model_type, model_name, api_key, is_online, is_active,updated_at,updated_at)
+                        INSERT INTO model_configs (user_id, model_type, model_name, api_key, is_online, is_active,created_at,updated_at)
                         VALUES (?,?,?,?,?,?,?,?)
                         """,
                         (user_id, model_type,model_name,api_key,

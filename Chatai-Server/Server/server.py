@@ -45,6 +45,9 @@ class ModelConfig(BaseModel):
     modelname:str
     apikey:str
     isonline:int
+    proxyhost:str
+    proxyport:int
+    proxyactive:int
 
 class Conversation(BaseModel):
     userid: int
@@ -162,7 +165,9 @@ async def get_model_config_state(userid:int,
 async def get_user_model_config(userid:int):
     config = db_manager.get_model_config_by_userid(userid)
     check_result(config)
-    if not config:
+    proxy_config = db_manager.get_proxy_config_by_user_id(userid)
+    check_result(proxy_config)
+    if not config or not proxy_config:
         return success("当前用户模型配置数据不存在！")
     else:
         return success("当前用户模型配置查询成功！",{
@@ -172,7 +177,10 @@ async def get_user_model_config(userid:int):
             "modelname": config["model_name"],
             "modelconfigid":config["id"],
             "modelid":config["model_id"],
-            "logo":image_to_data_url(config["logo_path"])
+            "logo":image_to_data_url(config["logo_path"]),
+            "proxyhost":proxy_config["proxy_host"],
+            "proxyport":proxy_config["proxy_port"],
+            "proxyactive":proxy_config["is_active"],
         })
     
 @app.get("/chatai/user/getConversationByUserId")
@@ -204,6 +212,11 @@ async def save_model_config(config:ModelConfig):
         config.isonline
     )
     check_result(result)
+    #设置代理
+    proxyresult = db_manager.create_proxy_config(config.userid,
+        config.proxyhost,config.proxyport,config.proxyactive
+    )
+    check_result(proxyresult)
     return success("配置保存成功",{
         "userid": result["user_id"],
         "modelid":result["model_id"]
