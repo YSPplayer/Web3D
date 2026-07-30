@@ -34,6 +34,16 @@ export const Util = {
         const day = String(now.getDate()).padStart(2, '0')
         const hour = String(now.getHours()).padStart(2, '0')
         return `${year}-${month}-${day}-${hour}`
+    },
+    formatTokenCount(value: number):string {
+        if (value >= 100) {
+            const kValue = value / 1000
+            if (Number.isInteger(kValue)) {
+                return `${kValue}k`
+            }
+            return `${kValue.toFixed(1)}k`
+        }
+        return `${value}`
     }
 
 

@@ -9,6 +9,7 @@
     import { CanvasRenderer } from 'echarts/renderers'
     import { LineChart } from 'echarts/charts'
     import { use } from 'echarts/core'
+    import { Util } from '@/shared/util'
     import {
         GridComponent,
         TooltipComponent,
@@ -44,7 +45,10 @@
                 trigger: 'axis',// 触发方式：当鼠标移动到坐标轴（X轴）上时触发
                 formatter(params) {  // 自定义提示框的内容
                     const item = params[0] // 取第一个数据项（当只有一个数据系列时）
-                    return `${item.axisValue}<br/>Token：${item.data}`
+                    return `
+                        时间：${item.axisValue}<br/>
+                        Token：${Util.formatTokenCount(item.data)}
+                    `
                 }
             },
             grid: {
@@ -63,7 +67,9 @@
             yAxis: {
                 type: 'value',         // 1. 轴类型：数值轴（适用于连续数据）
                 name: 'Token',         // 2. 轴名称：显示在轴左侧的文字
-                minInterval: 1         // 3. 最小刻度间隔：强制刻度为整数
+                axisLabel: {
+                    formatter: (value) => Util.formatTokenCount(value)
+                }
             },
              series: [
                 {
