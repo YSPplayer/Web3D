@@ -41,7 +41,7 @@
                         <img v-if="modelImageUrl != ''" class="model_logo_img" :src="modelImageUrl">
                     </div>
                     <div class="flex_row">
-                        <span class="center_span tab_span">代理</span>
+                        <span class="center_span tab_span">VPN</span>
                         <el-switch style="margin-left: 1rem;"
                         v-model="proxyActive"
                         active-text="启用代理">

@@ -253,15 +253,19 @@ async def create_chat_message(chatMessage:ChatMessage):
         limit=20
     )
     check_result(history_messages)
+    #查询当前的VPN配置
+    proxy_config = db_manager.get_proxy_config_by_user_id(chatMessage.userid)
+    check_result(proxy_config)
     model_config = db_manager.get_model_config_by_userid(chatMessage.userid)
     check_result(model_config)
     model_name = f"{model_config['provider_type']}/{model_config['model_name']}"
     api_key = key.decrypt_api_key(model_config['api_key'])
     # model_name = "zai/glm-5.2"
     # api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
-    user_tokens_used = modelApi.get_token_count(model_name,
-    user_message)
     model_messages = modelApi.build_messages(user_message,history_messages)
+    #算上下文的token量
+    user_tokens_used = modelApi.get_token_count(model_name,
+    model_messages)
     # 先保存用户消息
     if not chatMessage.istiTle:
         user_result = db_manager.create_messages(
@@ -276,7 +280,10 @@ async def create_chat_message(chatMessage:ChatMessage):
             async for content in modelApi.chat_stream(
                 model_name,
                 api_key,
-                model_messages
+                model_messages,
+                proxy_config["proxy_host"],
+                proxy_config["proxy_port"],
+                proxy_config["is_active"]
             ):
                 full_content.append(content)
                 yield json.dumps(
