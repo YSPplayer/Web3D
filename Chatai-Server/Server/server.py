@@ -140,6 +140,12 @@ async def get_model_chat_message(conversationid:int):
     else:
          return  success("当前会话消息查询成功！",messages)
     
+@app.get("/chatai/user/tokensCount")
+async def get_tokens_count(conversationid: int, date: str):
+    result = db_manager.get_tokens_count(conversationid, date)
+    check_result(result)
+    return success("Token 使用量查询成功", result)
+
 @app.get("/chatai/user/chatPageMessages") 
 async def get_model_chat_message_page(conversationid:int,limit: int,beforeid:int):#获取当前模型的会话记录，分页查询
     messages = db_manager.get_messages_page(conversationid,limit,beforeid)

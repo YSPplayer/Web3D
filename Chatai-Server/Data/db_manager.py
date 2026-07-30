@@ -172,6 +172,84 @@ class DBManager:
                  return {
                     "code":500
                 }
+    def get_tokens_count(self,conversation_id:int, date: str):
+        with self.lock:
+            #date(created_at) = '2026-07-30-9'：只查这一天
+            #strftime('%H:00', created_at)：把时间归到小时
+            #SUM(tokens_used)：统计这个小时内所有消息 token 总量
+            #GROUP BY strftime('%H', created_at)：按小时分组
+            conn = self.get_db_connection()
+            try:
+                parts = date.rsplit("-", 1)
+                if len(parts) != 2:
+                    return {
+                        "code": 400,
+                        "message": "日期格式错误，应为 YYYY-MM-DD-H，例如 2026-07-30-9"
+                }
+                day = parts[0]      # 2026-07-30
+                hour_text = parts[1]  # 9
+                end_hour = int(hour_text)
+                if end_hour < 0 or end_hour > 23:
+                    return {
+                        "code": 400,
+                        "message": "小时范围错误，应为 0~23"
+                    }
+                rows = conn.execute(
+                """
+                SELECT 
+                    CAST(strftime('%H', created_at) AS INTEGER) AS hour,
+                    SUM(tokens_used) AS tokens
+                FROM messages
+                WHERE conversation_id = ?
+                  AND date(created_at) = ?
+                  AND CAST(strftime('%H', created_at) AS INTEGER) <= ?
+                GROUP BY CAST(strftime('%H', created_at) AS INTEGER)
+                ORDER BY hour
+                """,
+                (conversation_id, day, end_hour)
+                ).fetchall()
+                total_row = conn.execute(
+                    """
+                    SELECT 
+                        COALESCE(SUM(tokens_used), 0) AS total_tokens
+                    FROM messages
+                    WHERE conversation_id = ?
+                    AND date(created_at) = ?
+                    AND CAST(strftime('%H', created_at) AS INTEGER) <= ?
+                    """,
+                    (conversation_id, day, end_hour)
+                ).fetchone()
+                hourly_map = {
+                    hour: 0
+                    for hour in range(end_hour + 1)
+                }
+                for row in rows:
+                    hourly_map[row["hour"]] = row["tokens"] or 0
+                items = [
+                    {
+                        "time": f"{hour:02d}:00",
+                        "tokens": tokens
+                    }
+                    for hour, tokens in hourly_map.items()
+                ]
+                return {
+                    "date": day,
+                    "end_hour": end_hour,
+                    "total_tokens": total_row["total_tokens"] if total_row else 0,
+                    "items": items
+                }
+            except ValueError:
+                return {
+                    "code": 400,
+                    "message": "小时格式错误，应为数字，例如 2026-07-30-9"
+                }
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code": 500
+                }
+            
+
     def get_proxy_config_by_user_id(self,user_id:int):
         with self.lock:
             conn = self.get_db_connection()

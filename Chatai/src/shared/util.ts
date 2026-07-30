@@ -26,7 +26,15 @@ export const Util = {
     // 3. 用 TextDecoder 解码为 UTF-8 字符串
     const decoder = new TextDecoder()
     return decoder.decode(bytes)
-}
+    },
+    getToday():string {
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        const hour = String(now.getHours()).padStart(2, '0')
+        return `${year}-${month}-${day}-${hour}`
+    }
 
 
 };                                                              

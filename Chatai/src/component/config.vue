@@ -53,6 +53,9 @@
                             <span class="center_span tab_span" style="margin-left: 1rem;">端口</span>
                             <el-input class = "model_apiport" v-model="configForm.agentport" @input="formatPortInput"></el-input>
                     </div>
+                    <div style="margin-bottom: 1rem;">
+                        <tokenchart :tokenData ="configForm.tokenData" />
+                    </div>
                 </div>
             </el-tab-pane>
         </el-tabs>
@@ -71,11 +74,13 @@
     import { user } from '@/store/store'
     import { ElMessage } from 'element-plus'
     import { Util } from '@/shared/util.ts'
+    import tokenchart from './tokenchart.vue'
     const modelSelectValue = ref([])
     const configForm = reactive({
         apikey: '',
         agentip:'',
-        agentport:''
+        agentport:'',
+        tokenData:[]
     })
     const activeName = ref('model')
     const modelImageUrl = ref('')
@@ -103,6 +108,13 @@
     const handleOpen = async ()=> {
       await updateUserModelConfig()
     } 
+    const updateUserTokens = async() => {
+        const result = await ChatAiApi.getTokensCountApi(user.conversationid,Util.getToday())
+        if(result?.code == 200) {
+            const data = result.data
+            configForm.tokenData = data.items
+        }
+    }
     const updateUserModelConfig = async ()=> {
       //获取到所有模型
       modelOptions.value = []
@@ -131,6 +143,7 @@
             })
         });
       }
+      await updateUserTokens()
       //设置当前的激活模型
       const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
       if(userconfig.code == 200) {

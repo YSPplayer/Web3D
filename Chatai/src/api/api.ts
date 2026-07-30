@@ -107,6 +107,14 @@ export const ChatAiApi = {
   },
   
   //get
+  async getTokensCountApi(conversationid: number, date: string): Promise<any> {
+  return await request.get('/chatai/user/tokensCount', {
+    params: {
+      conversationid,
+      date
+    }
+  })
+  },
   async modelsApi():Promise<any> {
     return await request.get('/chatai/models')
   },
