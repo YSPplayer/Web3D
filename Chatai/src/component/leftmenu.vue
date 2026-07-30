@@ -4,7 +4,7 @@
         <img :src="svgChat" alt="聊天图标">
         <span> 智能聊天助手 </span>
     </div>
-    <el-button type="primary" @click="newChatButton" style="height: 35.89px;">+ 新建对话</el-button>
+    <el-button type="primary" :disabled="newbuttonDisable" @click="newChatButton" style="height: 35.89px;">+ 新建对话</el-button>
     <el-input
         v-model="searchText"
         placeholder="搜索对话"
@@ -63,6 +63,7 @@
  const searchText = ref('')
  const chatList = ref([])
  const rawChatList = ref([])
+ const newbuttonDisable = ref(false)
  const activeId = ref(chatList.value[0]?.id || null)
  const emits = defineEmits(['showConfigDialog','updateChatMessage'])
  const showConfigDialog = ()=> {
@@ -91,8 +92,9 @@
     })
  }
  //检索会话
- const searchChat = () => {
+ const searchChat = async () => {
     const keyword = searchText.value.trim()
+    newbuttonDisable.value = keyword !== ''
     if (!keyword) {
         chatList.value = [...rawChatList.value]
         return
@@ -100,12 +102,19 @@
     chatList.value = rawChatList.value.filter(item =>
         item.name.includes(keyword)
     )
+    if (chatList.value.length > 0) {
+       await selectChat(chatList.value[0].id)
+   } else {
+       activeId.value = null
+       user.conversationid = -1
+       emits('updateChatMessage', [])
+   }
  }
 
  const selectChat = async (id,index) => {
     if(activeId.value === id) return 
     activeId.value = id
-    user.conversationid = user.conversationsid[index]
+    user.conversationid = id
     await updateChatMessage()
 }
  const updateTitleMessage = async (message)=> {

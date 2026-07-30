@@ -53,20 +53,42 @@ class ModelApi:
         proxy_port: int | None = None,
         proxy_active: int = 0):
         response = None
+        use_proxy = (
+            int(proxy_active or 0) == 1
+            and proxy_host
+            and proxy_port
+        )
+        if not use_proxy:#非代理下直接返回
+            try:
+                response = await litellm.acompletion(
+                    model=model,
+                    messages=message,
+                    temperature=0.6,
+                    api_key=api_key,
+                    stream=True
+                )
+                async for chunk in response:
+                    content = chunk.choices[0].delta.content
+                    if content:
+                        yield content
+            except asyncio.CancelledError:
+                print("model stream cancelled")
+                raise
+            finally:
+                close = getattr(response, "aclose", None)
+                if close:
+                    await close()
+            return
+        #代理模式下启动新进程调用
         worker_path = Path(__file__).resolve().parent / "chatworker.py"
         server_root = Path(__file__).resolve().parent.parent
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
-        if proxy_active and proxy_host and proxy_port:
-            proxy_url = self.build_proxy_url(proxy_host, proxy_port)
-            print("代理已启用:" + proxy_url)
-            env["HTTP_PROXY"] = proxy_url
-            env["HTTPS_PROXY"] = proxy_url
-            env["ALL_PROXY"] = proxy_url
-        else:
-            env.pop("HTTP_PROXY", None)
-            env.pop("HTTPS_PROXY", None)
-            env.pop("ALL_PROXY", None)
+        proxy_url = self.build_proxy_url(proxy_host, proxy_port)
+        print("proxy enabled:" + proxy_url)
+        env["HTTP_PROXY"] = proxy_url
+        env["HTTPS_PROXY"] = proxy_url
+        env["ALL_PROXY"] = proxy_url
         payload = {
             "model": model,
             "api_key": api_key,
@@ -99,6 +121,9 @@ class ModelApi:
                     break
                 text = line.decode("utf-8", errors="replace").strip()
                 if not text:
+                    continue
+                if not text.startswith("{"):
+                    print(f"子进程非JSON输出: {text}")
                     continue
                 event = json.loads(text)
 

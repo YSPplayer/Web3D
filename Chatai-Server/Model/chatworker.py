@@ -1,3 +1,7 @@
+# import os
+## 告诉litellm从本地读取配置，不从github拉取
+# os.environ["LITELLM_LOCAL_MODEL_COST_MAP"] = "True"
+# os.environ["LITELLM_LOG"] = "ERROR"
 import sys
 import json
 import asyncio
