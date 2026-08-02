@@ -3,6 +3,7 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import { request } from '@/api/request'
 import { ElMessage } from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import 'element-plus/dist/index.css'
 const apiUrl = import.meta.env.VITE_SERVER_API_URL;
 request.create(apiUrl) //初始化接口
@@ -12,4 +13,4 @@ request.get('/chatai/health').then(()=>{
     ElMessage.error(`HTTP服务器${apiUrl}连接失败！`)
 })
 const app = createApp(App)
-app.use(ElementPlus).mount('#app')
+app.use(ElementPlus, { locale: zhCn }).mount('#app')

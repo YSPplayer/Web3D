@@ -35,6 +35,19 @@ export const Util = {
         const hour = String(now.getHours()).padStart(2, '0')
         return `${year}-${month}-${day}-${hour}`
     },
+    formatDateWithHour(dateStr:string):string {
+        if(!dateStr) return ''
+        const target = new Date(dateStr)
+        const now = new Date()
+        const year = target.getFullYear()
+        const month = String(target.getMonth() + 1).padStart(2, '0')
+        const day = String(target.getDate()).padStart(2, '0')
+        const isToday = target.getFullYear() === now.getFullYear()
+            && target.getMonth() === now.getMonth()
+            && target.getDate() === now.getDate()
+        const hour = isToday ? String(now.getHours()).padStart(2, '0') : '23'
+        return `${year}-${month}-${day}-${hour}`
+    },
     formatTokenCount(value: number):string {
         if (value >= 100) {
             const kValue = value / 1000

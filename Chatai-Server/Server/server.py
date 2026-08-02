@@ -139,7 +139,12 @@ async def get_model_chat_message(conversationid:int):
         return success("当前会话中的消息不存在！",[])
     else:
          return  success("当前会话消息查询成功！",messages)
-    
+@app.get("/chatai/user/tokensCountByUserId")
+async def get_tokens_count_by_user_id(userid: int, date: str):
+    result = db_manager.get_tokens_count_by_user_id(userid, date)
+    check_result(result)
+    return success("Token 使用量查询成功", result)
+
 @app.get("/chatai/user/tokensCount")
 async def get_tokens_count(conversationid: int, date: str):
     result = db_manager.get_tokens_count(conversationid, date)

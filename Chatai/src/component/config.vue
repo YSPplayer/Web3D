@@ -1,5 +1,5 @@
 <template>
-   <el-dialog @open="handleOpen" v-model="dialogVisible" title="系统设置" class="config_dialog" align-center :close-on-click-modal="false">
+   <el-dialog @opened="handleOpen" v-model="dialogVisible" title="系统设置" class="config_dialog" align-center :close-on-click-modal="false">
     <div class="flex_colum_center">
         <el-tabs v-model="activeName" class="config_tab" tab-position='left'>
             <el-tab-pane name="model">
@@ -54,7 +54,9 @@
                             <el-input class = "model_apiport" v-model="configForm.agentport" @input="formatPortInput"></el-input>
                     </div>
                     <div style="margin-bottom: 1rem;">
-                        <tokenchart :tokenData ="configForm.tokenData" />
+                        <tokenchart  :tokenData ="configForm.tokenData" :tokenCount="configForm.tokenCount"
+                        :tokenDate = "configForm.tokenDate" 
+                        @updateUserTokens="updateUserTokens"/>
                     </div>
                 </div>
             </el-tab-pane>
@@ -80,7 +82,9 @@
         apikey: '',
         agentip:'',
         agentport:'',
-        tokenData:[]
+        tokenData:[],
+        tokenCount:0,
+        tokenDate:''
     })
     const activeName = ref('model')
     const modelImageUrl = ref('')
@@ -108,11 +112,13 @@
     const handleOpen = async ()=> {
       await updateUserModelConfig()
     } 
-    const updateUserTokens = async() => {
-        const result = await ChatAiApi.getTokensCountApi(user.conversationid,Util.getToday())
+    const updateUserTokens = async(date) => {
+        const result = await ChatAiApi.getTokensCountByUserIdApi(user.userid,date)
         if(result?.code == 200) {
             const data = result.data
             configForm.tokenData = data.items
+            configForm.tokenCount = data.total_tokens
+            configForm.tokenDate = data.date
         }
     }
     const updateUserModelConfig = async ()=> {
@@ -143,7 +149,7 @@
             })
         });
       }
-      await updateUserTokens()
+      await updateUserTokens(Util.getToday())
       //设置当前的激活模型
       const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
       if(userconfig.code == 200) {

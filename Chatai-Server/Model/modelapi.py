@@ -1,3 +1,4 @@
+#pip install litellm -i https://pypi.tuna.tsinghua.edu.cn/simple
 import litellm
 import asyncio
 import json

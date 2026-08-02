@@ -1,10 +1,25 @@
 <template>
+<div class="flex_colum token_count" style="gap: 1rem;">
+    <span class="center_span span_count">Token 使用量统计</span>
+    <div class="flex_row" style="gap: 1rem;">
+        <span class="center_span" style="font-weight: bold;margin-left: auto;">日用总量 {{Util.formatTokenCount(props.tokenCount)}}</span>
+          <el-date-picker
+        v-model="localDate"
+        type="date"
+        placeholder="选择日期"
+        @change="handleDateChange"
+        :disabled-date="disabledDate"
+        format="YYYY-MM-DD"
+        value-format="YYYY-MM-DD">
+        </el-date-picker>
+    </div>
 <div class="token_chart">
     <v-chart class="chart" :option="chartOption" autoresize />
   </div>
+  </div>
 </template>
 <script setup>
-    import { computed } from 'vue'
+    import { computed,ref,onMounted,watch } from 'vue'
     import VChart from 'vue-echarts'
     import { CanvasRenderer } from 'echarts/renderers'
     import { LineChart } from 'echarts/charts'
@@ -24,23 +39,38 @@
     TitleComponent,
     LegendComponent
     ])
+    const emits = defineEmits(['updateUserTokens'])
     const props = defineProps({
         tokenData: {
             type:Array,
             default:[]
+        },
+        tokenCount: {
+            type:Number,
+            default:0
+        },
+        tokenDate:{
+            type:String,
+            default:''
         }
     })
-
+    const disabledDate = (time) => {
+        return time.getTime() > Date.now()
+    }
+    const localDate = ref('')
+    watch(() => props.tokenDate, (tokenDate) => {
+       localDate.value = tokenDate
+    }, { immediate: true })
+    onMounted(()=> {
+        localDate.value = props.tokenDate
+        emits('updateUserTokens',Util.getToday())
+    })
+    const handleDateChange = (value) => {
+        emits('updateUserTokens',
+        Util.formatDateWithHour(value)) //更新选中日期的统计量
+    }
     const chartOption  = computed(()=>{
         return {
-            title:{
-                 text: 'Token 使用量统计',
-                 left: 'center',
-                 textStyle: {
-                    fontSize: 16,
-                    fontWeight: 600
-                }
-            },
              tooltip: {
                 trigger: 'axis',// 触发方式：当鼠标移动到坐标轴（X轴）上时触发
                 formatter(params) {  // 自定义提示框的内容
@@ -53,9 +83,9 @@
             },
             grid: {
                 left: '0%',      // 图表距离容器左侧的距离
-                right: '5%',     // 图表距离容器右侧的距离
+                right: '6%',     // 图表距离容器右侧的距离
                 bottom: '0%',   // 图表距离容器底部的距离
-                top: '18%',      // 图表距离容器顶部的距离
+                top: '7%',      // 图表距离容器顶部的距离
                 containLabel: true // 坐标轴标签是否自动包含在 grid 区域内
             },
             xAxis: {
@@ -95,6 +125,15 @@
     })
 </script>
 <style scoped>
+.token_count .span_count {
+     font-size: 16px;
+     font-weight: 600
+}
+.token_count {
+    width: 100%;
+    height: 400px;
+}
+
 .token_chart {
     width: 100%;
     height: 360px;
