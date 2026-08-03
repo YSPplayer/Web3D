@@ -41,7 +41,9 @@
     <div class="chat_config flex_colum">
         <div class="chat_line"></div>
         <div class="chat_config_user flex_row">
-            <div class="user_img"></div>
+            <div class="user_img">
+                <img :src="userImgUrl">
+            </div>
             <span>{{userName}}</span>
             <div class="user_edit flex_row_center" @click="showConfigDialog">
                 <img :src="editChat" class="fill_img" />
@@ -61,6 +63,7 @@
  import { ElMessageBox, ElMessage } from 'element-plus'
  const userName = ref('')
  const searchText = ref('')
+ const userImgUrl = ref('')
  const chatList = ref([])
  const rawChatList = ref([])
  const newbuttonDisable = ref(false)
@@ -191,6 +194,10 @@ watch(() => user.username,(newName) => {
        userName.value = newName
     }
 )
+watch(() => user.userlogo,(userlogo) => {
+       userImgUrl.value = userlogo
+    }
+)
 defineExpose({
   updateChatList,
   updateTitleMessage
@@ -297,11 +304,17 @@ defineExpose({
      align-items: center; 
 }
 .user_img {
-    border-radius: 50%;
+    border-radius: 5px;
     width: 2.6rem;
-    aspect-ratio: 1 / 1;
-    background-color: #409EFF;
+    height: 2.6rem;
+    border: 1px solid #ccc;
     margin-left: 1rem;
+}
+.user_img img {
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    object-fit: fill;
 }
 .chat_title span {
     display: grid;

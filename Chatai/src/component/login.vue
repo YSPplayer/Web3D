@@ -1,6 +1,9 @@
 <template>
     <el-dialog v-model="dialogVisible" :title="dialogTitle" class="login_dialog" align-center :close-on-click-modal="false">
         <div class="flex_colum_center">
+            <div v-if="registerVisible" class = 'user_register_img'>
+                <img class ='fill_img' :src="userImageUrl"></img>
+            </div>
             <el-input v-model="loginForm.username" placeholder="请输入账号" ref="usernameRef" class="login_input"  @input="onUserNameInput"></el-input>
             <el-input placeholder="请输入密码" v-model="loginForm.password" show-password ref="passwordRef" class="login_input" @input="onUserPasswordInput"></el-input>
             <el-input v-if="registerVisible" placeholder="确认密码" v-model="loginForm.dfpassword" show-password
@@ -12,7 +15,6 @@
             <el-button :loading="registerLoading" v-if="registerVisible" type="primary" class = 'register_button' @click = "clickRegisterButton" >注册</el-button>
            <a href="#" v-if="registerVisible" class="a_link" @click="clickLoginA">返回登录</a>     
         </div>
-
         </div>
 
     </el-dialog>
@@ -24,6 +26,7 @@
     import { ElMessage } from 'element-plus'
     import CryptoJS from 'crypto-js'
     import {user} from '@/store/store'
+    const userImageUrl = ref('')
     const loginLoading = ref(false)
     const registerLoading = ref(false)
     const dialogVisible = ref(true)
@@ -71,7 +74,8 @@
         loginLoading.value = true
         const result = await ChatAiApi.userRegisterApi({
             username : loginForm.username,
-            password : CryptoJS.SHA256(loginForm.password).toString() //密码加密
+            password : CryptoJS.SHA256(loginForm.password).toString(), //密码加密
+            imgurl:userImageUrl.value
         })
         if(result?.code == 200) {
             ElMessage.success('用户注册成功！')
@@ -99,6 +103,7 @@
             const data = result.data
             user.userid = data.id
             user.username = data.username
+            user.userlogo = data.imgurl
             ElMessage.success('用户登录成功！')
             closeDialog()
         } else {
@@ -107,9 +112,14 @@
         emits('updateUserModelConfig')
         loginLoading.value = false
     }
-    const clickRegisterA = ()=> {
+    const clickRegisterA = async ()=> {
         clearLoginForm()
         registerVisible.value = true
+        const result = await ChatAiApi.getDefaultUserImageApi()
+        if(result.code == 200) {
+            const data = result.data
+            userImageUrl.value = data.imageurl
+        }
     }
     const clickLoginA = ()=> {
         clearLoginForm()
@@ -143,6 +153,18 @@
     /* margin-left: auto; */
 
 } 
+.user_register_img {
+    width: 100px;
+    height: 100px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+.user_register_img img {
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    object-fit: fill;
+}
 .a_link {
     margin-left: 1rem;
 }

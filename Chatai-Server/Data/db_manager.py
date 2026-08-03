@@ -72,7 +72,8 @@ class DBManager:
 
                 row = conn.execute(
                     """
-                    SELECT id, username, password_hash, created_at
+                    SELECT id, username, password_hash, avatar_base64,
+            avatar_mime, created_at
                     FROM users
                     WHERE username = ?
                     """,
@@ -651,23 +652,24 @@ class DBManager:
                  return {
                     "code":500
                 }
-    def create_user(self,username:str, password_hash: str):
+    def create_user(self,username:str, password_hash: str,avatar_base64: str = "",
+    avatar_mime: str = "image/png"):
          with self.lock:
             conn = self.get_db_connection()
             try:
                 now = self.now_time()
                 cursor = conn.execute(
                     """
-                    INSERT INTO users (username, password_hash,created_at)
-                    VALUES (?, ?,?)
+                    INSERT INTO users (username, password_hash,avatar_base64,avatar_mime,created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (username, password_hash,now)
+                    (username, password_hash, avatar_base64, avatar_mime, now, now)
                 )
                 user_id = cursor.lastrowid
                 conn.commit()
                 row = conn.execute(
                     """
-                    SELECT id, username, created_at
+                    SELECT id, username, avatar_base64, avatar_mime, created_at
                     FROM users
                     WHERE id = ?
                     """,

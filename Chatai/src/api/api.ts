@@ -2,6 +2,7 @@ import { request } from './request'
 interface UserRegister {
     username:string
     password:string
+    imgurl:string
 }
 interface ModelConfig {
     userid:number
@@ -107,6 +108,9 @@ export const ChatAiApi = {
   },
   
   //get
+  async getDefaultUserImageApi(): Promise<any> {
+    return await request.get('/chatai/user/defaultUserImage')
+  },
   async getTokensCountApi(conversationid: number, date: string): Promise<any> {
   return await request.get('/chatai/user/tokensCount', {
     params: {

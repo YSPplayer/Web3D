@@ -267,6 +267,7 @@ const handleMarkdownClick = async event => {
     height: 2.403125rem;
     aspect-ratio: 1 / 1;  /*宽高相等*/
     object-fit: fill; 
+    border-radius: 5px;
 }
 
 .chat_message {

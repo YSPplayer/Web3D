@@ -2,7 +2,10 @@ CREATE TABLE users { --用户表
     id BIGINT PRIMARY KEY AUTO_INCREMENT,--PRIMARY KEY 主键  AUTO_INCREMENT 自动递增
     username VARCHAR(64) UNIQUE NOT NULL,--用户名 UNIQUE用户名不能重复
     password_hash VARCHAR(255) NOT NULL,   -- 密码必须存哈希，不能存明文！
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP --自动填当前时间
+    avatar_base64 TEXT DEFAULT '',
+    avatar_mime TEXT NOT NULL DEFAULT 'image/png',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,--自动填当前时间
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 }
 CREATE TABLE model_configs { --模型配置表
     id BIGINT PRIMARY KEY AUTO_INCREMENT,

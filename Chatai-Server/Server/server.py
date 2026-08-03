@@ -39,6 +39,10 @@ def run():
 class UserRegister(BaseModel):
     username:str
     password:str
+    imgurl:str
+class UserLogin(BaseModel):
+    username:str
+    password:str
 class ModelConfig(BaseModel):
     userid:int
     modeltype:str
@@ -112,6 +116,11 @@ def image_to_data_url(logo_path: str)-> str:
     encoded = key.img_bytes_to_base64(image_bytes)
     return f"data:{mime_type};base64,{encoded}"
 ##get
+@app.get("/chatai/user/defaultUserImage")
+async def get_default_user_image():
+    imageurl = image_to_data_url('/user/userdefault.jpg')
+    return success("默认用户图像获取成功！", {"imageurl": imageurl})
+
 @app.get("/chatai/health")
 async def health():
     return success("服务器访问正常")
@@ -360,29 +369,49 @@ async def register(user:UserRegister):
     #获取前端传输数据
     username = user.username.strip()
     password = user.password
+    imgurl = user.imgurl.strip() if user.imgurl else ""
     if not username:
         raise HTTPException(
             status_code=400,
             detail="账号不能为空"
         )
+    avatar_mime = "image/png"
+    avatar_base64 = ""
+    if imgurl:
+          if imgurl.startswith("data:") and ";base64," in imgurl:
+            header, avatar_base64 = imgurl.split(";base64,", 1)
+            avatar_mime = header.replace("data:", "").strip() or "image/png"
+          else:
+            avatar_base64 = imgurl
+    
     # 1. 后端用 bcrypt 再加盐哈希（安全存储）
-    result = db_manager.create_user(username, key.string_to_bcrypt_hash(password))
+    result = db_manager.create_user(username, key.string_to_bcrypt_hash(password),
+                                    avatar_base64, avatar_mime)
     check_result(result)
     return success("注册成功",{
-                "username": result["username"]
+                "id": result["id"],
+                "username": result["username"],
+                "imgurl": f'data:{result["avatar_mime"]};base64,{result["avatar_base64"]}'
+                if result.get("avatar_base64") else ""
     })
 
 @app.post("/chatai/login")
-async def login(user:UserRegister):
+async def login(user:UserLogin):
     #获取前端传输数据
     username = user.username.strip()
     password = user.password
     db_user = db_manager.get_user_by_username(username)
     check_result(db_user)
     if key.checkpw_bcrypt(password.encode(), db_user["password_hash"]):
+            avatar_base64 = db_user.get("avatar_base64") or ""
+            avatar_mime = db_user.get("avatar_mime") or "image/png"
+            imgurl = ""
+            if avatar_base64:
+                imgurl = f"data:{avatar_mime};base64,{avatar_base64}"
             return success("登录成功",{
                 "id": db_user["id"],
-                "username": db_user["username"]
+                "username": db_user["username"],
+                "imgurl": imgurl
             })
     return error("登录失败，账号或密码不正确！",401)
 
