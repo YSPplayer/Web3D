@@ -36,9 +36,15 @@ type ChatStreamEvent =
 
 export const ChatAiApi = {
   //post
+  async startLocalModelApi() {
+    return await request.post('/chatai/localModel/start')
+  },
   async userRegisterApi(user: UserRegister): Promise<any> {
     
     return await request.post('/chatai/register', user)
+  },
+  async stopLocalModelApi() {
+    return await request.post('/chatai/localModel/stop')
   },
   async userLoginApi(user: UserRegister): Promise<any> {
     return await request.post('/chatai/login', user)
@@ -118,6 +124,9 @@ export const ChatAiApi = {
       date
     }
   })
+  },
+  async getLocalModelStatusApi() {
+    return await request.get('/chatai/localModel/status')
   },
   async getTokensCountByUserIdApi(userid: number, date: string): Promise<any> {
   return await request.get('/chatai/user/tokensCountByUserId', {

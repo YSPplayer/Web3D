@@ -55,8 +55,13 @@
                     </div>
                     <div v-if="!onlineModel" class="flex_row" style="gap: 0.5rem;">
                             <span class="center_span">启动模型</span>
-                            <div style="width: 36px; height: 36px;">
-                                <img class="fill_img" :src="modelStart" >
+                           <div class="config_run_model" @click="handleRunModel">
+                            <img
+                                class="fill_img"
+                                :class="{ run_model_spinning: localModelState === 'starting' }"
+                                :src="runModelIcon"
+                                alt=""
+                                />
                             </div>
                     </div>
                     <div style="margin-bottom: 1rem;">
@@ -77,13 +82,15 @@
 
 </template>
 <script setup>
-    import { ref,reactive,computed } from 'vue'
+    import { ref,reactive,computed, watch } from 'vue'
     import { ChatAiApi } from '@/api/api'
     import { user } from '@/store/store'
     import { ElMessage } from 'element-plus'
     import { Util } from '@/shared/util.ts'
+    import { Loading } from '@element-plus/icons-vue'
     import modelStart from '@/assets/modelStart.svg'
     import modelStop from '@/assets/modelStop.svg'
+    import modelStarting from '@/assets/modelStarting.svg'
     import tokenchart from './tokenchart.vue'
     const modelSelectValue = ref([])
     const configForm = reactive({
@@ -94,6 +101,8 @@
         tokenCount:0,
         tokenDate:''
     })
+    //stopped / starting / ready / error
+    const localModelState = ref('')
     const activeName = ref('model')
     const modelImageUrl = ref('')
     const onlineModel = ref(true)
@@ -117,8 +126,30 @@
             modelImageUrl.value = data.logo
         } 
     }
+    const handleRunModel = async ()=>{
+        await ChatAiApi.startLocalModelApi()
+    }
+    const runModelIcon = computed(() =>{
+        if(localModelState.value === 'stopped') return modelStart
+        if(localModelState.value === 'ready') return modelStop
+        if(localModelState.value === 'error') return modelStart
+        if(localModelState.value === 'starting') return modelStarting
+        return ''
+    })
+    watch(() => user.localmodelstate,(newState) => {
+        localModelState.value = newState
+        }
+    )
+    const updatelocalModelState = async ()=>{
+         const result = await ChatAiApi.getLocalModelStatusApi()
+         if(result?.code == 200) {
+             const data = result.data
+             user.localmodelstate = data.status
+         }
+    }
     const handleOpen = async ()=> {
       await updateUserModelConfig()
+      await updatelocalModelState()
     } 
     const updateUserTokens = async(date) => {
         const result = await ChatAiApi.getTokensCountByUserIdApi(user.userid,date)
@@ -230,6 +261,26 @@
     })
 </script>
 <style>
+.run_model_spinning {
+  animation: run-model-spin 2s linear infinite;
+}
+
+@keyframes run-model-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+.config_run_model {
+    width: 36px; 
+    height: 36px;
+}
+.config_run_model:hover {
+    cursor: pointer;
+}
 .model_logo_img {
     height: 30px;
     aspect-ratio: 1 / 1;

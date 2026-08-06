@@ -5,6 +5,7 @@ export interface Conversation { //会话对象
     isnew:boolean,//是否为新建的对话
 }
 export interface User {
+    localmodelstate:string //当前的本地模型状态
     userid:number //用户名
     userlogo:string //用户图像
     modelconfigid:number, //模型配置id
@@ -20,6 +21,7 @@ export interface User {
 }
 
 export const user = reactive<User>({
+    localmodelstate:'',
     userid: -1,
     conversationsid:[],
     userlogo:'',
