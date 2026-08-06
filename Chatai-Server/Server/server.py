@@ -13,6 +13,7 @@ from Data.db_manager import db_manager
 from Model.key import key
 from Model.modelapi import modelApi
 from datetime import datetime
+from Model.local_model_manager import local_model_manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI):
     finally:
         # 服务关闭，例如 Ctrl+C、正常停止 Uvicorn
         db_manager.close_db()
+        local_model_manager.stop()
 app = FastAPI(title="Chat API",lifespan=lifespan)
 # 重要：允许前端跨域请求
 app.add_middleware(
@@ -250,6 +252,22 @@ async def delete_conversation(conversationid:int):
     return success('会话删除操作成功')
 
 ##post
+@app.post("/chatai/localModel/start")
+async def start_local_model():
+    result = await asyncio.to_thread(local_model_manager.start)
+    check_result(result)
+    return success(result["message"])
+
+@app.get("/chatai/localModel/status")
+async def get_local_model_status():
+    return success("本地模型状态查询成功", local_model_manager.get_status())
+
+@app.post("/chatai/localModel/stop")
+async def stop_local_model():
+    result = local_model_manager.stop()
+    check_result(result)
+    return success(result["message"])
+
 @app.post("/chatai/user/conversation")
 async def create_conversation(conversation:Conversation):
     result = db_manager.create_conversation(conversation.userid,conversation.modelconfigid,conversation.title)

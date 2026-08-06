@@ -9,13 +9,13 @@
                 <div class="config_model flex_colum">
                     <el-switch
                     v-model="onlineModel"
-                    active-text="在线模型">
+                    :active-text="onlineModel ? '在线模型' : '本地模型'">
                     </el-switch>
-                    <div class="flex_row">
+                    <div  v-if="onlineModel" class="flex_row">
                         <span class="center_span tab_span">密钥</span>
                         <el-input class = "model_apikey" v-model="configForm.apikey"></el-input>
                     </div>
-                    <div class="flex_row">
+                    <div v-if="onlineModel" class="flex_row">
                         <span class="center_span tab_span">模型</span>
                         <el-cascader
                             class = "model_select"
@@ -40,18 +40,24 @@
                         </el-cascader>
                         <img v-if="modelImageUrl != ''" class="model_logo_img" :src="modelImageUrl">
                     </div>
-                    <div class="flex_row">
+                    <div v-if="onlineModel" class="flex_row">
                         <span class="center_span tab_span">VPN</span>
                         <el-switch style="margin-left: 1rem;"
                         v-model="proxyActive"
                         active-text="启用代理">
                         </el-switch>
                     </div>
-                    <div class="flex_row">
+                    <div v-if="onlineModel" class="flex_row">
                         <span class="center_span tab_span" style="margin-left: 3rem;">IP</span>
                             <el-input class = "model_apiip" v-model="configForm.agentip" @input="formatIpInput"></el-input>
                             <span class="center_span tab_span" style="margin-left: 1rem;">端口</span>
                             <el-input class = "model_apiport" v-model="configForm.agentport" @input="formatPortInput"></el-input>
+                    </div>
+                    <div v-if="!onlineModel" class="flex_row" style="gap: 0.5rem;">
+                            <span class="center_span">启动模型</span>
+                            <div style="width: 36px; height: 36px;">
+                                <img class="fill_img" :src="modelStart" >
+                            </div>
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <tokenchart  :tokenData ="configForm.tokenData" :tokenCount="configForm.tokenCount"
@@ -76,6 +82,8 @@
     import { user } from '@/store/store'
     import { ElMessage } from 'element-plus'
     import { Util } from '@/shared/util.ts'
+    import modelStart from '@/assets/modelStart.svg'
+    import modelStop from '@/assets/modelStop.svg'
     import tokenchart from './tokenchart.vue'
     const modelSelectValue = ref([])
     const configForm = reactive({
