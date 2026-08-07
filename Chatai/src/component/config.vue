@@ -127,7 +127,26 @@
         } 
     }
     const handleRunModel = async ()=>{
-        await ChatAiApi.startLocalModelApi()
+        await updatelocalModelState()
+        //stopped / starting / ready / error
+        if( user.localmodelstate === 'starting') return;
+        if(user.localmodelstate ==='ready') {
+           const result =  await ChatAiApi.stopLocalModelApi()
+           if(result?.code != 200) {
+                ElMessage.error('本地模型停止失败')
+           } else {
+                ElMessage.success('本地模型已停止')
+           }
+        } else {
+            localModelState.value = 'starting'
+            const result = await ChatAiApi.startLocalModelApi()
+            if(result?.code != 200)  {
+                    ElMessage.error('本地模型运行失败')
+            } else {
+                    ElMessage.success('本地模型运行成功')
+            }
+        }
+        await updatelocalModelState()
     }
     const runModelIcon = computed(() =>{
         if(localModelState.value === 'stopped') return modelStart

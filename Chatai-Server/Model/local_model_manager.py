@@ -63,6 +63,7 @@ class LocalModelManager:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 torch.cuda.ipc_collect()
+            print('已释放本地模型资源')
             return {"code": 200, "message": "模型已关闭"}
     
     def chat_stream(self, messages: list[dict]):
