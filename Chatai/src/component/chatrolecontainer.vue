@@ -13,10 +13,22 @@
                             <span class="chat_role_span_title">{{chatName}}</span>
                             <span>{{timeText}}</span>
                     </div>
-                  <div class="chat_message markdown_body"
-                    v-html="renderedMessage"
-                     @click="handleMarkdownClick">
-                  
+                  <div class="chat_message">
+                    <div v-if="reasoningText" class="reasoning_box">
+                        <div class="reasoning_header" @click="showReasoning = !showReasoning">
+                            <span class="reasoning_arrow">{{ reasoningExpanded ? '▼' : '▶' }}</span>
+                            <span>{{ streaming ? '思考中...' : '思考过程' }}</span>
+                        </div>
+                        <div v-if="reasoningExpanded" class="reasoning_content">
+                            {{ reasoningText }}
+                        </div>
+                    </div>
+                    <div
+                        v-if="answerText"
+                        class="markdown_body"
+                        v-html="renderedMessage"
+                        @click="handleMarkdownClick">
+                    </div>
                 </div>
                 </div>    
             </div>
@@ -29,8 +41,8 @@
 </template>
 
 <script setup>
- import { computed } from 'vue'
- import { renderMarkdown } from '@/shared/markdown'
+ import { computed, ref } from 'vue'
+ import { renderMarkdown, splitThinkContent } from '@/shared/markdown'
  import { ElMessage } from 'element-plus'
  import { Loading } from '@element-plus/icons-vue'
  const props = defineProps({
@@ -41,6 +53,18 @@
     message:{
         type:String,
         default:''
+    },
+    reasoning:{
+        type:String,
+        default:''
+    },
+    enableReasoning: {
+        type: Boolean,
+        default: false
+    },
+    streaming: {
+        type: Boolean,
+        default: false
     },
     timeText: {
         type:String,
@@ -63,8 +87,38 @@
         default: false
     }
 })
+const showReasoning = ref(false)
+
+const shouldParseReasoning = computed(() => {
+    return props.enableReasoning || Boolean(props.reasoning)
+})
+
+const parsedMessage = computed(() => {
+    if (!shouldParseReasoning.value) {
+        return {
+            reasoning: '',
+            answer: props.message
+        }
+    }
+    return splitThinkContent(props.message)
+})
+
+const reasoningText = computed(() => {
+    if (!shouldParseReasoning.value) return ''
+    return props.reasoning || parsedMessage.value.reasoning
+})
+
+const reasoningExpanded = computed(() => {
+    return props.streaming || showReasoning.value
+})
+
+const answerText = computed(() => {
+    if (!shouldParseReasoning.value) return props.message
+    return props.reasoning ? props.message : parsedMessage.value.answer
+})
+
 const renderedMessage = computed(() => {
-    return renderMarkdown(props.message)
+    return renderMarkdown(answerText.value)
 })
 const extensionMap = {
     javascript: 'js',
@@ -268,6 +322,55 @@ const handleMarkdownClick = async event => {
     aspect-ratio: 1 / 1;  /*宽高相等*/
     object-fit: fill; 
     border-radius: 5px;
+}
+
+.reasoning_box {
+    margin-bottom: 0.7rem;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f6f7f9;
+}
+
+.reasoning_header {
+    height: 34px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #666;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.reasoning_header:hover {
+    background: rgba(0, 0, 0, 0.035);
+}
+
+.reasoning_arrow {
+    width: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 11px;
+}
+
+.reasoning_content {
+    padding: 10px 12px;
+    color: #8a8f98;
+    background: #f7f8fa;
+    border-top: 1px solid #e5e7eb;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .chat_message {

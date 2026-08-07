@@ -8,6 +8,7 @@ export interface User {
     localmodelstate:string //当前的本地模型状态
     userid:number //用户名
     userlogo:string //用户图像
+    modelname:string //当前默认激活的模型名称
     modelconfigid:number, //模型配置id
     modeltype:string,//模型名称
     modellogo:string,//模型的图像
@@ -28,6 +29,7 @@ export const user = reactive<User>({
     modeltype:'',
     models:[], 
     modellogo:'',
+    modelname:'',
     modelid: -1,
     modelconfigid:-1,
     conversationid:-1,

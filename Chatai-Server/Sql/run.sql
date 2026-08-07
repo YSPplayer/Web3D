@@ -80,7 +80,8 @@ INSERT OR IGNORE INTO models (id, provider_type, model_type, model_name, logo_pa
 (10, 'anthropic', 'claude',   'claude-3-opus-latest',           'logo/anthropic.svg'),
 (11, 'deepseek',  'deepseek', 'deepseek-chat',                  'logo/deepseek.svg'),
 (12, 'deepseek',  'deepseek', 'deepseek-coder',                 'logo/deepseek.svg'),
-(13, 'local',     'local',    'DeepSeek-R1-Distill-Qwen-7B',    'logo/deepqwen.svg');
+(13, 'local',     'local',    'DeepSeek-R1-Distill-Qwen-7B',    'logo/deepqwen.svg'),
+(14, 'local',     'local',    'Qwen2.5-Coder-3B-Instruct',      'logo/deepqwen.svg');
 
 UPDATE model_configs
 SET is_online = 0

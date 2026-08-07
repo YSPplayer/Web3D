@@ -187,6 +187,52 @@ function normalizeMath(source: string): string {
         .join('')
 }
 
+export function splitThinkContent(source: string): { reasoning: string; answer: string } {
+    const raw = source || ''
+    const lower = raw.toLowerCase()
+    const openTag = '<think>'
+    const closeTag = '</think>'
+    const thinkStart = lower.indexOf(openTag)
+    const thinkEndOnly = lower.indexOf(closeTag)
+
+    if (thinkStart === -1) {
+        if (thinkEndOnly === -1) {
+            return {
+                reasoning: '',
+                answer: raw
+            }
+        }
+
+        return {
+            reasoning: raw.slice(0, thinkEndOnly).trim(),
+            answer: raw.slice(thinkEndOnly + closeTag.length).trim()
+        }
+    }
+
+    const beforeThink = raw.slice(0, thinkStart)
+    const contentStart = thinkStart + openTag.length
+    const afterThinkStart = raw.slice(contentStart)
+    const afterThinkStartLower = afterThinkStart.toLowerCase()
+    const thinkEnd = afterThinkStartLower.indexOf(closeTag)
+
+    if (thinkEnd === -1) {
+        return {
+            reasoning: afterThinkStart.trim(),
+            answer: beforeThink.trim()
+        }
+    }
+
+    const reasoning = afterThinkStart.slice(0, thinkEnd).trim()
+    const afterThink = afterThinkStart.slice(
+        thinkEnd + closeTag.length
+    )
+
+    return {
+        reasoning,
+        answer: `${beforeThink}${afterThink}`.trim()
+    }
+}
+
 export function renderMarkdown(source: string): string {
     const normalized = normalizeMath(
         normalizeMarkdown(source || '')

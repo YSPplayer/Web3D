@@ -9,6 +9,7 @@
                 <div class="config_model flex_colum">
                     <el-switch
                     v-model="onlineModel"
+                    :disabled = "!onlineModel && localModelState !== 'stopped' "
                     :active-text="onlineModel ? '在线模型' : '本地模型'"   @change="handleModelModeChange">
                 </el-switch>
                     <div  v-if="onlineModel" class="flex_row">
@@ -31,6 +32,7 @@
                         <el-cascader
                             class = "model_select"
                             v-model="modelSelectValue"
+                            :disabled = "!onlineModel && localModelState !== 'stopped' "
                             :options="filteredModelOptions"
                             :props="{ expandTrigger: 'hover' }"
                             @change='modelSelectChange'
@@ -199,7 +201,7 @@
            }
         } else {
             localModelState.value = 'starting'
-            const result = await ChatAiApi.startLocalModelApi()
+            const result = await ChatAiApi.startLocalModelApi(user.userid, user.modelconfigid)
             if(result?.code != 200)  {
                     ElMessage.error('本地模型运行失败')
             } else {
@@ -225,16 +227,20 @@
          if(result?.code == 200) {
              const data = result.data
              user.localmodelstate = data.status
+              localModelState.value = user.localmodelstate
          }
     }
     const handleModelModeChange = async () => {
         await updateUserModelConfig(onlineModel.value)
+       
     }
     const handleOpen = async ()=> {
         updateSystemMetrics()
         timer = window.setInterval(updateSystemMetrics, 1000)
         await updateUserModelConfig()
         await updatelocalModelState()
+        user.modelname = modelSelectValue?.value.length > 1 
+        ?  modelSelectValue.value[1] : ""
     } 
     const updateUserTokens = async(date) => {
         const result = await ChatAiApi.getTokensCountByUserIdApi(user.userid,date)
@@ -345,6 +351,7 @@
                 const data = result.data
                 user.modelconfigid = data.modelconfigid
                 user.modelid = data.modelid
+                user.modelname = data.modelname
             }
         }
         saveconfigLoading.value = false

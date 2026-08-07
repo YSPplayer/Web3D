@@ -13,6 +13,9 @@
                 :key="message.id"
                 :isUser="message.role === 'user'"
                 :message="message.content"
+                :reasoning="message.reasoning"
+                :enableReasoning="isMessageReasoning(message)"
+                :streaming="message.streaming"
                 :timeText="message.timeText"
                 :chatName="getChatName(message.role,message.modelid)"
                 :svgChat = "getSvg(message.role,message.modelid) "
@@ -217,6 +220,59 @@ const handleChatScroll = async () => {
     const model = user.models.find(item => item.id === id)
     return model.logo_path
  }
+ const isReasoningModel = (modelid = user.modelid) => {
+    const model = user.models.find(item => item.id === modelid)
+    const modelName = model?.model_name || (modelid === user.modelid ? user.modelname : '') || ''
+    return /(^|[-_])r1($|[-_])|reason|thinking/i.test(modelName)
+}
+const isMessageReasoning = (message) => {
+    return Boolean(message.reasoning) || isReasoningModel(message.modelid)
+}
+ const handleThinkDelta = (message, delta) => {
+    const openTag = '<think>'
+    const closeTag = '</think>'
+    let text = delta || ''
+
+    while (text) {
+        const lower = text.toLowerCase()
+
+        if (message.inThink) {
+            const closeIndex = lower.indexOf(closeTag)
+            if (closeIndex === -1) {
+                message.reasoning += text
+                text = ''
+            } else {
+                message.reasoning += text.slice(0, closeIndex)
+                text = text.slice(closeIndex + closeTag.length)
+                message.inThink = false
+            }
+            continue
+        }
+
+        const openIndex = lower.indexOf(openTag)
+        const closeIndex = lower.indexOf(closeTag)
+
+        if (openIndex !== -1 && (closeIndex === -1 || openIndex < closeIndex)) {
+            message.answer += text.slice(0, openIndex)
+            text = text.slice(openIndex + openTag.length)
+            message.inThink = true
+            continue
+        }
+
+        if (closeIndex !== -1) {
+            message.reasoning += message.answer + text.slice(0, closeIndex)
+            message.answer = text.slice(closeIndex + closeTag.length)
+            message.inThink = false
+            text = ''
+            continue
+        }
+
+        message.answer += text
+        text = ''
+    }
+
+    message.content = message.answer
+}
  const stopChatMessage = ()=> {
     if(abortController) {
         abortController.abort()
@@ -260,10 +316,15 @@ const getTitleMessage = async ()=> {
         modelid: user.modelid,
     })
    messages.value.push(userMessage) //增加用户对话
+   const reasoningEnabled = isReasoningModel(user.modelid)
    const aiMessage = reactive({
         id: lastid + 2,
         role: 'assistant',
         content: '',
+        reasoning: '',
+        answer: '',
+        inThink: reasoningEnabled,
+        reasoningEnabled,
         streaming: true,
         modelid: user.modelid,
         showloding:true
@@ -284,7 +345,11 @@ const getTitleMessage = async ()=> {
             },
             event => {
                 if (event.type === 'delta') {
-                    aiMessage.content += event.content
+                    if (aiMessage.reasoningEnabled) {
+                        handleThinkDelta(aiMessage, event.content)
+                    } else {
+                        aiMessage.content += event.content
+                    }
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false
                     userMessage.timeText = Util.extractTime(event.user_created_at)

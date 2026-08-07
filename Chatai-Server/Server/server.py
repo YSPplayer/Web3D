@@ -67,7 +67,7 @@ class ChatMessage(BaseModel):
     modelconfigid: int
     conversationid:int
     message:str
-    istiTle:bool   
+    istiTle:bool 
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -249,7 +249,8 @@ async def save_model_config(config:ModelConfig):
     return success("配置保存成功",{
         "userid": result["user_id"],
         "modelconfigid": result["id"],
-        "modelid":result["model_id"]
+        "modelid":result["model_id"],
+        "modelname": result["model_name"]
     })
 
 ##delete
@@ -261,10 +262,23 @@ async def delete_conversation(conversationid:int):
 
 ##post
 @app.post("/chatai/localModel/start")
-async def start_local_model():
-    result = await asyncio.to_thread(local_model_manager.start)
+async def start_local_model(userid:int, modelconfigid:int):
+    model_config = db_manager.get_active_local_model_config(userid, modelconfigid)
+    check_result(model_config)
+    if not model_config:
+        raise HTTPException(
+            status_code=400,
+            detail="当前本地模型配置不存在或未启用"
+        )
+    result = await asyncio.to_thread(
+        local_model_manager.start,
+        model_config["model_name"]
+    )
     check_result(result)
-    return success(result["message"])
+    return success(result["message"], {
+        "modelname": model_config["model_name"],
+        "modelconfigid": model_config["id"]
+    })
 
 @app.get("/chatai/localModel/status")
 async def get_local_model_status():
@@ -272,7 +286,7 @@ async def get_local_model_status():
 
 @app.post("/chatai/localModel/stop")
 async def stop_local_model():
-    result = local_model_manager.stop()
+    result = await asyncio.to_thread(local_model_manager.stop)
     check_result(result)
     return success(result["message"])
 

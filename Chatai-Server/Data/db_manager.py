@@ -148,6 +148,38 @@ class DBManager:
                 return {
                     "code":500
                 }   
+    def get_active_local_model_config(self,user_id:int,model_config_id:int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT mc.*,
+                           m.id AS model_id,
+                           m.logo_path,
+                           m.provider_type
+                    FROM model_configs mc
+                    INNER JOIN models m
+                        ON mc.model_type = m.model_type
+                       AND mc.model_name = m.model_name
+                    WHERE mc.user_id = ?
+                      AND mc.id = ?
+                      AND mc.is_active = 1
+                      AND mc.model_type = 'local'
+                      AND mc.is_online = 0
+                    LIMIT 1
+                    """,
+                    (user_id, model_config_id)
+                ).fetchone()
+                if row is None:
+                    return {}
+                return dict(row)
+            except Exception as exc:
+                print(f"数据库操作错误: {exc}")
+                return {
+                    "code":500
+                }
+
     def update_conversation_title(self,conversationid:int,title:str):
         with self.lock:
             now = self.now_time()

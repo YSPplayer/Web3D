@@ -36,8 +36,8 @@ type ChatStreamEvent =
 
 export const ChatAiApi = {
   //post
-  async startLocalModelApi() {
-    return await request.post('/chatai/localModel/start')
+  async startLocalModelApi(userid:number, modelconfigid:number) {
+    return request.post(`/chatai/localModel/start?userid=${userid}&modelconfigid=${modelconfigid}`)
   },
   async userRegisterApi(user: UserRegister): Promise<any> {
     
