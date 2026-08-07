@@ -1,5 +1,5 @@
 <template>
-   <el-dialog @opened="handleOpen" v-model="dialogVisible" title="系统设置" class="config_dialog" align-center :close-on-click-modal="false">
+   <el-dialog @opened="handleOpen"  @closed="handleClosed" v-model="dialogVisible" title="系统设置" class="config_dialog" align-center :close-on-click-modal="false">
     <div class="flex_colum_center">
         <el-tabs v-model="activeName" class="config_tab" tab-position='left'>
             <el-tab-pane name="model">
@@ -64,6 +64,23 @@
                                 />
                             </div>
                     </div>
+                    <span class="center_span span_count">资源管理统计</span>
+                    <div v-if="!onlineModel" class="flex_row system_status">
+                            <span class="center_span">CPU内存占用率</span>
+                            <el-progress class="system_status_progress" :percentage="configForm.cpuMemoryPercent"></el-progress>
+                    </div>
+                    <div v-if="!onlineModel" class="flex_row system_status">
+                            <span class="center_span">CPU使用率</span>
+                            <el-progress class="system_status_progress" :percentage="configForm.cpuPercent"></el-progress>
+                    </div>
+                      <div v-if="!onlineModel" class="flex_row system_status">
+                            <span class="center_span">GPU内存占用率</span>
+                            <el-progress class="system_status_progress" :percentage="configForm.gpuMemoryPercent"></el-progress>
+                    </div>
+                    <div v-if="!onlineModel" class="flex_row system_status">
+                            <span class="center_span">GPU使用率</span>
+                            <el-progress class="system_status_progress" :percentage="configForm.gpuPercent"></el-progress>
+                    </div>
                     <div style="margin-bottom: 1rem;">
                         <tokenchart  :tokenData ="configForm.tokenData" :tokenCount="configForm.tokenCount"
                         :tokenDate = "configForm.tokenDate" 
@@ -99,7 +116,11 @@
         agentport:'',
         tokenData:[],
         tokenCount:0,
-        tokenDate:''
+        tokenDate:'',
+        cpuMemoryPercent:0,
+        cpuPercent:0,
+        gpuPercent:0,
+        gpuMemoryPercent:0,
     })
     //stopped / starting / ready / error
     const localModelState = ref('')
@@ -110,6 +131,8 @@
     const modelOptions = ref([])
     const dialogVisible = ref(false)
     const saveconfigLoading = ref(false)
+    const systemMetrics = ref(null)
+    let timer = null
     const modelSelectChange = async ()=> {
         const config = await ChatAiApi.getModelConfigStateApi(user.userid,
             modelSelectValue.value[0],modelSelectValue.value[1]
@@ -126,6 +149,23 @@
             modelImageUrl.value = data.logo
         } 
     }
+    const handleClosed = async ()=>{
+         if (timer) {
+            clearInterval(timer)
+        }
+    }
+
+    const updateSystemMetrics = async () => {
+        const result = await ChatAiApi.getSystemMetricsApi()
+        if (result?.code === 200) {
+            const data = result.data
+            configForm.cpuPercent =data.cpu.percent
+            configForm.cpuMemoryPercent = data.memory.percent
+            configForm.gpuPercent = data.gpu.gpu_percent
+            configForm.gpuMemoryPercent = data.gpu.memory_percent
+        }
+    }
+
     const handleRunModel = async ()=>{
         await updatelocalModelState()
         //stopped / starting / ready / error
@@ -167,8 +207,10 @@
          }
     }
     const handleOpen = async ()=> {
-      await updateUserModelConfig()
-      await updatelocalModelState()
+        updateSystemMetrics()
+        timer = window.setInterval(updateSystemMetrics, 1000)
+        await updateUserModelConfig()
+        await updatelocalModelState()
     } 
     const updateUserTokens = async(date) => {
         const result = await ChatAiApi.getTokensCountByUserIdApi(user.userid,date)
@@ -253,7 +295,6 @@
                 modeltype:modelSelectValue.value[0],
                 modelname:modelSelectValue.value[1],
                 apikey:Util.stringToBase64(configForm.apikey),
-                isonline:onlineModel.value ? 1 : 0,
                 proxyhost:configForm.agentip,
                 proxyport:Number(configForm.agentport),
                 proxyactive:proxyActive.value ? 1 : 0
@@ -325,6 +366,7 @@
 .config_bottom {
     width: 100%;
 }
+
 .config_bottom .el-button {
     width: 100px;
     height: 35px;
@@ -340,6 +382,15 @@
 .config_model {
     width: 100%;
     gap:1rem;
+}
+.span_count {
+     font-size: 16px;
+     font-weight: 600
+}
+.system_status_progress {
+    width: 200px;
+    margin-left: auto;
+    margin-right: 20rem;
 }
 .model_option {
     display: flex;

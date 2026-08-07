@@ -114,6 +114,9 @@ export const ChatAiApi = {
   },
   
   //get
+  async getSystemMetricsApi() {
+    return await request.get('/chatai/system/metrics')
+  },
   async getDefaultUserImageApi(): Promise<any> {
     return await request.get('/chatai/user/defaultUserImage')
   },

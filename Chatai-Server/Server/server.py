@@ -14,13 +14,16 @@ from Model.key import key
 from Model.modelapi import modelApi
 from datetime import datetime
 from Model.local_model_manager import local_model_manager
+from System.system_monitor import system_monitor
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
     db_manager.init_db()
+    await system_monitor.start()
     try:
         yield
     finally:
+        await system_monitor.stop()
         # 服务关闭，例如 Ctrl+C、正常停止 Uvicorn
         db_manager.close_db()
         local_model_manager.stop()
@@ -50,7 +53,6 @@ class ModelConfig(BaseModel):
     modeltype:str
     modelname:str
     apikey:str
-    isonline:int
     proxyhost:str
     proxyport:int
     proxyactive:int
@@ -126,6 +128,10 @@ async def get_default_user_image():
 @app.get("/chatai/health")
 async def health():
     return success("服务器访问正常")
+
+@app.get("/chatai/system/metrics")
+async def get_system_metrics():
+    return success("系统状态查询成功", system_monitor.get_snapshot())
 
 @app.get("/chatai/models") #获取到当前后端存储的所有类别的模型
 async def models():
@@ -228,10 +234,11 @@ async def save_model_config(config:ModelConfig):
     encrypted_api_key = key.encrypt_api_key(
        key.base64_to_string(config.apikey)
     )
+    is_online = 0 if config.modeltype == "local" else 1
     result = db_manager.create_model_config(
         config.userid,config.modeltype,
         config.modelname,encrypted_api_key,
-        config.isonline
+        is_online
     )
     check_result(result)
     #设置代理
