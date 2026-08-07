@@ -9,18 +9,29 @@
                 <div class="config_model flex_colum">
                     <el-switch
                     v-model="onlineModel"
-                    :active-text="onlineModel ? '在线模型' : '本地模型'">
-                    </el-switch>
+                    :active-text="onlineModel ? '在线模型' : '本地模型'"   @change="handleModelModeChange">
+                </el-switch>
                     <div  v-if="onlineModel" class="flex_row">
                         <span class="center_span tab_span">密钥</span>
                         <el-input class = "model_apikey" v-model="configForm.apikey"></el-input>
                     </div>
-                    <div v-if="onlineModel" class="flex_row">
+                    <div v-if="!onlineModel" class="flex_row" style="gap: 0.5rem;">
+                            <span class="center_span">启动模型</span>
+                           <div class="config_run_model" @click="handleRunModel">
+                            <img
+                                class="fill_img"
+                                :class="{ run_model_spinning: localModelState === 'starting' }"
+                                :src="runModelIcon"
+                                alt=""
+                                />
+                            </div>
+                    </div>
+                    <div class="flex_row">
                         <span class="center_span tab_span">模型</span>
                         <el-cascader
                             class = "model_select"
                             v-model="modelSelectValue"
-                            :options="modelOptions"
+                            :options="filteredModelOptions"
                             :props="{ expandTrigger: 'hover' }"
                             @change='modelSelectChange'
                             >
@@ -52,17 +63,6 @@
                             <el-input class = "model_apiip" v-model="configForm.agentip" @input="formatIpInput"></el-input>
                             <span class="center_span tab_span" style="margin-left: 1rem;">端口</span>
                             <el-input class = "model_apiport" v-model="configForm.agentport" @input="formatPortInput"></el-input>
-                    </div>
-                    <div v-if="!onlineModel" class="flex_row" style="gap: 0.5rem;">
-                            <span class="center_span">启动模型</span>
-                           <div class="config_run_model" @click="handleRunModel">
-                            <img
-                                class="fill_img"
-                                :class="{ run_model_spinning: localModelState === 'starting' }"
-                                :src="runModelIcon"
-                                alt=""
-                                />
-                            </div>
                     </div>
                     <span class="center_span span_count">资源管理统计</span>
                     <div v-if="!onlineModel" class="flex_row system_status">
@@ -133,22 +133,36 @@
     const saveconfigLoading = ref(false)
     const systemMetrics = ref(null)
     let timer = null
-    const modelSelectChange = async ()=> {
+    const modelSelectChange = async (syncOnlineModel = true)=> {
+        if (modelSelectValue.value.length !== 2) return
         const config = await ChatAiApi.getModelConfigStateApi(user.userid,
             modelSelectValue.value[0],modelSelectValue.value[1]
         )
         if(config.code == 200) {
             const data = config.data
             if(Util.isEmptyObject(data)) {
-                 onlineModel.value = false
+                 if (syncOnlineModel) {
+                    onlineModel.value = modelSelectValue.value[0] !== 'local'
+                 }
                  configForm.apikey = ''
                  modelImageUrl.value = ''
+                 return
             }
-            onlineModel.value = data.isonline
-            configForm.apikey = Util.base64ToString(data.apikey)
-            modelImageUrl.value = data.logo
+            if (syncOnlineModel) {
+                onlineModel.value =  data.isonline === 1
+            }
+            configForm.apikey =  data.apikey ? Util.base64ToString(data.apikey) : ''
+            modelImageUrl.value = data.logo || ''
         } 
     }
+    const filteredModelOptions = computed(() => {
+    if (onlineModel.value) {
+        // 在线模型：排除 local
+        return modelOptions.value.filter(item => item.value !== 'local')
+    }
+        // 本地模型：只保留 local
+        return modelOptions.value.filter(item => item.value === 'local')
+    })
     const handleClosed = async ()=>{
          if (timer) {
             clearInterval(timer)
@@ -159,10 +173,16 @@
         const result = await ChatAiApi.getSystemMetricsApi()
         if (result?.code === 200) {
             const data = result.data
+            const gpu = Array.isArray(data.gpu) && data.gpu.length > 0
+            ? data.gpu[0]
+            : null
             configForm.cpuPercent =data.cpu.percent
             configForm.cpuMemoryPercent = data.memory.percent
-            configForm.gpuPercent = data.gpu.gpu_percent
-            configForm.gpuMemoryPercent = data.gpu.memory_percent
+            if(gpu) {
+                configForm.gpuPercent = gpu.gpu_percent
+                configForm.gpuMemoryPercent = gpu.memory_percent
+            }
+           
         }
     }
 
@@ -195,16 +215,20 @@
         if(localModelState.value === 'starting') return modelStarting
         return ''
     })
+
     watch(() => user.localmodelstate,(newState) => {
         localModelState.value = newState
-        }
-    )
+    },{ immediate: true })
+
     const updatelocalModelState = async ()=>{
          const result = await ChatAiApi.getLocalModelStatusApi()
          if(result?.code == 200) {
              const data = result.data
              user.localmodelstate = data.status
          }
+    }
+    const handleModelModeChange = async () => {
+        await updateUserModelConfig(onlineModel.value)
     }
     const handleOpen = async ()=> {
         updateSystemMetrics()
@@ -221,7 +245,7 @@
             configForm.tokenDate = data.date
         }
     }
-    const updateUserModelConfig = async ()=> {
+    const updateUserModelConfig = async (targetOnlineModel = null)=> {
       //获取到所有模型
       modelOptions.value = []
       const modelDatas = await ChatAiApi.modelsApi()
@@ -254,21 +278,12 @@
       const userconfig = await ChatAiApi.getUserModelConfigApi(user.userid)
       if(userconfig.code == 200) {
             const data = userconfig.data
-            if(Util.isEmptyObject(data)) {
-                onlineModel.value = false
-                configForm.apikey = ''
-                configForm.agentip = ''
-                configForm.agentport = ''
-                proxyActive.value = false
-                modelSelectValue.value = []
-                modelImageUrl.value = ''
-                user.modelconfigid = -1
-                user.modeltype = ''
-                user.modellogo = ''
-                user.modelid = -1
-            } else {
+            const hasConfig = !Util.isEmptyObject(data)
+            const shouldUseCurrentConfig = targetOnlineModel === null || (hasConfig && (data.isonline === 1) === targetOnlineModel)
+
+            if(shouldUseCurrentConfig && hasConfig) {
                 onlineModel.value = data.isonline === 1
-                configForm.apikey = Util.base64ToString(data.apikey)
+                configForm.apikey = data.apikey ? Util.base64ToString(data.apikey) : ''
                 modelSelectValue.value = [data.modeltype,data.modelname]
                 modelImageUrl.value = data.logo  
                 user.modelconfigid = data.modelconfigid
@@ -278,7 +293,32 @@
                 configForm.agentip = data.proxyhost
                 configForm.agentport = String(data.proxyport)
                 proxyActive.value = data.proxyactive === 1
+                return
             }
+
+            onlineModel.value = targetOnlineModel ?? false
+            configForm.apikey = ''
+            modelImageUrl.value = ''
+            user.modelconfigid = -1
+            user.modeltype = ''
+            user.modellogo = ''
+            user.modelid = -1
+
+            if(!onlineModel.value) {
+                configForm.agentip = ''
+                configForm.agentport = ''
+                proxyActive.value = false
+            }
+
+            const group = filteredModelOptions.value[0]
+            const model = group?.children?.[0]
+            if (!group || !model) {
+                modelSelectValue.value = []
+                return
+            }
+
+            modelSelectValue.value = [group.value, model.value]
+            await modelSelectChange(false)
       }
     }
     const formatIpInput = (value) => {
@@ -303,6 +343,7 @@
             if(result?.code == 200) {
                 ElMessage.success('配置保存成功！')
                 const data = result.data
+                user.modelconfigid = data.modelconfigid
                 user.modelid = data.modelid
             }
         }
