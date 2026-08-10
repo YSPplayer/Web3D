@@ -267,5 +267,53 @@ class LocalModelManager:
         finally:
             self.chat_lock.release()
 
+    def get_token_count(self, text: str | None = None,
+            messages: list[dict] | None = None, timeout: int = 10) -> int:
+        if not self.chat_lock.acquire(blocking=False):
+            raise RuntimeError("本地模型正在生成中")
+
+        request_id = None
+        try:
+            with self.lock:
+                if self.status != "ready" or not self._is_process_alive():
+                    raise RuntimeError("本地模型未启动")
+                self.request_id += 1
+                request_id = self.request_id
+                self._send_command({
+                    "type": "count_tokens",
+                    "id": request_id,
+                    "text": text,
+                    "messages": messages
+                })
+
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+                with self.lock:
+                    if not self._is_process_alive():
+                        raise RuntimeError(self.error or "本地模型进程已退出")
+
+                try:
+                    event = self.events.get(timeout=0.2)
+                except queue.Empty:
+                    continue
+
+                event_id = event.get("id")
+                event_type = event.get("type")
+
+                if event_type in ("ready", "log"):
+                    continue
+
+                if event_id != request_id:
+                    continue
+
+                if event_type == "token_count":
+                    return int(event.get("count", 0))
+                if event_type == "error":
+                    raise RuntimeError(event.get("message", "本地 token 统计失败"))
+
+            raise TimeoutError("本地 token 统计超时")
+        finally:
+            self.chat_lock.release()
+
 
 local_model_manager = LocalModelManager()

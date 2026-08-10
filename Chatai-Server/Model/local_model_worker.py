@@ -127,6 +127,33 @@ def run_chat(request_id: int, messages: list[dict], tokenizer, model):
         cleanup_cuda()
 
 
+def count_tokens(request_id: int, command: dict, tokenizer):
+    try:
+        text = command.get("text")
+        messages = command.get("messages")
+
+        if text is None and messages is not None:
+            text = tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True
+            )
+
+        count = len(tokenizer.encode(text or ""))
+        write_event({
+            "id": request_id,
+            "type": "token_count",
+            "count": count
+        })
+    except Exception as exc:
+        write_event({
+            "id": request_id,
+            "type": "error",
+            "message": str(exc)
+        })
+        traceback.print_exc(file=sys.stderr)
+
+
 def main():
     if len(sys.argv) < 2:
         write_event({
@@ -170,6 +197,12 @@ def main():
                     command.get("messages") or [],
                     tokenizer,
                     model
+                )
+            if command_type == "count_tokens":
+                count_tokens(
+                    command.get("id"),
+                    command,
+                    tokenizer
                 )
     except Exception as exc:
         write_event({

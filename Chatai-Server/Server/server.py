@@ -62,6 +62,10 @@ class Conversation(BaseModel):
     modelconfigid: int
     title: str
 
+class ConversationTitle(BaseModel):
+    userid: int
+    conversationid: int
+
 class ChatMessage(BaseModel):
     userid: int
     modelconfigid: int
@@ -119,6 +123,85 @@ def image_to_data_url(logo_path: str)-> str:
     image_bytes = image_path.read_bytes()
     encoded = key.img_bytes_to_base64(image_bytes)
     return f"data:{mime_type};base64,{encoded}"
+
+TITLE_PROMPT = (
+    "基于当前会话内容生成一个简短标题，只返回标题文本，"
+    "不要解释，不要引号，不要标点装饰，长度控制在20个字以内。"
+)
+
+def is_local_model_config(model_config: dict) -> bool:
+    return (
+        model_config.get("provider_type") == "local"
+        or model_config.get("model_type") == "local"
+    )
+
+def build_model_context(
+        userid: int,
+        conversationid: int,
+        user_message: str) -> tuple[dict, list[dict]]:
+    history_messages = db_manager.get_recent_messages_for_context(
+        conversationid,
+        limit=20
+    )
+    check_result(history_messages)
+    model_config = db_manager.get_model_config_by_userid(userid)
+    check_result(model_config)
+    model_messages = modelApi.build_messages(user_message, history_messages)
+    return model_config, model_messages
+
+def build_model_runtime(model_config: dict, userid: int) -> dict:
+    is_local_model = is_local_model_config(model_config)
+    if is_local_model:
+        local_status = local_model_manager.get_status()
+        if local_status.get("status") != "ready":
+            raise HTTPException(
+                status_code=409,
+                detail="本地模型未启动"
+            )
+        return {
+            "is_local_model": True,
+            "model_name": model_config["model_name"],
+            "api_key": None,
+            "proxy_config": None
+        }
+
+    proxy_config = db_manager.get_proxy_config_by_user_id(userid)
+    check_result(proxy_config)
+    return {
+        "is_local_model": False,
+        "model_name": f"{model_config['provider_type']}/{model_config['model_name']}",
+        "api_key": key.decrypt_api_key(model_config["api_key"]),
+        "proxy_config": proxy_config
+    }
+
+async def stream_model_content(runtime: dict, model_messages: list[dict]):
+    if runtime["is_local_model"]:
+        for content in local_model_manager.chat_stream(model_messages):
+            yield content
+            await asyncio.sleep(0)
+        return
+
+    proxy_config = runtime["proxy_config"]
+    async for content in modelApi.chat_stream(
+        runtime["model_name"],
+        runtime["api_key"],
+        model_messages,
+        proxy_config["proxy_host"],
+        proxy_config["proxy_port"],
+        proxy_config["is_active"]
+    ):
+        yield content
+
+def normalize_conversation_title(title: str) -> str:
+    text = title.strip()
+    if "</think>" in text:
+        text = text.split("</think>", 1)[1].strip()
+    text = text.replace("<think>", "").strip()
+    text = text.replace("\r", " ").replace("\n", " ").strip()
+    text = text.strip(" \"'`“”‘’")
+    if len(text) > 30:
+        text = text[:30]
+    return text or "新对话"
 ##get
 @app.get("/chatai/user/defaultUserImage")
 async def get_default_user_image():
@@ -298,6 +381,32 @@ async def create_conversation(conversation:Conversation):
         "conversationid": result["conversation_id"]
     })
 
+@app.post("/chatai/user/conversation/title")
+async def create_conversation_title(req:ConversationTitle):
+    model_config, model_messages = build_model_context(
+        req.userid,
+        req.conversationid,
+        TITLE_PROMPT
+    )
+    runtime = build_model_runtime(model_config, req.userid)
+    full_content: list[str] = []
+    try:
+        async for content in stream_model_content(runtime, model_messages):
+            full_content.append(content)
+    except Exception as exc:
+        print(f"会话标题生成失败: {exc}")
+        raise HTTPException(
+            status_code=500,
+            detail="会话标题生成失败"
+        )
+    title = normalize_conversation_title("".join(full_content))
+    title_result = db_manager.update_conversation_title(req.conversationid, title)
+    check_result(title_result)
+    return success("会话标题生成成功", {
+        "conversationid": req.conversationid,
+        "title": title
+    })
+
 @app.post("/chatai/user/chat")
 async def create_chat_message(chatMessage:ChatMessage):
     user_message = chatMessage.message.strip()
@@ -307,113 +416,64 @@ async def create_chat_message(chatMessage:ChatMessage):
             status_code=400,
             detail="消息不能为空"
         )
-    # 查询历史上下文
-    history_messages = db_manager.get_recent_messages_for_context(
+    if chatMessage.istiTle:
+        raise HTTPException(
+            status_code=400,
+            detail="标题生成请调用专用接口"
+        )
+    model_config, model_messages = build_model_context(
+        chatMessage.userid,
         chatMessage.conversationid,
-        limit=20
+        user_message
     )
-    check_result(history_messages)
-    model_config = db_manager.get_model_config_by_userid(chatMessage.userid)
-    check_result(model_config)
-
-    is_local_model = (
-        model_config.get("provider_type") == "local"
-        or model_config.get("model_type") == "local"
-    )
-    model_messages = modelApi.build_messages(user_message,history_messages)
+    runtime = build_model_runtime(model_config, chatMessage.userid)
+    is_local_model = runtime["is_local_model"]
+    model_name = runtime["model_name"]
 
     if is_local_model:
-        local_status = local_model_manager.get_status()
-        if local_status.get("status") != "ready":
-            raise HTTPException(
-                status_code=409,
-                detail="本地模型未启动"
-            )
-        model_name = model_config["model_name"]
         user_tokens_used = 0
-        proxy_config = None
-        api_key = None
     else:
-        #查询当前的VPN配置
-        proxy_config = db_manager.get_proxy_config_by_user_id(chatMessage.userid)
-        check_result(proxy_config)
-        model_name = f"{model_config['provider_type']}/{model_config['model_name']}"
-        api_key = key.decrypt_api_key(model_config['api_key'])
-        # model_name = "zai/glm-5.2"
-        # api_key = "5a42c59072ee4983b9da2456c3b35343.MOiVpKzHuitSmd2T"
         #算上下文的token量
         user_tokens_used = modelApi.get_token_count(model_name,
         model_messages)
 
     # 先保存用户消息
-    if not chatMessage.istiTle:
-        user_result = db_manager.create_messages(
-            model_config["model_id"],
-            chatMessage.conversationid,"user",
-            user_message,user_tokens_used)
-        check_result(user_result)
-        user_created_at = user_result["created_at"]
+    user_result = db_manager.create_messages(
+        model_config["model_id"],
+        chatMessage.conversationid,"user",
+        user_message,user_tokens_used)
+    check_result(user_result)
+    user_created_at = user_result["created_at"]
     async def generate():
         full_content: list[str] = []
         try:
-            if is_local_model:
-                for content in local_model_manager.chat_stream(model_messages):
-                    full_content.append(content)
-                    yield json.dumps(
-                        {
-                            "type": "delta",
-                            "content": content
-                        },
-                        ensure_ascii=False
-                    ) + "\n"
-                    await asyncio.sleep(0)
-            else:
-                async for content in modelApi.chat_stream(
-                    model_name,
-                    api_key,
-                    model_messages,
-                    proxy_config["proxy_host"],
-                    proxy_config["proxy_port"],
-                    proxy_config["is_active"]
-                ):
-                    full_content.append(content)
-                    yield json.dumps(
-                        {
-                            "type": "delta",
-                            "content": content
-                        },
-                        ensure_ascii=False
-                    ) + "\n"
+            async for content in stream_model_content(runtime, model_messages):
+                full_content.append(content)
+                yield json.dumps(
+                    {
+                        "type": "delta",
+                        "content": content
+                    },
+                    ensure_ascii=False
+                ) + "\n"
             ai_message = "".join(full_content)
             # 把完整 AI 消息存入数据库
             ai_tokens_used = 0 if is_local_model else modelApi.get_token_count(model_name,
             ai_message)
-            if not chatMessage.istiTle:
-                # 先保存用户消息
-                ai_result = db_manager.create_messages(
-                    model_config["model_id"],
-                    chatMessage.conversationid,"assistant",
-                    ai_message,ai_tokens_used)
-                check_result(ai_result)
-                yield json.dumps(
-                    {
-                        "type": "done",
-                        "user_created_at":user_created_at,
-                        "ai_created_at":ai_result["created_at"]
-                    },
-                    ensure_ascii=False
-                ) + "\n"
-            else:
-                #替换会话
-                title_result = db_manager.update_conversation_title(chatMessage.conversationid,
-                                          ai_message)
-                check_result(title_result)
-                yield json.dumps(
-                   {
-                        "type": "done",
-                   },
-                   ensure_ascii=False
-                ) + "\n"
+            # 先保存用户消息
+            ai_result = db_manager.create_messages(
+                model_config["model_id"],
+                chatMessage.conversationid,"assistant",
+                ai_message,ai_tokens_used)
+            check_result(ai_result)
+            yield json.dumps(
+                {
+                    "type": "done",
+                    "user_created_at":user_created_at,
+                    "ai_created_at":ai_result["created_at"]
+                },
+                ensure_ascii=False
+            ) + "\n"
         except asyncio.CancelledError:
             # 前端断开或用户点击“停止生成”
             raise

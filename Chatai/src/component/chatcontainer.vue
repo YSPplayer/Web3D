@@ -282,29 +282,18 @@ const isMessageReasoning = (message) => {
  }
  //生成总结性会话标题
 const getTitleMessage = async ()=> {
-    let title = ''
     try {
-        await ChatAiApi.createChatMessageApi({
-            userid: user.userid,
-            modelconfigid: user.modelconfigid,
-            conversationid:user.conversationid,
-            message:'基于上面的对话生成一个此次会话的简短的总结性的标题，只需要文字，不需要有任何其他的符号',
-            istiTle:true
-        },
-        event => {
-            if (event.type === 'delta') {
-                title += event.content
-            } else if(event.type === 'done') {
-
-            } else if(event.type === 'error') {
-                title = ''
-            }
+        const result = await ChatAiApi.createConversationTitleApi(
+            user.userid,
+            user.conversationid
+        )
+        if(result?.code === 200) {
+            return result.data?.title || ''
         }
-    )
     } catch(error) {
-        title = ''
+        return ''
     } 
-    return title
+    return ''
 }
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()

@@ -69,19 +69,19 @@
                     <span class="center_span span_count">资源管理统计</span>
                     <div v-if="!onlineModel" class="flex_row system_status">
                             <span class="center_span">CPU内存占用率</span>
-                            <el-progress class="system_status_progress" :percentage="configForm.cpuMemoryPercent"></el-progress>
+                            <el-progress class="system_status_progress" :percentage="configForm.cpuMemoryPercent"  :color="progressColors"></el-progress>
                     </div>
                     <div v-if="!onlineModel" class="flex_row system_status">
                             <span class="center_span">CPU使用率</span>
-                            <el-progress class="system_status_progress" :percentage="configForm.cpuPercent"></el-progress>
+                            <el-progress class="system_status_progress" :percentage="configForm.cpuPercent"  :color="progressColors"></el-progress>
                     </div>
                       <div v-if="!onlineModel" class="flex_row system_status">
                             <span class="center_span">GPU内存占用率</span>
-                            <el-progress class="system_status_progress" :percentage="configForm.gpuMemoryPercent"></el-progress>
+                            <el-progress class="system_status_progress" :percentage="configForm.gpuMemoryPercent"  :color="progressColors"></el-progress>
                     </div>
                     <div v-if="!onlineModel" class="flex_row system_status">
                             <span class="center_span">GPU使用率</span>
-                            <el-progress class="system_status_progress" :percentage="configForm.gpuPercent"></el-progress>
+                            <el-progress class="system_status_progress" :percentage="configForm.gpuPercent"  :color="progressColors"></el-progress>
                     </div>
                     <div style="margin-bottom: 1rem;">
                         <tokenchart  :tokenData ="configForm.tokenData" :tokenCount="configForm.tokenCount"
@@ -124,6 +124,11 @@
         gpuPercent:0,
         gpuMemoryPercent:0,
     })
+    const progressColors = [
+    { color: '#67c23a', percentage: 40 },
+    { color: '#e6a23c', percentage: 70 },
+    { color: '#f56c6c', percentage: 100 }
+    ]
     //stopped / starting / ready / error
     const localModelState = ref('')
     const activeName = ref('model')
@@ -241,6 +246,7 @@
         await updatelocalModelState()
         user.modelname = modelSelectValue?.value.length > 1 
         ?  modelSelectValue.value[1] : ""
+        await saveConfig(false)
     } 
     const updateUserTokens = async(date) => {
         const result = await ChatAiApi.getTokensCountByUserIdApi(user.userid,date)
@@ -333,7 +339,7 @@
     const formatPortInput = (value) => {
         configForm.agentport = value.replace(/[^0-9.:]/g, '')
     }
-    const saveConfig = async () => {
+    const saveConfig = async (log = true) => {
         saveconfigLoading.value = true
         if(activeName.value === 'model') {
             const config = {
@@ -347,7 +353,7 @@
             } 
             const result = await ChatAiApi.saveModelConfigApi(config)
             if(result?.code == 200) {
-                ElMessage.success('配置保存成功！')
+                if(log) ElMessage.success('配置保存成功！')
                 const data = result.data
                 user.modelconfigid = data.modelconfigid
                 user.modelid = data.modelid
