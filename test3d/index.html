@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebGL 3D 学习场景</title>
+  </head>
+  <body>
+    <main class="app">
+      <header class="toolbar">
+        <strong>WebGL 3D 学习场景</strong>
+        <div class="target-controls" aria-label="模型变换目标">
+          <button type="button" data-transform-target="left">左模型</button>
+          <button type="button" data-transform-target="right">右模型</button>
+          <button type="button" data-transform-target="sync">同步</button>
+        </div>
+        <span>左键拖动：上下记录 Y 旋转，左右记录 Z 旋转</span>
+        <span>右键拖动：左右记录 X 平移，上下记录 Y 平移</span>
+      </header>
+      <canvas id="webgl-canvas">当前浏览器不支持 Canvas。</canvas>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
