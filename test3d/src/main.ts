@@ -33,5 +33,10 @@ console.log('[Scene] WebGL2 scene initialized', {
       translation: Array.from(interactionManager.state.right.translation),
       transformMatrix: Array.from(interactionManager.state.right.transformMatrix),
     },
+    group: {
+      rotation: Array.from(interactionManager.state.group.rotation),
+      translation: Array.from(interactionManager.state.group.translation),
+      transformMatrix: Array.from(interactionManager.state.group.transformMatrix),
+    },
   },
 });

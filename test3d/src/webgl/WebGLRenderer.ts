@@ -46,16 +46,17 @@ export class WebGLRenderer {
     this.viewLocation = viewLocation;
     this.projectionLocation = projectionLocation;
 
-    // 两个模型各有四个顶点，分别完全位于世界坐标的 X 负半轴和正半轴。
+    // 两个模型使用相同的局部顶点，几何中心均为局部原点。
+    // 左右初始位置由 InteractionManager 中各自的 TX 决定。
     this.models = [
       new RectangleModel(
         gl,
         'negative-x-rectangle',
         new Float32Array([
-          -2.25, -1.0, 0.0,
-          -0.45, -1.0, 0.0,
-          -0.45,  1.0, 0.0,
-          -2.25,  1.0, 0.0,
+          -0.9, -1.0, 0.0,
+           0.9, -1.0, 0.0,
+           0.9,  1.0, 0.0,
+          -0.9,  1.0, 0.0,
         ]),
         positionLocation,
       ),
@@ -63,10 +64,10 @@ export class WebGLRenderer {
         gl,
         'positive-x-rectangle',
         new Float32Array([
-           0.45, -1.0, 0.0,
-           2.25, -1.0, 0.0,
-           2.25,  1.0, 0.0,
-           0.45,  1.0, 0.0,
+          -0.9, -1.0, 0.0,
+           0.9, -1.0, 0.0,
+           0.9,  1.0, 0.0,
+          -0.9,  1.0, 0.0,
         ]),
         positionLocation,
       ),
