@@ -35,8 +35,18 @@
         </div>
         <div class="chat_input_container flex_row">
             <div class="chat_input">
-                <textarea  v-model="inputChatText" @keydown.enter.exact.prevent ="handleEnter()">
-                </textarea>
+                <div class="flex_colum">
+                    <textarea  v-model="inputChatText" @keydown.enter.exact.prevent ="handleEnter()">
+                    </textarea>
+                    <el-select class="chat_model_select" v-model="selecteValue" placeholder="">
+                        <el-option
+                        v-for="item in selectOptions"
+                        :key="item.value"
+                        :label="item.label"
+                        :value="item.value">
+                        </el-option>
+                    </el-select>
+                </div>
             </div>
             <img class="chat_post" :src="generating ? stopChat : postChat" :class="fill_img"
             @click="generating ? stopChatMessage() : sendChatMessage() " >
@@ -59,6 +69,11 @@
  const inputChatText = ref('')
  const chatMainRef = ref(null)
  const messages = ref([])
+ const selecteValue = ref('') //当前模式选择
+ const selectOptions = [
+  { label: 'Chat', value: 'chat' },
+  { label: 'Agent', value: 'agent' },
+]
  const isLoding = ref(false)
  const showLoadMore = ref(false)
  const showScrollBtn = ref(false)
@@ -453,7 +468,14 @@ const getTitleMessage = async ()=> {
     flex: 1;
     height: 100%;
 }
-
+.chat_model_select {
+    width: 120px;
+    margin-left: 1rem;
+}
+:deep(.chat_model_select .el-select__wrapper) {
+    height: 30px;
+    min-height: 30px;
+}
 .chat_input_container {
      width: 95%;
      height: 7.375rem;
