@@ -832,6 +832,13 @@ async def create_chat_message(chatMessage:ChatMessage):
                         usage_base,
                         metadata["call_type"],
                         temperature=0,
+                        max_output_tokens=min(
+                            int(metadata.get(
+                                "max_output_tokens",
+                                profile.max_output_tokens,
+                            )),
+                            profile.max_output_tokens,
+                        ),
                         agent_step=metadata["agent_step"],
                     )
 
@@ -851,6 +858,13 @@ async def create_chat_message(chatMessage:ChatMessage):
                         usage_base,
                         metadata["call_type"],
                         temperature=0.4,
+                        max_output_tokens=min(
+                            int(metadata.get(
+                                "max_output_tokens",
+                                profile.max_output_tokens,
+                            )),
+                            profile.max_output_tokens,
+                        ),
                         agent_step=metadata["agent_step"],
                     ):
                         yield content

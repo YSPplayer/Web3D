@@ -331,8 +331,8 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
         dispatcher = FakeDispatcher()
         runner = AgentRunner(dispatcher)
         duplicate_decision = (
-            '{"type":"tool","tool_name":"list_directory",'
-            '"arguments":{"path":"D:\\\\MeasResults","max_depth":0}}'
+            '{"type":"tool","tool_name":"get_current_time",'
+            '"arguments":{}}'
         )
         decisions = iter([duplicate_decision, duplicate_decision])
 
@@ -349,8 +349,39 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
                 conversation_id=56,
                 messages=[{
                     "role": "user",
-                    "content": "统计 D:\\MeasResults 的文件夹数量",
+                    "content": "查询当前系统时间",
                 }],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["tool_start", "tool_result", "delta"],
+        )
+        self.assertEqual(len(dispatcher.calls), 1)
+
+    async def test_natural_answer_after_successful_tool_becomes_implicit_final(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher)
+        decisions = iter([
+            '{"type":"tool","tool_name":"get_current_time","arguments":{}}',
+            "当前系统时间是 2026-08-31 12:00:00。",
+        ])
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            yield "当前系统时间是 2026-08-31 12:00:00。"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=1,
+                conversation_id=56,
+                messages=[{"role": "user", "content": "查询当前系统时间"}],
                 complete_model=complete_model,
                 stream_model=stream_model,
             )
@@ -368,11 +399,11 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
         decisions = iter([
             '{"type":"tool","tool_name":"list_directory",'
             '"arguments":{"path":"D:\\\\MeasResults","max_depth":3}}',
-            '{"type":"final","reason_code":"completed_with_tool",'
-            '"data":{"directory_count":1}}',
         ])
+        decision_calls = []
 
         async def complete_model(messages: list[dict], metadata: dict) -> str:
+            decision_calls.append(metadata)
             return next(decisions)
 
         async def stream_model(messages: list[dict], metadata: dict):
@@ -403,6 +434,8 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             dispatcher.calls[0]["arguments"],
             {"path": "D:\\MeasResults", "max_depth": 0},
         )
+        self.assertEqual(len(decision_calls), 1)
+        self.assertEqual(decision_calls[0]["max_output_tokens"], 256)
         self.assertEqual(events[-1]["type"], "delta")
 
 

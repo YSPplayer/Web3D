@@ -8,6 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from Agent.tool_dispatcher import ToolDispatcher
 from Agent.skill_loader import AgentSkillLoader
+from Agent.completion_policy import (
+    ToolCompletionPolicy,
+    tool_completion_policy,
+)
 from System.log_manager import get_logger
 
 
@@ -71,12 +75,14 @@ class AgentRunner:
         dispatcher: ToolDispatcher,
         skill_loader: AgentSkillLoader | None = None,
         *,
+        completion_policy: ToolCompletionPolicy | None = None,
         max_steps: int = 5,
         max_decision_retries: int = 2,
         max_failed_tools: int = 2,
     ):
         self.dispatcher = dispatcher
         self.skill_loader = skill_loader or AgentSkillLoader()
+        self.completion_policy = completion_policy or tool_completion_policy
         self.max_steps = max_steps
         self.max_decision_retries = max_decision_retries
         self.max_failed_tools = max_failed_tools
@@ -240,6 +246,37 @@ class AgentRunner:
                     },
                 ])
 
+                if (
+                    result.status == "success"
+                    and self.completion_policy.can_finalize(
+                        decision.tool_name,
+                        decision.arguments,
+                        model_result.get("data"),
+                        request_context={
+                            "directories_only": (
+                                self._requests_directories_only(
+                                    working_messages
+                                )
+                            ),
+                        },
+                    )
+                ):
+                    logger.info(
+                        "Agent 工具结果已满足请求，直接进入最终回答，"
+                        "user_id=%s conversation_id=%s tool=%s",
+                        user_id,
+                        conversation_id,
+                        decision.tool_name,
+                    )
+                    async for event in self._stream_final_answer(
+                        working_messages,
+                        tool_schemas,
+                        stream_model,
+                        agent_step=step_index + 1,
+                    ):
+                        yield event
+                    return
+
                 if failed_tools >= self.max_failed_tools:
                     yield self._tool_failure_event(result)
                     return
@@ -310,6 +347,7 @@ class AgentRunner:
                     ),
                     "agent_step": agent_step,
                     "retry_index": retry_index,
+                    "max_output_tokens": 256,
                 },
             )
             logger.debug(
@@ -318,7 +356,24 @@ class AgentRunner:
                 (raw_decision or "")[:2000],
             )
             try:
-                decision = self._parse_decision(raw_decision)
+                try:
+                    decision = self._parse_decision(raw_decision)
+                except json.JSONDecodeError:
+                    if (
+                        successful_tools > 0
+                        and self._looks_like_natural_answer(raw_decision)
+                    ):
+                        logger.info(
+                            "Agent 自然语言决策已归一化为 implicit final，"
+                            "step=%s retry=%s",
+                            agent_step,
+                            retry_index,
+                        )
+                        return FinalDecision(
+                            type="final",
+                            reason_code="completed_with_tool",
+                        )
+                    raise
                 validation_error = self._validate_decision(
                     decision,
                     available_tool_names=available_tool_names,
@@ -581,6 +636,20 @@ class AgentRunner:
                 continue
             return content
         return ""
+
+    @staticmethod
+    def _looks_like_natural_answer(content: str) -> bool:
+        text = AgentRunner._strip_reasoning(content).strip()
+        if len(text) < 10:
+            return False
+        if text.startswith(("{", "[", "```json")):
+            return False
+        if re.match(
+            r"^[A-Za-z_][A-Za-z0-9_]*\s*\n\s*\{",
+            text,
+        ):
+            return False
+        return True
 
     @staticmethod
     def _directory_only_result(model_result: dict) -> dict:
