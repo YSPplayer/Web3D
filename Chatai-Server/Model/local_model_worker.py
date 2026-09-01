@@ -62,6 +62,7 @@ def run_chat(
     tokenizer,
     model,
     temperature: float = 0.6,
+    max_output_tokens: int = 1024,
 ):
     inputs = None
     streamer = None
@@ -84,7 +85,7 @@ def run_chat(
         generation_kwargs = {
             **inputs,
             "streamer": streamer,
-            "max_new_tokens": 1024,
+            "max_new_tokens": max_output_tokens,
             "do_sample": temperature > 0,
             "eos_token_id": tokenizer.eos_token_id
         }
@@ -205,6 +206,7 @@ def main():
                     tokenizer,
                     model,
                     float(command.get("temperature", 0.6)),
+                    int(command.get("max_output_tokens", 1024)),
                 )
             if command_type == "count_tokens":
                 count_tokens(

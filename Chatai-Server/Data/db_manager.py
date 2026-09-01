@@ -48,12 +48,31 @@ class DBManager:
             conn = self.get_db_connection()
             try:
                 conn.executescript(sql_script)
+                self._migrate_schema(conn)
                 conn.commit()
             except Exception as exc:
                 logger.exception("数据库初始化失败")
                 conn.rollback()
                 raise
         logger.info("数据库初始化成功，sql_path=%s", sql_path)
+
+    @staticmethod
+    def _migrate_schema(conn):
+        """为已有 SQLite 数据库补充 CREATE TABLE 无法新增的字段。"""
+        model_columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(models)").fetchall()
+        }
+        migrations = {
+            "context_window": "INTEGER",
+            "max_output_tokens": "INTEGER",
+            "safety_margin_tokens": "INTEGER NOT NULL DEFAULT 512",
+        }
+        for column_name, column_type in migrations.items():
+            if column_name not in model_columns:
+                conn.execute(
+                    f"ALTER TABLE models ADD COLUMN {column_name} {column_type}"
+                )
     def get_models(self):
         with self.lock:
             try:
@@ -138,7 +157,9 @@ class DBManager:
                     return {}
                 imgs = conn.execute(
                     """
-                    SELECT id AS model_id,logo_path,provider_type
+                    SELECT id AS model_id, logo_path, provider_type,
+                           context_window, max_output_tokens,
+                           safety_margin_tokens
                     FROM models
                     WHERE model_type = ? AND model_name = ? 
                     """,
@@ -230,14 +251,13 @@ class DBManager:
                 rows = conn.execute(
                 """
                 SELECT 
-                    CAST(strftime('%H', m.created_at) AS INTEGER) AS hour,
-                    SUM(m.tokens_used) AS tokens
-                FROM messages m
-                JOIN conversations c ON m.conversation_id = c.id
-                WHERE c.user_id = ?
-                  AND date(m.created_at) = ?
-                  AND CAST(strftime('%H', m.created_at) AS INTEGER) <= ?
-                GROUP BY CAST(strftime('%H', m.created_at) AS INTEGER)
+                    CAST(strftime('%H', created_at) AS INTEGER) AS hour,
+                    SUM(total_tokens) AS tokens
+                FROM model_usage_runs
+                WHERE user_id = ?
+                  AND date(created_at) = ?
+                  AND CAST(strftime('%H', created_at) AS INTEGER) <= ?
+                GROUP BY CAST(strftime('%H', created_at) AS INTEGER)
                 ORDER BY hour
                 """,
                 (user_id, day, end_hour)
@@ -245,12 +265,11 @@ class DBManager:
                 total_row = conn.execute(
                     """
                     SELECT 
-                        COALESCE(SUM(m.tokens_used), 0) AS total_tokens
-                    FROM messages m
-                    JOIN conversations c ON m.conversation_id = c.id
-                    WHERE c.user_id = ?
-                    AND date(m.created_at) = ?
-                    AND CAST(strftime('%H', m.created_at) AS INTEGER) <= ?
+                        COALESCE(SUM(total_tokens), 0) AS total_tokens
+                    FROM model_usage_runs
+                    WHERE user_id = ?
+                    AND date(created_at) = ?
+                    AND CAST(strftime('%H', created_at) AS INTEGER) <= ?
                     """,
                     (user_id, day, end_hour)
                 ).fetchone()
@@ -287,7 +306,7 @@ class DBManager:
         with self.lock:
             #date(created_at) = '2026-07-30-9'：只查这一天
             #strftime('%H:00', created_at)：把时间归到小时
-            #SUM(tokens_used)：统计这个小时内所有消息 token 总量
+            #SUM(total_tokens)：统计这个小时内所有真实模型调用 token 总量
             #GROUP BY strftime('%H', created_at)：按小时分组
             conn = self.get_db_connection()
             try:
@@ -309,8 +328,8 @@ class DBManager:
                 """
                 SELECT 
                     CAST(strftime('%H', created_at) AS INTEGER) AS hour,
-                    SUM(tokens_used) AS tokens
-                FROM messages
+                    SUM(total_tokens) AS tokens
+                FROM model_usage_runs
                 WHERE conversation_id = ?
                   AND date(created_at) = ?
                   AND CAST(strftime('%H', created_at) AS INTEGER) <= ?
@@ -322,8 +341,8 @@ class DBManager:
                 total_row = conn.execute(
                     """
                     SELECT 
-                        COALESCE(SUM(tokens_used), 0) AS total_tokens
-                    FROM messages
+                        COALESCE(SUM(total_tokens), 0) AS total_tokens
+                    FROM model_usage_runs
                     WHERE conversation_id = ?
                     AND date(created_at) = ?
                     AND CAST(strftime('%H', created_at) AS INTEGER) <= ?
@@ -588,6 +607,135 @@ class DBManager:
                 return {
                     "code": 500
                 }
+
+    def get_all_messages_for_context(self, conversation_id: int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                rows = conn.execute(
+                    """
+                    SELECT id, role, content
+                    FROM messages
+                    WHERE conversation_id = ?
+                    ORDER BY id ASC
+                    """,
+                    (conversation_id,),
+                ).fetchall()
+                return [dict(row) for row in rows] if rows else []
+            except Exception:
+                logger.exception(
+                    "数据库操作失败，operation=get_all_messages_for_context"
+                )
+                return {"code": 500}
+
+    def get_conversation_summary(self, conversation_id: int):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT conversation_id, summary_text,
+                           summarized_through_message_id, tokens_used
+                    FROM conversation_summaries
+                    WHERE conversation_id = ?
+                    """,
+                    (conversation_id,),
+                ).fetchone()
+                return dict(row) if row else {}
+            except Exception:
+                logger.exception(
+                    "数据库操作失败，operation=get_conversation_summary"
+                )
+                return {"code": 500}
+
+    def upsert_conversation_summary(
+        self,
+        conversation_id: int,
+        summary_text: str,
+        summarized_through_message_id: int,
+        tokens_used: int,
+    ):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                now = self.now_time()
+                conn.execute(
+                    """
+                    INSERT INTO conversation_summaries (
+                        conversation_id, summary_text,
+                        summarized_through_message_id, tokens_used,
+                        created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(conversation_id) DO UPDATE SET
+                        summary_text = excluded.summary_text,
+                        summarized_through_message_id =
+                            excluded.summarized_through_message_id,
+                        tokens_used = excluded.tokens_used,
+                        updated_at = excluded.updated_at
+                    """,
+                    (
+                        conversation_id,
+                        summary_text,
+                        summarized_through_message_id,
+                        tokens_used,
+                        now,
+                        now,
+                    ),
+                )
+                conn.commit()
+                return {"code": 200}
+            except Exception:
+                conn.rollback()
+                logger.exception(
+                    "数据库操作失败，operation=upsert_conversation_summary"
+                )
+                return {"code": 500}
+
+    def create_model_usage_run(self, usage: dict):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                now = self.now_time()
+                cursor = conn.execute(
+                    """
+                    INSERT INTO model_usage_runs (
+                        user_id, conversation_id, message_id,
+                        model_id, model_config_id, mode, call_type,
+                        agent_step, input_tokens, output_tokens,
+                        total_tokens, context_window, max_output_tokens,
+                        truncated_messages, summary_used, status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        usage["user_id"],
+                        usage["conversation_id"],
+                        usage.get("message_id"),
+                        usage["model_id"],
+                        usage["model_config_id"],
+                        usage["mode"],
+                        usage["call_type"],
+                        usage.get("agent_step", 0),
+                        usage.get("input_tokens", 0),
+                        usage.get("output_tokens", 0),
+                        usage.get("input_tokens", 0)
+                        + usage.get("output_tokens", 0),
+                        usage["context_window"],
+                        usage["max_output_tokens"],
+                        usage.get("truncated_messages", 0),
+                        int(bool(usage.get("summary_used", False))),
+                        usage.get("status", "success"),
+                        now,
+                    ),
+                )
+                conn.commit()
+                return {"usage_id": cursor.lastrowid}
+            except Exception:
+                conn.rollback()
+                logger.exception(
+                    "数据库操作失败，operation=create_model_usage_run"
+                )
+                return {"code": 500}
+
     def get_messages_page(self,conversation_id:int,limit: int , before_id:int):
         with self.lock:
             conn = self.get_db_connection()

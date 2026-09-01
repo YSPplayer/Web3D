@@ -226,7 +226,12 @@ class LocalModelManager:
         process.stdin.write(json.dumps(command, ensure_ascii=False) + "\n")
         process.stdin.flush()
 
-    def chat_stream(self, messages: list[dict], temperature: float = 0.6):
+    def chat_stream(
+        self,
+        messages: list[dict],
+        temperature: float = 0.6,
+        max_output_tokens: int = 1024,
+    ):
         if not self.chat_lock.acquire(blocking=False):
             raise RuntimeError("本地模型正在生成中")
 
@@ -242,6 +247,7 @@ class LocalModelManager:
                     "id": request_id,
                     "messages": messages,
                     "temperature": temperature,
+                    "max_output_tokens": max_output_tokens,
                 })
 
             while True:

@@ -65,7 +65,10 @@ CREATE TABLE IF NOT EXISTS models (
     provider_type TEXT NOT NULL,
     model_type TEXT NOT NULL,
     model_name TEXT NOT NULL,
-    logo_path TEXT NOT NULL
+    logo_path TEXT NOT NULL,
+    context_window INTEGER,
+    max_output_tokens INTEGER,
+    safety_margin_tokens INTEGER NOT NULL DEFAULT 512
 );
 INSERT OR IGNORE INTO models (id, provider_type, model_type, model_name, logo_path) VALUES
 (1,  'zai',       'glm',      'glm-4-plus',                     'logo/glm.svg'),
@@ -90,6 +93,51 @@ WHERE model_type = 'local';
 UPDATE model_configs
 SET is_online = 1
 WHERE model_type != 'local';
+
+CREATE TABLE IF NOT EXISTS conversation_summaries (
+    conversation_id INTEGER PRIMARY KEY,
+    summary_text TEXT NOT NULL DEFAULT '',
+    summarized_through_message_id INTEGER NOT NULL DEFAULT 0,
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id)
+        REFERENCES conversations(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS model_usage_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    conversation_id INTEGER NOT NULL,
+    message_id INTEGER,
+    model_id INTEGER NOT NULL,
+    model_config_id INTEGER NOT NULL,
+    mode TEXT NOT NULL CHECK (mode IN ('chat', 'agent')),
+    call_type TEXT NOT NULL,
+    agent_step INTEGER NOT NULL DEFAULT 0,
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens INTEGER NOT NULL DEFAULT 0,
+    context_window INTEGER NOT NULL,
+    max_output_tokens INTEGER NOT NULL,
+    truncated_messages INTEGER NOT NULL DEFAULT 0,
+    summary_used INTEGER NOT NULL DEFAULT 0
+        CHECK (summary_used IN (0, 1)),
+    status TEXT NOT NULL DEFAULT 'success'
+        CHECK (status IN ('success', 'failed', 'cancelled')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE SET NULL,
+    FOREIGN KEY (model_id) REFERENCES models(id) ON DELETE CASCADE,
+    FOREIGN KEY (model_config_id) REFERENCES model_configs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_model_usage_runs_conversation_id
+ON model_usage_runs(conversation_id);
+
+CREATE INDEX IF NOT EXISTS idx_model_usage_runs_user_created
+ON model_usage_runs(user_id, created_at);
 
 CREATE TABLE IF NOT EXISTS proxy_configs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -192,7 +240,7 @@ INSERT OR IGNORE INTO agent_tools (
 ('get_hostname', '获取主机名', '获取当前计算机主机名。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{},"required":[]}', '["*"]', 1, 0, 'low', 5, 4096, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('get_current_user', '获取当前用户', '获取当前操作系统登录用户名称。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{},"required":[]}', '["*"]', 1, 0, 'low', 5, 4096, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('get_os_info', '获取系统信息', '获取当前操作系统版本、内核、架构等基础信息。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{},"required":[]}', '["*"]', 1, 0, 'low', 10, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('list_directory', '列出目录', '列出允许目录下的文件和文件夹，不读取文件内容。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{"path":{"type":"string"},"max_depth":{"type":"integer","minimum":0,"maximum":3,"default":1}},"required":["path"]}', '["*"]', 1, 0, 'low', 10, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('list_directory', '列出目录', '列出允许目录下的文件和文件夹，不读取文件内容。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{"path":{"type":"string"},"max_depth":{"type":"integer","minimum":0,"maximum":3,"default":0}},"required":["path"]}', '["*"]', 1, 0, 'low', 10, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('file_stat', '查看文件信息', '查看允许目录下文件或文件夹的大小、修改时间、类型等元信息。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}', '["*"]', 1, 0, 'low', 10, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('read_text_file', '读取文本文件', '读取允许目录下的文本文件内容，需要限制最大输出长度。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{"path":{"type":"string"},"encoding":{"type":"string","default":"utf-8"},"max_bytes":{"type":"integer","minimum":1,"maximum":65536,"default":20000}},"required":["path"]}', '["*"]', 1, 0, 'medium', 10, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('read_file_head', '读取文件开头', '读取允许目录下文本文件的前 N 行。', 'python_builtin', 'all', '', '', '[]', '{"type":"object","properties":{"path":{"type":"string"},"lines":{"type":"integer","minimum":1,"maximum":200,"default":50},"encoding":{"type":"string","default":"utf-8"}},"required":["path"]}', '["*"]', 1, 0, 'low', 10, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),

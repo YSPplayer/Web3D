@@ -15,15 +15,19 @@ async def main():
     api_key = payload["api_key"]
     messages = payload["messages"]
     temperature = payload["temperature"]
+    max_output_tokens = payload.get("max_output_tokens")
     response = None
     try:
-        response = await litellm.acompletion(
-            model=model,
-            messages=messages,
-            temperature=temperature,
-            api_key=api_key,
-            stream=True
-        )
+        request_data = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "api_key": api_key,
+            "stream": True,
+        }
+        if max_output_tokens is not None:
+            request_data["max_tokens"] = max_output_tokens
+        response = await litellm.acompletion(**request_data)
         async for chunk in response:
             content = chunk.choices[0].delta.content
             if content:

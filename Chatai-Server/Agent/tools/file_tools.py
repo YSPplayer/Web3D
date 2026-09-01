@@ -19,7 +19,7 @@ class PathArguments(BaseModel):
 
 
 class ListDirectoryArguments(PathArguments):
-    max_depth: int = Field(default=1, ge=0, le=3)
+    max_depth: int = Field(default=0, ge=0, le=3)
 
 
 class ReadTextFileArguments(PathArguments):

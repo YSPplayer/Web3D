@@ -14,8 +14,8 @@ from System.log_manager import get_logger
 logger = get_logger(__name__)
 
 
-ModelCompletion = Callable[[list[dict]], Awaitable[str]]
-ModelStream = Callable[[list[dict]], AsyncIterator[str]]
+ModelCompletion = Callable[[list[dict], dict], Awaitable[str]]
+ModelStream = Callable[[list[dict], dict], AsyncIterator[str]]
 
 
 class ToolDecision(BaseModel):
@@ -27,7 +27,9 @@ class ToolDecision(BaseModel):
 
 
 class FinalDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # 部分模型会在 final 决策中附带已经得到的结果数据。决策层只关心
+    # type/reason_code，额外数据不会参与执行，因此安全忽略。
+    model_config = ConfigDict(extra="ignore")
 
     type: Literal["final"]
     reason_code: Literal["knowledge_only", "completed_with_tool"]
@@ -89,7 +91,8 @@ class AgentRunner:
         stream_model: ModelStream,
     ) -> AsyncIterator[dict]:
         skill = self.skill_loader.get()
-        tool_schemas = await self.dispatcher.model_schemas_for_user(user_id)
+        all_tool_schemas = await self.dispatcher.model_schemas_for_user(user_id)
+        tool_schemas = self._select_tool_schemas(messages, all_tool_schemas)
         tool_names = [
             schema.get("function", {}).get("name", "")
             for schema in tool_schemas
@@ -111,6 +114,7 @@ class AgentRunner:
         )
         failed_tools = 0
         successful_tools = 0
+        successful_call_signatures: set[str] = set()
 
         try:
             for step_index in range(self.max_steps):
@@ -120,6 +124,7 @@ class AgentRunner:
                     complete_model,
                     successful_tools=successful_tools,
                     request_requires_tool=request_requires_tool,
+                    agent_step=step_index + 1,
                 )
                 logger.info(
                     "Agent 决策，user_id=%s conversation_id=%s step=%s "
@@ -153,6 +158,34 @@ class AgentRunner:
                         working_messages,
                         tool_schemas,
                         stream_model,
+                        agent_step=step_index + 1,
+                    ):
+                        yield event
+                    return
+
+                decision = self._normalize_tool_decision(
+                    decision,
+                    working_messages,
+                )
+                call_signature = self._tool_call_signature(decision)
+                if call_signature in successful_call_signatures:
+                    logger.warning(
+                        "Agent 跳过重复成功工具调用，user_id=%s "
+                        "conversation_id=%s tool=%s arguments=%s",
+                        user_id,
+                        conversation_id,
+                        decision.tool_name,
+                        decision.arguments,
+                    )
+                    async for event in self._stream_final_answer(
+                        working_messages,
+                        tool_schemas,
+                        stream_model,
+                        fallback_reason=(
+                            "相同工具和参数已经成功执行，不得重复调用；"
+                            "请直接依据已有成功结果回答。"
+                        ),
+                        agent_step=step_index + 1,
                     ):
                         yield event
                     return
@@ -180,6 +213,16 @@ class AgentRunner:
                     failed_tools += 1
                 else:
                     successful_tools += 1
+                    successful_call_signatures.add(call_signature)
+
+                model_result = result.to_model_content()
+                if (
+                    result.status == "success"
+                    and decision.tool_name == "list_directory"
+                    and decision.arguments.get("max_depth") == 0
+                    and self._requests_directories_only(working_messages)
+                ):
+                    model_result = self._directory_only_result(model_result)
 
                 working_messages.extend([
                     {
@@ -192,7 +235,7 @@ class AgentRunner:
                     {
                         "role": "user",
                         "content": self._format_tool_result(
-                            result.to_model_content()
+                            model_result
                         ),
                     },
                 ])
@@ -233,6 +276,7 @@ class AgentRunner:
         *,
         successful_tools: int,
         request_requires_tool: bool,
+        agent_step: int,
     ) -> AgentDecision:
         decision_messages = [
             {
@@ -256,7 +300,18 @@ class AgentRunner:
         }
 
         for retry_index in range(self.max_decision_retries + 1):
-            raw_decision = await complete_model(decision_messages)
+            raw_decision = await complete_model(
+                decision_messages,
+                {
+                    "call_type": (
+                        "agent_decision"
+                        if retry_index == 0
+                        else "agent_retry"
+                    ),
+                    "agent_step": agent_step,
+                    "retry_index": retry_index,
+                },
+            )
             logger.debug(
                 "Agent 原始决策，retry=%s decision=%s",
                 retry_index,
@@ -310,6 +365,7 @@ class AgentRunner:
         tool_schemas: list[dict],
         stream_model: ModelStream,
         fallback_reason: str = "",
+        agent_step: int = 0,
     ) -> AsyncIterator[dict]:
         tool_names = [
             schema.get("function", {}).get("name", "")
@@ -340,7 +396,14 @@ class AgentRunner:
         ]
 
         emitted = False
-        async for content in stream_model(final_messages):
+        async for content in stream_model(
+            final_messages,
+            {
+                "call_type": "agent_final",
+                "agent_step": agent_step,
+                "retry_index": 0,
+            },
+        ):
             if not content:
                 continue
             emitted = True
@@ -446,24 +509,101 @@ class AgentRunner:
 
     @staticmethod
     def _decision_context(working_messages: list[dict]) -> list[dict]:
-        """决策阶段排除旧助手拒绝回答，只保留近期用户请求和工具结果。"""
-        user_indices = [
-            index
-            for index, message in enumerate(working_messages)
-            if message.get("role") == "user"
-            and not str(message.get("content", "")).startswith("<tool_result>")
-        ][-4:]
-        tool_result_indices = [
-            index
-            for index, message in enumerate(working_messages)
-            if str(message.get("content", "")).startswith("<tool_result>")
-        ]
-        selected_indices = set(user_indices + tool_result_indices)
-        return [
-            dict(message)
-            for index, message in enumerate(working_messages)
-            if index in selected_indices
-        ]
+        """保留完整上下文，实际截断由统一 token 预算层完成。"""
+        return [dict(message) for message in working_messages]
+
+    @classmethod
+    def _normalize_tool_decision(
+        cls,
+        decision: ToolDecision,
+        working_messages: list[dict],
+    ) -> ToolDecision:
+        if (
+            decision.tool_name != "list_directory"
+            or not cls._requests_directories_only(working_messages)
+        ):
+            return decision
+
+        arguments = dict(decision.arguments)
+        if arguments.get("max_depth") != 0:
+            logger.info(
+                "Agent 目录请求已强制使用 max_depth=0，原值=%s",
+                arguments.get("max_depth"),
+            )
+        arguments["max_depth"] = 0
+        return decision.model_copy(update={"arguments": arguments})
+
+    @staticmethod
+    def _tool_call_signature(decision: ToolDecision) -> str:
+        return json.dumps(
+            {
+                "tool_name": decision.tool_name,
+                "arguments": decision.arguments,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+
+    @classmethod
+    def _requests_directories_only(cls, working_messages: list[dict]) -> bool:
+        request = cls._latest_user_request(working_messages).lower()
+        if not request:
+            return False
+
+        directory_terms = (
+            "文件夹", "子目录", "目录名", "folder", "folders",
+            "subdirectory", "subdirectories", "directory names",
+        )
+        mixed_terms = (
+            "文件和文件夹", "文件及文件夹", "文件、文件夹",
+            "files and folders", "files and directories",
+        )
+        recursive_terms = (
+            "递归", "所有层级", "全部层级", "所有子目录", "全部子目录",
+            "包含下级", "包括下级", "及其子目录", "recursive",
+            "all subdirectories", "all levels",
+        )
+        return (
+            any(term in request for term in directory_terms)
+            and not any(term in request for term in mixed_terms)
+            and not any(term in request for term in recursive_terms)
+        )
+
+    @staticmethod
+    def _latest_user_request(working_messages: list[dict]) -> str:
+        for message in reversed(working_messages):
+            if message.get("role") != "user":
+                continue
+            content = str(message.get("content", ""))
+            if content.startswith("<tool_result>"):
+                continue
+            return content
+        return ""
+
+    @staticmethod
+    def _directory_only_result(model_result: dict) -> dict:
+        normalized_result = dict(model_result)
+        data = normalized_result.get("data")
+        if not isinstance(data, dict):
+            return normalized_result
+
+        normalized_data = dict(data)
+        entries = normalized_data.get("entries")
+        if isinstance(entries, list):
+            directory_entries = [
+                entry
+                for entry in entries
+                if isinstance(entry, dict)
+                and entry.get("type") == "directory"
+            ]
+            normalized_data["entries"] = directory_entries
+            normalized_data["directory_count"] = len(directory_entries)
+        normalized_data.pop("file_count", None)
+        normalized_data["result_scope"] = "direct_directories_only"
+        normalized_result["data"] = normalized_data
+        return normalized_result
 
     @staticmethod
     def _request_requires_tool(working_messages: list[dict]) -> bool:
@@ -509,6 +649,58 @@ class AgentRunner:
         if re.search(r"(?i)(?:[a-z]:[\\/]|\\\\)", request):
             provided_fields.add("path")
         return provided_fields
+
+    @staticmethod
+    def _select_tool_schemas(
+        messages: list[dict],
+        tool_schemas: list[dict],
+        maximum: int = 10,
+    ) -> list[dict]:
+        """按用户请求预筛工具 Schema；无法可靠匹配时保留全部工具。"""
+        user_requests = [
+            str(message.get("content", ""))
+            for message in messages
+            if message.get("role") == "user"
+            and not str(message.get("content", "")).startswith("<tool_result>")
+        ]
+        if not user_requests or len(tool_schemas) <= maximum:
+            return tool_schemas
+
+        request = user_requests[-1].lower()
+        request_terms = AgentRunner._semantic_terms(request)
+        scored: list[tuple[int, int, dict]] = []
+        for index, schema in enumerate(tool_schemas):
+            function = schema.get("function", {})
+            schema_text = " ".join([
+                str(function.get("name", "")).replace("_", " "),
+                str(function.get("description", "")),
+                json.dumps(
+                    function.get("parameters", {}),
+                    ensure_ascii=False,
+                ),
+            ]).lower()
+            score = len(request_terms & AgentRunner._semantic_terms(schema_text))
+            tool_name = str(function.get("name", "")).lower()
+            if tool_name and tool_name in request:
+                score += 20
+            if score > 0:
+                scored.append((score, -index, schema))
+
+        if not scored:
+            return tool_schemas
+        scored.sort(reverse=True, key=lambda item: (item[0], item[1]))
+        return [item[2] for item in scored[:maximum]]
+
+    @staticmethod
+    def _semantic_terms(text: str) -> set[str]:
+        terms = set(re.findall(r"[a-z0-9_]{2,}", text.lower()))
+        chinese_segments = re.findall(r"[\u4e00-\u9fff]+", text)
+        for segment in chinese_segments:
+            terms.update(
+                segment[index:index + 2]
+                for index in range(max(0, len(segment) - 1))
+            )
+        return terms
 
     @staticmethod
     def _agent_error(code: str, message: str, **details) -> dict:

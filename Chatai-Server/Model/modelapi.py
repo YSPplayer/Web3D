@@ -10,11 +10,17 @@ from System.log_manager import get_logger
 
 logger = get_logger(__name__)
 class ModelApi:
-    def get_token_count(self,model:str,message: str):
+    def get_token_count(
+        self,
+        model: str,
+        text: str | None = None,
+        messages: list[dict] | None = None,
+    ):
         return litellm.token_counter(
-        model=model,
-        text=message
-    )
+            model=model,
+            text=text,
+            messages=messages,
+        )
 
     def build_proxy_url(self,ip: str, port: int) -> str:
         return f"http://{ip}:{port}"
@@ -58,7 +64,8 @@ class ModelApi:
     async def chat_stream(self, model: str, api_key: str, message: list[dict], proxy_host: str | None = None,
         proxy_port: int | None = None,
         proxy_active: int = 0,
-        temperature: float = 0.6):
+        temperature: float = 0.6,
+        max_output_tokens: int | None = None):
         response = None
         use_proxy = (
             int(proxy_active or 0) == 1
@@ -67,12 +74,17 @@ class ModelApi:
         )
         if not use_proxy:#非代理下直接返回
             try:
+                request_data = {
+                    "model": model,
+                    "messages": message,
+                    "temperature": temperature,
+                    "api_key": api_key,
+                    "stream": True,
+                }
+                if max_output_tokens is not None:
+                    request_data["max_tokens"] = max_output_tokens
                 response = await litellm.acompletion(
-                    model=model,
-                    messages=message,
-                    temperature=temperature,
-                    api_key=api_key,
-                    stream=True
+                    **request_data
                 )
                 async for chunk in response:
                     content = chunk.choices[0].delta.content
@@ -100,7 +112,8 @@ class ModelApi:
             "model": model,
             "api_key": api_key,
             "messages": message,
-            "temperature": temperature
+            "temperature": temperature,
+            "max_output_tokens": max_output_tokens,
         }
         process = None
         stderr_task = None

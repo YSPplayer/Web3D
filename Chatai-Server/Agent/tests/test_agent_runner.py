@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from Agent.result import ToolExecutionResult
@@ -55,13 +56,33 @@ class FakeDispatcher:
 
     async def execute(self, **kwargs) -> ToolExecutionResult:
         self.calls.append(kwargs)
+        if kwargs["tool_name"] == "list_directory":
+            data = {
+                "path": kwargs["arguments"]["path"],
+                "entries": [
+                    {
+                        "name": "folder-a",
+                        "relative_path": "folder-a",
+                        "type": "directory",
+                    },
+                    {
+                        "name": "file.txt",
+                        "relative_path": "file.txt",
+                        "type": "file",
+                    },
+                ],
+                "file_count": 1,
+                "directory_count": 1,
+                "max_depth": kwargs["arguments"].get("max_depth", 0),
+                "truncated": False,
+            }
+        else:
+            data = {"datetime": "2026-08-31 12:00:00"}
         return ToolExecutionResult(
             run_id=1,
             tool_name=kwargs["tool_name"],
             status=self.result_status,
-            data={"datetime": "2026-08-31 12:00:00"}
-            if self.result_status == "success"
-            else None,
+            data=data if self.result_status == "success" else None,
             error=None if self.result_status == "success" else "工具不可用",
         )
 
@@ -75,10 +96,10 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             '{"type":"final","reason_code":"completed_with_tool"}',
         ])
 
-        async def complete_model(messages: list[dict]) -> str:
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
             return next(decisions)
 
-        async def stream_model(messages: list[dict]):
+        async def stream_model(messages: list[dict], metadata: dict):
             self.assertIn("<tool_result>", str(messages))
             yield "当前时间是"
             yield "2026-08-31 12:00:00"
@@ -109,10 +130,10 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             '{"type":"final","reason_code":"knowledge_only"}',
         ])
 
-        async def complete_model(messages: list[dict]) -> str:
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
             return next(decisions)
 
-        async def stream_model(messages: list[dict]):
+        async def stream_model(messages: list[dict], metadata: dict):
             yield "当前不需要调用工具"
 
         events = [
@@ -135,13 +156,13 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
         dispatcher = FakeDispatcher(result_status="denied")
         runner = AgentRunner(dispatcher, max_failed_tools=1)
 
-        async def complete_model(messages: list[dict]) -> str:
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
             return (
                 '{"type":"tool","tool_name":"get_current_time",'
                 '"arguments":{}}'
             )
 
-        async def stream_model(messages: list[dict]):
+        async def stream_model(messages: list[dict], metadata: dict):
             self.fail("工具失败不应再次调用模型生成错误说明")
             yield ""
 
@@ -173,10 +194,10 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             '{"type":"final","reason_code":"completed_with_tool"}',
         ])
 
-        async def complete_model(messages: list[dict]) -> str:
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
             return next(decisions)
 
-        async def stream_model(messages: list[dict]):
+        async def stream_model(messages: list[dict], metadata: dict):
             yield "目录查询完成"
 
         events = [
@@ -207,10 +228,10 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             '{"type":"final","reason_code":"completed_with_tool"}',
         ])
 
-        async def complete_model(messages: list[dict]) -> str:
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
             return next(decisions)
 
-        async def stream_model(messages: list[dict]):
+        async def stream_model(messages: list[dict], metadata: dict):
             yield "目录中有 3 个文件夹"
 
         events = [
@@ -248,10 +269,10 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             '{"type":"final","reason_code":"completed_with_tool"}',
         ])
 
-        async def complete_model(messages: list[dict]) -> str:
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
             return next(decisions)
 
-        async def stream_model(messages: list[dict]):
+        async def stream_model(messages: list[dict], metadata: dict):
             yield "目录查询完成"
 
         events = [
@@ -273,6 +294,116 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             ["tool_start", "tool_result", "delta"],
         )
         self.assertEqual(dispatcher.calls[0]["tool_name"], "list_directory")
+
+    async def test_final_decision_ignores_harmless_data_field(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher)
+        decisions = iter([
+            '{"type":"tool","tool_name":"get_current_time","arguments":{}}',
+            '{"type":"final","reason_code":"completed_with_tool",'
+            '"data":{"datetime":"2026-08-31 12:00:00"}}',
+        ])
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            yield "当前时间是 2026-08-31 12:00:00"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=3,
+                conversation_id=25,
+                messages=[{"role": "user", "content": "现在几点"}],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["tool_start", "tool_result", "delta"],
+        )
+        self.assertEqual(len(dispatcher.calls), 1)
+
+    async def test_successful_identical_tool_call_is_not_executed_twice(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher)
+        duplicate_decision = (
+            '{"type":"tool","tool_name":"list_directory",'
+            '"arguments":{"path":"D:\\\\MeasResults","max_depth":0}}'
+        )
+        decisions = iter([duplicate_decision, duplicate_decision])
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            yield "目录查询完成"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=1,
+                conversation_id=56,
+                messages=[{
+                    "role": "user",
+                    "content": "统计 D:\\MeasResults 的文件夹数量",
+                }],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["tool_start", "tool_result", "delta"],
+        )
+        self.assertEqual(len(dispatcher.calls), 1)
+
+    async def test_direct_folder_request_forces_depth_zero_and_filters_files(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher)
+        decisions = iter([
+            '{"type":"tool","tool_name":"list_directory",'
+            '"arguments":{"path":"D:\\\\MeasResults","max_depth":3}}',
+            '{"type":"final","reason_code":"completed_with_tool",'
+            '"data":{"directory_count":1}}',
+        ])
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            serialized = json.dumps(messages, ensure_ascii=False)
+            self.assertIn("folder-a", serialized)
+            self.assertNotIn("file.txt", serialized)
+            self.assertIn("direct_directories_only", serialized)
+            yield "共有 1 个一级文件夹：folder-a"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=1,
+                conversation_id=56,
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        "帮我分析一下 D:\\MeasResults 这里的文件夹数量，"
+                        "每一个文件夹的目录名也整理给我"
+                    ),
+                }],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertEqual(
+            dispatcher.calls[0]["arguments"],
+            {"path": "D:\\MeasResults", "max_depth": 0},
+        )
+        self.assertEqual(events[-1]["type"], "delta")
 
 
 if __name__ == "__main__":
