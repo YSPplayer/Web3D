@@ -8,22 +8,30 @@
                 <!-- <div class="loding_more" v-if="showLoadMore"> 
                     <span  @click="lodingShowMore">▲加载更多</span>
                     </div> -->
-                <chatrolecontainer
-                v-for="message in messages"
-                :key="message.id"
-                :isUser="message.role === 'user'"
-                :message="message.content"
-                :reasoning="message.reasoning"
-                :agentTrace="message.agentTrace"
-                :status="message.status"
-                :finishReason="message.finishReason"
-                :enableReasoning="isMessageReasoning(message)"
-                :streaming="message.streaming"
-                :timeText="message.timeText"
-                :chatName="getChatName(message.role,message.modelid)"
-                :svgChat = "getSvg(message.role,message.modelid) "
-                :showloding="message.showloding"
-                />
+                <div
+                    v-for="(message, index) in messages"
+                    :key="message.databaseId || message.id"
+                    class="chat_message_group">
+                    <div
+                        v-if="shouldShowDateDivider(message, index)"
+                        class="chat_date_divider">
+                        <span>{{ formatDateLabel(message.createdAt) }}</span>
+                    </div>
+                    <chatrolecontainer
+                        :isUser="message.role === 'user'"
+                        :message="message.content"
+                        :reasoning="message.reasoning"
+                        :agentTrace="message.agentTrace"
+                        :status="message.status"
+                        :finishReason="message.finishReason"
+                        :enableReasoning="isMessageReasoning(message)"
+                        :streaming="message.streaming"
+                        :timeText="message.timeText"
+                        :chatName="getChatName(message.role,message.modelid)"
+                        :svgChat="getSvg(message.role,message.modelid)"
+                        :showloding="message.showloding"
+                    />
+                </div>
             </div>
             <div v-show="showScrollBtn"  class="flex_row_center scroll_bottom_btn">
                 <el-button
@@ -85,6 +93,35 @@
  const BOTTOM_DISTANCE = 40
  const TOP_DISTANCE = 10
  const minLoadingTime = 300 //最小加载时间
+ const getDateKey = datetime => {
+    if(!datetime) return ''
+    return String(datetime).slice(0, 10)
+ }
+ const getLocalDateKey = date => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+ }
+ const formatDateLabel = datetime => {
+    const dateKey = getDateKey(datetime)
+    if(!dateKey) return ''
+
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(today.getDate() - 1)
+    if(dateKey === getLocalDateKey(today)) return '今天'
+    if(dateKey === getLocalDateKey(yesterday)) return '昨天'
+
+    const [year, month, day] = dateKey.split('-').map(Number)
+    return `${year}年${month}月${day}日`
+ }
+ const shouldShowDateDivider = (message, index) => {
+    const currentDate = getDateKey(message.createdAt)
+    if(!currentDate) return false
+    if(index === 0) return true
+    return currentDate !== getDateKey(messages.value[index - 1]?.createdAt)
+ }
  const canScroll = () => {
     const element = chatMainRef.value
     if (!element) {
@@ -215,6 +252,7 @@ const handleChatScroll = async () => {
         status:item.status || 'completed',
         finishReason:item.finish_reason || '',
         requestId:item.request_id || '',
+        createdAt:item.created_at || '',
         timeText:Util.extractTime(item.created_at),
         modelid:item.model_id
     })
@@ -231,6 +269,7 @@ const handleChatScroll = async () => {
             status:item.status || 'completed',
             finishReason:item.finishReason || '',
             requestId:item.requestId || '',
+            createdAt:item.createdAt || '',
             timeText:item.timeText,
             modelid:item.modelid
         })
@@ -358,6 +397,7 @@ const getTitleMessage = async ()=> {
         id: lastid + 1,
         role: 'user',
         content: userContent,
+        createdAt: '',
         modelid: user.modelid,
     })
    messages.value.push(userMessage) //增加用户对话
@@ -372,6 +412,7 @@ const getTitleMessage = async ()=> {
         status: 'streaming',
         finishReason: '',
         requestId: '',
+        createdAt: '',
         inThink: reasoningEnabled,
         reasoningEnabled,
         streaming: true,
@@ -399,7 +440,9 @@ const getTitleMessage = async ()=> {
                     activeRequestId = event.request_id
                     aiMessage.requestId = event.request_id
                     aiMessage.databaseId = event.assistant_message_id
+                    aiMessage.createdAt = event.assistant_created_at
                     aiMessage.timeText = Util.extractTime(event.assistant_created_at)
+                    userMessage.createdAt = event.user_created_at
                     userMessage.timeText = Util.extractTime(event.user_created_at)
                 } else if (event.type === 'delta') {
                     if (aiMessage.reasoningEnabled) {
@@ -465,6 +508,51 @@ const getTitleMessage = async ()=> {
 <style scoped>
 .chatcontainer {
     gap:1rem;
+}
+
+.chat_message_group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.chat_date_divider {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    color: #a0a5ad;
+    font-size: 0.75rem;
+    line-height: 1;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.chat_date_divider::before,
+.chat_date_divider::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    max-width: 8rem;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(150, 155, 165, 0.28)
+    );
+}
+
+.chat_date_divider::after {
+    background: linear-gradient(
+        to left,
+        transparent,
+        rgba(150, 155, 165, 0.28)
+    );
+}
+
+.chat_date_divider span {
+    white-space: nowrap;
 }
 .scroll_bottom_btn {
     position: absolute;  /* 添加：脱离文档流 */
