@@ -196,6 +196,7 @@ class AgentToolRepository:
         status: str,
         error_message: str | None = None,
         step_index: int = 0,
+        message_id: int | None = None,
     ) -> int:
         with self.db_manager.lock:
             connection = self.db_manager.get_db_connection()
@@ -205,6 +206,7 @@ class AgentToolRepository:
                     INSERT INTO agent_tool_runs (
                         user_id,
                         conversation_id,
+                        message_id,
                         tool_id,
                         tools_name,
                         arguments_json,
@@ -213,11 +215,12 @@ class AgentToolRepository:
                         step_index,
                         started_at,
                         ended_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         user_id,
                         conversation_id,
+                        message_id,
                         tool_id,
                         tool_name,
                         json.dumps(arguments, ensure_ascii=False, default=str),

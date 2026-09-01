@@ -15,6 +15,8 @@
                 :message="message.content"
                 :reasoning="message.reasoning"
                 :agentTrace="message.agentTrace"
+                :status="message.status"
+                :finishReason="message.finishReason"
                 :enableReasoning="isMessageReasoning(message)"
                 :streaming="message.streaming"
                 :timeText="message.timeText"
@@ -194,6 +196,8 @@ const handleChatScroll = async () => {
 }
  const generating = ref(false)
  let abortController = null;
+ let activeRequestId = ''
+ let activeAiMessage = null
  const lastid = messages.value.length > 0 ?
  messages.value[messages.value.length - 1].id : 0
  const updateChatMessage = (data,insert = false) => {
@@ -208,6 +212,9 @@ const handleChatScroll = async () => {
         content:item.content,
         reasoning:'',
         agentTrace:item.agent_trace || [],
+        status:item.status || 'completed',
+        finishReason:item.finish_reason || '',
+        requestId:item.request_id || '',
         timeText:Util.extractTime(item.created_at),
         modelid:item.model_id
     })
@@ -221,6 +228,9 @@ const handleChatScroll = async () => {
             content:item.content,
             reasoning:item.reasoning || '',
             agentTrace:item.agentTrace || [],
+            status:item.status || 'completed',
+            finishReason:item.finishReason || '',
+            requestId:item.requestId || '',
             timeText:item.timeText,
             modelid:item.modelid
         })
@@ -295,7 +305,30 @@ const isMessageReasoning = (message) => {
 
     message.content = message.answer
 }
- const stopChatMessage = ()=> {
+ const stopChatMessage = async ()=> {
+    const requestId = activeRequestId
+    let stopAccepted = true
+    if(requestId) {
+        try {
+            const result = await ChatAiApi.stopChatMessageApi(user.userid, requestId)
+            stopAccepted = result?.data?.stopped !== false
+        } catch(error) {
+            stopAccepted = true
+        }
+    }
+    if(!stopAccepted) return
+    if(activeAiMessage) {
+        activeAiMessage.status = 'cancelled'
+        activeAiMessage.finishReason = 'user_cancelled'
+        activeAiMessage.streaming = false
+        activeAiMessage.showloding = false
+        activeAiMessage.agentTrace.forEach(trace => {
+            if(trace.status === 'running') {
+                trace.status = 'failed'
+                trace.summary = '已停止'
+            }
+        })
+    }
     if(abortController) {
         abortController.abort()
         abortController = null
@@ -336,6 +369,9 @@ const getTitleMessage = async ()=> {
         reasoning: '',
         answer: '',
         agentTrace: [],
+        status: 'streaming',
+        finishReason: '',
+        requestId: '',
         inThink: reasoningEnabled,
         reasoningEnabled,
         streaming: true,
@@ -343,6 +379,7 @@ const getTitleMessage = async ()=> {
         showloding:true
     })
     messages.value.push(aiMessage)
+    activeAiMessage = aiMessage
     scrollToBottom(true)
     inputChatText.value = ''
     generating.value = true
@@ -358,7 +395,13 @@ const getTitleMessage = async ()=> {
                 mode: requestMode
             },
             event => {
-                if (event.type === 'delta') {
+                if (event.type === 'meta') {
+                    activeRequestId = event.request_id
+                    aiMessage.requestId = event.request_id
+                    aiMessage.databaseId = event.assistant_message_id
+                    aiMessage.timeText = Util.extractTime(event.assistant_created_at)
+                    userMessage.timeText = Util.extractTime(event.user_created_at)
+                } else if (event.type === 'delta') {
                     if (aiMessage.reasoningEnabled) {
                         handleThinkDelta(aiMessage, event.content)
                     } else {
@@ -376,10 +419,15 @@ const getTitleMessage = async ()=> {
                     }
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false
+                    aiMessage.status = event.status
+                    aiMessage.finishReason = 'stop'
+                    aiMessage.databaseId = event.assistant_message_id
                     userMessage.timeText = Util.extractTime(event.user_created_at)
                     aiMessage.timeText =  Util.extractTime(event.ai_created_at)
                 } else if (event.type === 'error') {
                     aiMessage.streaming = false
+                    aiMessage.status = 'failed'
+                    aiMessage.finishReason = 'internal_error'
                     aiMessage.content ||= event.message
                 } else if (event.type === 'agent_error') {
                     aiMessage.content += event.message
@@ -404,6 +452,8 @@ const getTitleMessage = async ()=> {
         generating.value = false
         aiMessage.streaming = false
         aiMessage.showloding = false
+        if(activeAiMessage === aiMessage) activeAiMessage = null
+        if(activeRequestId === aiMessage.requestId) activeRequestId = ''
         abortController = null
     }
 } 

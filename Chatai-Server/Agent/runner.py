@@ -92,6 +92,7 @@ class AgentRunner:
         *,
         user_id: int,
         conversation_id: int,
+        message_id: int | None = None,
         messages: list[dict],
         complete_model: ModelCompletion,
         stream_model: ModelStream,
@@ -210,6 +211,7 @@ class AgentRunner:
                     tool_name=decision.tool_name,
                     arguments=decision.arguments,
                     step_index=step_index + 1,
+                    message_id=message_id,
                 )
 
                 yield {

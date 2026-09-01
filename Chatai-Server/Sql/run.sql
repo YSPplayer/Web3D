@@ -50,7 +50,12 @@ CREATE TABLE IF NOT EXISTS messages (
         CHECK (role IN ('user', 'assistant')),
     content TEXT NOT NULL DEFAULT '',
     tokens_used INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'completed'
+        CHECK (status IN ('streaming', 'completed', 'cancelled', 'failed')),
+    finish_reason TEXT,
+    request_id TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (conversation_id)
         REFERENCES conversations(id) ON DELETE CASCADE,
     FOREIGN KEY (model_id)

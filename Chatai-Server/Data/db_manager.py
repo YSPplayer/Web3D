@@ -90,6 +90,34 @@ class DBManager:
             "CREATE INDEX IF NOT EXISTS idx_agent_tool_runs_message_id "
             "ON agent_tool_runs(message_id)"
         )
+        message_columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(messages)").fetchall()
+        }
+        message_migrations = {
+            "status": "TEXT NOT NULL DEFAULT 'completed'",
+            "finish_reason": "TEXT",
+            "request_id": "TEXT",
+            "updated_at": "TEXT",
+        }
+        for column_name, column_type in message_migrations.items():
+            if column_name not in message_columns:
+                conn.execute(
+                    f"ALTER TABLE messages ADD COLUMN {column_name} {column_type}"
+                )
+        conn.execute(
+            "UPDATE messages SET updated_at = created_at "
+            "WHERE updated_at IS NULL"
+        )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_request_id "
+            "ON messages(request_id) WHERE request_id IS NOT NULL"
+        )
+        conn.execute(
+            "UPDATE messages SET status = 'failed', "
+            "finish_reason = 'server_restarted' "
+            "WHERE status = 'streaming'"
+        )
     def get_models(self):
         with self.lock:
             try:
@@ -634,6 +662,8 @@ class DBManager:
                     SELECT id, role, content
                     FROM messages
                     WHERE conversation_id = ?
+                      AND status IN ('completed', 'cancelled')
+                      AND (status != 'cancelled' OR content != '')
                     ORDER BY id ASC
                     """,
                     (conversation_id,),
@@ -858,17 +888,41 @@ class DBManager:
                 )
                 return {"code": 500}
 
-    def create_messages(self,model_id:int,conversation_id:int,role: str,content:str, tokens_used: int = 0):
+    def create_messages(
+        self,
+        model_id: int,
+        conversation_id: int,
+        role: str,
+        content: str,
+        tokens_used: int = 0,
+        *,
+        status: str = "completed",
+        finish_reason: str | None = None,
+        request_id: str | None = None,
+    ):
         with self.lock:
             conn = self.get_db_connection()
             try:
                 now = self.now_time()
                 cursor = conn.execute(
                     """
-                    INSERT INTO messages (model_id,conversation_id, role, content,tokens_used,created_at)
-                    VALUES (?, ?,?, ?, ?, ?)
+                    INSERT INTO messages (
+                        model_id, conversation_id, role, content, tokens_used,
+                        status, finish_reason, request_id, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (model_id,conversation_id, role, content, tokens_used,now)
+                    (
+                        model_id,
+                        conversation_id,
+                        role,
+                        content,
+                        tokens_used,
+                        status,
+                        finish_reason,
+                        request_id,
+                        now,
+                        now,
+                    )
                 )
                 conn.commit()
                 new_id = cursor.lastrowid
@@ -882,6 +936,52 @@ class DBManager:
                 return {
                     "code":500
                 }
+
+    def finalize_assistant_message(
+        self,
+        message_id: int,
+        content: str,
+        tokens_used: int,
+        status: str,
+        finish_reason: str,
+    ):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                now = self.now_time()
+                cursor = conn.execute(
+                    """
+                    UPDATE messages
+                    SET content = ?,
+                        tokens_used = ?,
+                        status = ?,
+                        finish_reason = ?,
+                        updated_at = ?
+                    WHERE id = ?
+                      AND role = 'assistant'
+                      AND status = 'streaming'
+                    """,
+                    (
+                        content,
+                        tokens_used,
+                        status,
+                        finish_reason,
+                        now,
+                        message_id,
+                    ),
+                )
+                conn.commit()
+                return {
+                    "code": 200,
+                    "updated": cursor.rowcount > 0,
+                    "updated_at": now,
+                }
+            except Exception:
+                conn.rollback()
+                logger.exception(
+                    "数据库操作失败，operation=finalize_assistant_message"
+                )
+                return {"code": 500}
 
     def create_conversation(self,user_id:int,model_config_id:int,title:str):
         with self.lock:

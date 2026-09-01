@@ -9,6 +9,7 @@ import json
 from Config.config import config
 import uvicorn
 import mimetypes
+from uuid import uuid4
 from Agent import AgentRunner, AgentSkillLoader, create_default_dispatcher
 from Agent.trace_formatter import agent_trace_formatter
 from Data.db_manager import db_manager
@@ -31,6 +32,8 @@ logger = get_logger(__name__)
 agent_dispatcher = create_default_dispatcher(db_manager)
 agent_skill_loader = AgentSkillLoader()
 agent_runner = AgentRunner(agent_dispatcher, agent_skill_loader)
+active_generation_tasks: dict[str, dict] = {}
+active_generation_lock = asyncio.Lock()
 
 
 def attach_agent_traces(messages: list[dict]) -> list[dict]:
@@ -121,6 +124,19 @@ class ChatMessage(BaseModel):
     message:str
     istiTle:bool
     mode: Literal["chat", "agent"] = "chat"
+
+
+@app.post("/chatai/user/chat/stop")
+async def stop_chat_generation(userid: int, requestid: str):
+    async with active_generation_lock:
+        generation = active_generation_tasks.get(requestid)
+        if generation is None or generation["user_id"] != userid:
+            return success("生成任务已经结束", {"stopped": False})
+        generation["cancel_reason"] = "user_cancelled"
+        task = generation["task"]
+        if not task.done():
+            task.cancel()
+    return success("停止生成请求已提交", {"stopped": True})
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -311,6 +327,9 @@ async def collect_recorded_model_call(
         )
         status = "success"
         return output
+    except asyncio.CancelledError:
+        status = "cancelled"
+        raise
     finally:
         output_tokens = await token_manager.count_text(runtime, output)
         record_model_usage(
@@ -828,11 +847,65 @@ async def create_chat_message(chatMessage:ChatMessage):
     except ContextWindowExceeded as exc:
         raise HTTPException(status_code=413, detail=str(exc)) from exc
 
+    request_id = uuid4().hex
+    assistant_result = db_manager.create_messages(
+        model_config["model_id"],
+        chatMessage.conversationid,
+        "assistant",
+        "",
+        0,
+        status="streaming",
+        request_id=request_id,
+    )
+    check_result(assistant_result)
+    assistant_message_id = assistant_result["message_id"]
+    assistant_created_at = assistant_result["created_at"]
+    usage_base["message_id"] = assistant_message_id
+
+    async def finalize_generation(
+        content: str,
+        status: str,
+        finish_reason: str,
+        agent_run_ids: list[int],
+    ):
+        output_tokens = await token_manager.count_text(runtime, content)
+        result = db_manager.finalize_assistant_message(
+            assistant_message_id,
+            content,
+            output_tokens,
+            status,
+            finish_reason,
+        )
+        check_result(result)
+        bind_result = db_manager.bind_agent_tool_runs_to_message(
+            agent_run_ids,
+            assistant_message_id,
+        )
+        check_result(bind_result)
+        return result
+
     async def generate():
         full_content: list[str] = []
         agent_run_ids: list[int] = []
         stream_failed = False
+        generation = {
+            "user_id": chatMessage.userid,
+            "task": asyncio.current_task(),
+            "cancel_reason": None,
+        }
+        async with active_generation_lock:
+            active_generation_tasks[request_id] = generation
         try:
+            yield json.dumps(
+                {
+                    "type": "meta",
+                    "request_id": request_id,
+                    "assistant_message_id": assistant_message_id,
+                    "assistant_created_at": assistant_created_at,
+                    "user_created_at": user_created_at,
+                },
+                ensure_ascii=False,
+            ) + "\n"
             if chatMessage.mode == "agent":
                 logger.info(
                     "进入 Agent 流程，user_id=%s conversation_id=%s",
@@ -895,6 +968,7 @@ async def create_chat_message(chatMessage:ChatMessage):
                 async for event in agent_runner.run_stream(
                     user_id=chatMessage.userid,
                     conversation_id=chatMessage.conversationid,
+                    message_id=assistant_message_id,
                     messages=prepared_chat_context.messages,
                     complete_model=complete_agent_model,
                     stream_model=stream_agent_model,
@@ -934,40 +1008,55 @@ async def create_chat_message(chatMessage:ChatMessage):
                     ) + "\n"
 
             if stream_failed:
+                await finalize_generation(
+                    "".join(full_content),
+                    "failed",
+                    "provider_error",
+                    agent_run_ids,
+                )
                 return
 
             ai_message = "".join(full_content)
-            # 把完整 AI 消息存入数据库
-            ai_tokens_used = await token_manager.count_text(runtime, ai_message)
-            # 先保存用户消息
-            ai_result = db_manager.create_messages(
-                model_config["model_id"],
-                chatMessage.conversationid,"assistant",
-                ai_message,ai_tokens_used)
-            check_result(ai_result)
-            bind_result = db_manager.bind_agent_tool_runs_to_message(
+            await finalize_generation(
+                ai_message,
+                "completed",
+                "stop",
                 agent_run_ids,
-                ai_result["message_id"],
             )
-            check_result(bind_result)
             yield json.dumps(
                 {
                     "type": "done",
                     "user_created_at":user_created_at,
-                    "ai_created_at":ai_result["created_at"]
+                    "ai_created_at":assistant_created_at,
+                    "assistant_message_id": assistant_message_id,
+                    "status": "completed"
                 },
                 ensure_ascii=False
             ) + "\n"
         except asyncio.CancelledError:
-            # 前端断开或用户点击“停止生成”
+            cancel_reason = generation.get("cancel_reason") or "client_disconnected"
+            await finalize_generation(
+                "".join(full_content),
+                "cancelled",
+                cancel_reason,
+                agent_run_ids,
+            )
             logger.info(
-                "模型生成已取消，user_id=%s conversation_id=%s mode=%s",
+                "模型生成已取消，user_id=%s conversation_id=%s mode=%s request_id=%s reason=%s",
                 chatMessage.userid,
                 chatMessage.conversationid,
                 chatMessage.mode,
+                request_id,
+                cancel_reason,
             )
             raise
         except Exception:
+            await finalize_generation(
+                "".join(full_content),
+                "failed",
+                "internal_error",
+                agent_run_ids,
+            )
             logger.exception(
                 "模型流式调用失败，user_id=%s conversation_id=%s mode=%s",
                 chatMessage.userid,
@@ -981,6 +1070,11 @@ async def create_chat_message(chatMessage:ChatMessage):
                 },
                 ensure_ascii=False
             ) + "\n"
+        finally:
+            async with active_generation_lock:
+                current = active_generation_tasks.get(request_id)
+                if current is generation:
+                    active_generation_tasks.pop(request_id, None)
     return StreamingResponse(
         generate(),
         media_type="application/x-ndjson",

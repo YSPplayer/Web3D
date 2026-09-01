@@ -42,6 +42,13 @@ interface ChatMessage {
 }
 
 type ChatStreamEvent =
+  | {
+      type: 'meta'
+      request_id: string
+      assistant_message_id: number
+      assistant_created_at: string
+      user_created_at: string
+    }
   | { type: 'delta'; content: string }
   | {
       type: 'agent_trace'
@@ -57,7 +64,13 @@ type ChatStreamEvent =
       requested_capability?: string
       missing_fields?: string[]
     }
-  | { type: 'done'; user_created_at: string; ai_created_at: string }
+  | {
+      type: 'done'
+      user_created_at: string
+      ai_created_at: string
+      assistant_message_id: number
+      status: 'completed'
+    }
   | { type: 'error'; message: string }
 
 export const ChatAiApi = {
@@ -77,6 +90,11 @@ export const ChatAiApi = {
   },
   async createConversationApi(conversation:Conversation) : Promise<any> {
     return await request.post('/chatai/user/conversation',conversation)
+  },
+  async stopChatMessageApi(userid: number, requestid: string) {
+    return request.post(
+      `/chatai/user/chat/stop?userid=${userid}&requestid=${encodeURIComponent(requestid)}`
+    )
   },
   async createConversationTitleApi(userid:number, conversationid:number): Promise<any> {
     return await request.post('/chatai/user/conversation/title', {

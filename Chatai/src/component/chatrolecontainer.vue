@@ -46,6 +46,12 @@
                         v-html="renderedMessage"
                         @click="handleMarkdownClick">
                     </div>
+                    <div
+                        v-if="status === 'cancelled' || status === 'failed'"
+                        class="generation_status"
+                        :class="`is-${status}`">
+                        {{ status === 'cancelled' ? '已停止生成' : '生成失败' }}
+                    </div>
                 </div>
                 </div>    
             </div>
@@ -78,6 +84,14 @@
     agentTrace: {
         type: Array,
         default: () => []
+    },
+    status: {
+        type: String,
+        default: 'completed'
+    },
+    finishReason: {
+        type: String,
+        default: ''
     },
     enableReasoning: {
         type: Boolean,
@@ -459,6 +473,19 @@ const handleMarkdownClick = async event => {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px solid #e7e9ed;
+}
+
+.generation_status {
+    margin-top: 8px;
+    color: #9297a0;
+    font-size: 12px;
+    line-height: 1.5;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.generation_status.is-failed {
+    color: #b66f6f;
 }
 
 .chat_message {

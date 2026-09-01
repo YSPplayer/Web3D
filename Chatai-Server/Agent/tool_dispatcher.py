@@ -43,6 +43,7 @@ class ToolDispatcher:
         arguments: dict,
         confirmation_granted: bool = False,
         step_index: int = 0,
+        message_id: int | None = None,
     ) -> ToolExecutionResult:
         started_at = perf_counter()
         if not isinstance(arguments, dict):
@@ -100,6 +101,7 @@ class ToolDispatcher:
                 status="denied",
                 error_message=denied_reason,
                 step_index=step_index,
+                message_id=message_id,
             )
             return ToolExecutionResult(
                 run_id=run_id,
@@ -122,6 +124,7 @@ class ToolDispatcher:
                 status="denied",
                 error_message=str(exc),
                 step_index=step_index,
+                message_id=message_id,
             )
             return ToolExecutionResult(
                 run_id=run_id,
@@ -139,6 +142,7 @@ class ToolDispatcher:
             arguments=arguments,
             status="running",
             step_index=step_index,
+            message_id=message_id,
         )
 
         try:
