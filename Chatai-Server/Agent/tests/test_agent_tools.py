@@ -3,8 +3,10 @@ import threading
 import unittest
 from pathlib import Path
 
+from Agent.context import ToolContext
 from Agent.factory import build_default_registry
 from Agent.tool_dispatcher import ToolDispatcher
+from Agent.tools.file_tools import ListDirectoryArguments, ListDirectoryTool
 from Data.agent_tool_repository import AgentToolRepository
 
 
@@ -43,9 +45,12 @@ class AgentToolModuleTests(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         self.db_manager.close()
 
-    async def test_registered_python_tool_can_run_after_binding(self):
-        self.repository.set_user_tool_binding(1, "get_current_time", True)
+    async def test_enabled_python_tool_can_run_without_binding(self):
         dispatcher = ToolDispatcher(self.registry, self.repository)
+        schemas = await dispatcher.model_schemas_for_user(user_id=1)
+        schema_names = {schema["function"]["name"] for schema in schemas}
+
+        self.assertIn("get_current_time", schema_names)
 
         result = await dispatcher.execute(
             user_id=1,
@@ -62,7 +67,12 @@ class AgentToolModuleTests(unittest.IsolatedAsyncioTestCase):
         ).fetchone()
         self.assertEqual(run["status"], "success")
 
-    async def test_unbound_tool_is_denied_and_audited(self):
+    async def test_system_disabled_tool_is_denied_and_audited(self):
+        self.db_manager.connection.execute(
+            "UPDATE agent_tools SET is_enabled = 0 WHERE tools_name = ?",
+            ("get_hostname",),
+        )
+        self.db_manager.connection.commit()
         dispatcher = ToolDispatcher(self.registry, self.repository)
 
         result = await dispatcher.execute(
@@ -78,3 +88,22 @@ class AgentToolModuleTests(unittest.IsolatedAsyncioTestCase):
     def test_external_executable_is_not_registered(self):
         self.assertNotIn("run_registered_executable", self.registry.names())
         self.assertEqual(len(self.registry.names()), 19)
+
+    async def test_list_directory_returns_counts_for_selected_depth(self):
+        root = Path(__file__).resolve().parent
+        expected_directories = sum(path.is_dir() for path in root.iterdir())
+        expected_files = sum(path.is_file() for path in root.iterdir())
+
+        result = await ListDirectoryTool().execute(
+            ToolContext(
+                user_id=1,
+                conversation_id=None,
+                allowed_roots=(root,),
+            ),
+            ListDirectoryArguments(path=str(root), max_depth=0),
+        )
+
+        self.assertEqual(result["directory_count"], expected_directories)
+        self.assertEqual(result["file_count"], expected_files)
+        self.assertEqual(result["max_depth"], 0)
+        self.assertFalse(result["truncated"])

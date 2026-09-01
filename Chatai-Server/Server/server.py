@@ -9,7 +9,7 @@ import json
 from Config.config import config
 import uvicorn
 import mimetypes
-from Agent import AgentRunner, create_default_dispatcher
+from Agent import AgentRunner, AgentSkillLoader, create_default_dispatcher
 from Data.db_manager import db_manager
 from Model.key import key
 from Model.modelapi import modelApi
@@ -22,13 +22,21 @@ from System.log_manager import get_logger
 logger = get_logger(__name__)
 
 agent_dispatcher = create_default_dispatcher(db_manager)
-agent_runner = AgentRunner(agent_dispatcher)
+agent_skill_loader = AgentSkillLoader()
+agent_runner = AgentRunner(agent_dispatcher, agent_skill_loader)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
     logger.info("后端服务开始初始化")
     db_manager.init_db()
+    agent_skill = agent_skill_loader.load()
+    logger.info(
+        "Agent Skill 已加载，name=%s version=%s hash=%s",
+        agent_skill.name,
+        agent_skill.version,
+        agent_skill.content_hash[:12],
+    )
     await agent_dispatcher.sync_registered_tools()
     await system_monitor.start()
     logger.info("后端服务初始化完成")
@@ -189,9 +197,16 @@ def build_model_runtime(model_config: dict, userid: int) -> dict:
         "proxy_config": proxy_config
     }
 
-async def stream_model_content(runtime: dict, model_messages: list[dict]):
+async def stream_model_content(
+    runtime: dict,
+    model_messages: list[dict],
+    temperature: float = 0.6,
+):
     if runtime["is_local_model"]:
-        for content in local_model_manager.chat_stream(model_messages):
+        for content in local_model_manager.chat_stream(
+            model_messages,
+            temperature=temperature,
+        ):
             yield content
             await asyncio.sleep(0)
         return
@@ -203,13 +218,22 @@ async def stream_model_content(runtime: dict, model_messages: list[dict]):
         model_messages,
         proxy_config["proxy_host"],
         proxy_config["proxy_port"],
-        proxy_config["is_active"]
+        proxy_config["is_active"],
+        temperature=temperature,
     ):
         yield content
 
-async def collect_model_content(runtime: dict, model_messages: list[dict]) -> str:
+async def collect_model_content(
+    runtime: dict,
+    model_messages: list[dict],
+    temperature: float = 0.6,
+) -> str:
     content_parts: list[str] = []
-    async for content in stream_model_content(runtime, model_messages):
+    async for content in stream_model_content(
+        runtime,
+        model_messages,
+        temperature=temperature,
+    ):
         content_parts.append(content)
     return "".join(content_parts)
 
@@ -487,10 +511,18 @@ async def create_chat_message(chatMessage:ChatMessage):
                     chatMessage.conversationid,
                 )
                 async def complete_agent_model(messages: list[dict]) -> str:
-                    return await collect_model_content(runtime, messages)
+                    return await collect_model_content(
+                        runtime,
+                        messages,
+                        temperature=0,
+                    )
 
                 def stream_agent_model(messages: list[dict]):
-                    return stream_model_content(runtime, messages)
+                    return stream_model_content(
+                        runtime,
+                        messages,
+                        temperature=0.4,
+                    )
 
                 async for event in agent_runner.run_stream(
                     user_id=chatMessage.userid,
@@ -501,6 +533,8 @@ async def create_chat_message(chatMessage:ChatMessage):
                 ):
                     if event.get("type") == "delta":
                         full_content.append(event.get("content", ""))
+                    elif event.get("type") == "agent_error":
+                        full_content.append(event.get("message", "Agent 执行失败"))
                     elif event.get("type") == "error":
                         stream_failed = True
                     yield json.dumps(event, ensure_ascii=False) + "\n"

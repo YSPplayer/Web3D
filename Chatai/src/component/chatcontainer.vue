@@ -363,6 +363,8 @@ const getTitleMessage = async ()=> {
                 } else if (event.type === 'error') {
                     aiMessage.streaming = false
                     aiMessage.content ||= event.message
+                } else if (event.type === 'agent_error') {
+                    aiMessage.content += event.message
                 }
                 scrollToBottom()
             },

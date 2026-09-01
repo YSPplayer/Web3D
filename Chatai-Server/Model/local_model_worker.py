@@ -56,7 +56,13 @@ def load_model(model_path: Path):
     return tokenizer, model
 
 
-def run_chat(request_id: int, messages: list[dict], tokenizer, model):
+def run_chat(
+    request_id: int,
+    messages: list[dict],
+    tokenizer,
+    model,
+    temperature: float = 0.6,
+):
     inputs = None
     streamer = None
     generation_kwargs = None
@@ -79,11 +85,12 @@ def run_chat(request_id: int, messages: list[dict], tokenizer, model):
             **inputs,
             "streamer": streamer,
             "max_new_tokens": 1024,
-            "do_sample": True,
-            "temperature": 0.7,
-            "top_p": 0.9,
+            "do_sample": temperature > 0,
             "eos_token_id": tokenizer.eos_token_id
         }
+        if temperature > 0:
+            generation_kwargs["temperature"] = temperature
+            generation_kwargs["top_p"] = 0.9
 
         def generate():
             nonlocal error
@@ -196,7 +203,8 @@ def main():
                     command.get("id"),
                     command.get("messages") or [],
                     tokenizer,
-                    model
+                    model,
+                    float(command.get("temperature", 0.6)),
                 )
             if command_type == "count_tokens":
                 count_tokens(

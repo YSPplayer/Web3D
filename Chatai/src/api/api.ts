@@ -41,6 +41,15 @@ type ChatStreamEvent =
       status: 'success' | 'failed' | 'denied' | 'timeout'
       run_id: number | null
     }
+  | {
+      type: 'agent_error'
+      code: string
+      message: string
+      tool_name?: string
+      run_id?: number | null
+      requested_capability?: string
+      missing_fields?: string[]
+    }
   | { type: 'done'; user_created_at: string; ai_created_at: string }
   | { type: 'error'; message: string }
 

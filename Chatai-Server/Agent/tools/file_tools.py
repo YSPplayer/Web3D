@@ -73,7 +73,10 @@ def _entry_info(path: Path, root: Path) -> dict:
 class ListDirectoryTool(PythonTool[ListDirectoryArguments]):
     name = "list_directory"
     display_name = "列出目录"
-    description = "使用 Python 列出允许目录中的文件和子目录。"
+    description = (
+        "使用 Python 列出允许目录中的文件和子目录，并返回限定深度内的"
+        "文件数量和子目录数量；统计直接子目录时使用 max_depth=0。"
+    )
     args_model = ListDirectoryArguments
     timeout_seconds = 10
 
@@ -110,6 +113,13 @@ class ListDirectoryTool(PythonTool[ListDirectoryArguments]):
             return {
                 "path": str(root),
                 "entries": entries,
+                "file_count": sum(
+                    entry["type"] == "file" for entry in entries
+                ),
+                "directory_count": sum(
+                    entry["type"] == "directory" for entry in entries
+                ),
+                "max_depth": arguments.max_depth,
                 "truncated": truncated,
             }
 
@@ -331,7 +341,10 @@ class GetDiskUsageTool(PythonTool[DiskUsageArguments]):
 class GetDirectorySizeTool(PythonTool[DirectorySizeArguments]):
     name = "get_directory_size"
     display_name = "查看目录大小"
-    description = "使用 Python 统计允许目录在限定深度内的文件大小。"
+    description = (
+        "使用 Python 统计允许目录在限定深度内的总大小、文件数量和子目录"
+        "数量；统计直接子目录时使用 max_depth=0。"
+    )
     args_model = DirectorySizeArguments
     risk_level = "medium"
     timeout_seconds = 30

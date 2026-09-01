@@ -57,7 +57,8 @@ class ModelApi:
     
     async def chat_stream(self, model: str, api_key: str, message: list[dict], proxy_host: str | None = None,
         proxy_port: int | None = None,
-        proxy_active: int = 0):
+        proxy_active: int = 0,
+        temperature: float = 0.6):
         response = None
         use_proxy = (
             int(proxy_active or 0) == 1
@@ -69,7 +70,7 @@ class ModelApi:
                 response = await litellm.acompletion(
                     model=model,
                     messages=message,
-                    temperature=0.6,
+                    temperature=temperature,
                     api_key=api_key,
                     stream=True
                 )
@@ -99,7 +100,7 @@ class ModelApi:
             "model": model,
             "api_key": api_key,
             "messages": message,
-            "temperature": 0.6
+            "temperature": temperature
         }
         process = None
         stderr_task = None
