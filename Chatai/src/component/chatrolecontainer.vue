@@ -14,13 +14,30 @@
                             <span>{{timeText}}</span>
                     </div>
                   <div class="chat_message">
-                    <div v-if="reasoningText" class="reasoning_box">
+                    <div v-if="reasoningText || agentTrace.length" class="reasoning_box">
                         <div class="reasoning_header" @click="showReasoning = !showReasoning">
                             <span class="reasoning_arrow">{{ reasoningExpanded ? '▼' : '▶' }}</span>
                             <span>{{ streaming ? '思考中...' : '思考过程' }}</span>
                         </div>
                         <div v-if="reasoningExpanded" class="reasoning_content">
-                            {{ reasoningText }}
+                            <div v-if="agentTrace.length" class="agent_trace_list">
+                                <div
+                                    v-for="trace in agentTrace"
+                                    :key="trace.id"
+                                    class="agent_trace_item">
+                                    <span
+                                        class="agent_trace_dot"
+                                        :class="`is-${trace.status}`">
+                                    </span>
+                                    <div class="agent_trace_body">
+                                        <code>{{ trace.command }}</code>
+                                        <span>{{ trace.summary }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="reasoningText" class="model_reasoning_text">
+                                {{ reasoningText }}
+                            </div>
                         </div>
                     </div>
                     <div
@@ -57,6 +74,10 @@
     reasoning:{
         type:String,
         default:''
+    },
+    agentTrace: {
+        type: Array,
+        default: () => []
     },
     enableReasoning: {
         type: Boolean,
@@ -107,6 +128,8 @@ const reasoningText = computed(() => {
     if (!shouldParseReasoning.value) return ''
     return props.reasoning || parsedMessage.value.reasoning
 })
+
+const agentTrace = computed(() => props.agentTrace || [])
 
 const reasoningExpanded = computed(() => {
     return props.streaming || showReasoning.value
@@ -371,6 +394,71 @@ const handleMarkdownClick = async event => {
     word-break: break-word;
     user-select: text;
     -webkit-user-select: text;
+}
+
+.agent_trace_list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.agent_trace_item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.agent_trace_dot {
+    width: 7px;
+    height: 7px;
+    margin-top: 7px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #a5abb4;
+}
+
+.agent_trace_dot.is-running {
+    background: #d9983d;
+    box-shadow: 0 0 0 3px rgba(217, 152, 61, 0.14);
+}
+
+.agent_trace_dot.is-success {
+    background: #73a580;
+}
+
+.agent_trace_dot.is-failed,
+.agent_trace_dot.is-denied,
+.agent_trace_dot.is-timeout {
+    background: #c87979;
+}
+
+.agent_trace_body {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.agent_trace_body code {
+    color: #666d78;
+    font-family: Consolas, "SFMono-Regular", monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.agent_trace_body span {
+    color: #9a9fa8;
+    font-size: 12px;
+}
+
+.model_reasoning_text:not(:first-child) {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e7e9ed;
 }
 
 .chat_message {

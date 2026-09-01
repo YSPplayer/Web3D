@@ -198,7 +198,10 @@ class AgentRunner:
 
                 yield {
                     "type": "tool_start",
+                    "trace_id": f"tool-{step_index + 1}",
+                    "step_index": step_index + 1,
                     "tool_name": decision.tool_name,
+                    "arguments": decision.arguments,
                 }
 
                 result = await self.dispatcher.execute(
@@ -206,13 +209,18 @@ class AgentRunner:
                     conversation_id=conversation_id,
                     tool_name=decision.tool_name,
                     arguments=decision.arguments,
+                    step_index=step_index + 1,
                 )
 
                 yield {
                     "type": "tool_result",
+                    "trace_id": f"tool-{step_index + 1}",
+                    "step_index": step_index + 1,
                     "tool_name": result.tool_name,
+                    "arguments": decision.arguments,
                     "status": result.status,
                     "run_id": result.run_id,
+                    "data": result.data,
                 }
 
                 if result.status != "success":

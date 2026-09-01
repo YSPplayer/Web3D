@@ -14,6 +14,7 @@
                 :isUser="message.role === 'user'"
                 :message="message.content"
                 :reasoning="message.reasoning"
+                :agentTrace="message.agentTrace"
                 :enableReasoning="isMessageReasoning(message)"
                 :streaming="message.streaming"
                 :timeText="message.timeText"
@@ -205,6 +206,8 @@ const handleChatScroll = async () => {
         id: lastid + 1,
         role:item.role,
         content:item.content,
+        reasoning:'',
+        agentTrace:item.agent_trace || [],
         timeText:Util.extractTime(item.created_at),
         modelid:item.model_id
     })
@@ -216,6 +219,8 @@ const handleChatScroll = async () => {
             id: lastid + 1,
             role:item.role,
             content:item.content,
+            reasoning:item.reasoning || '',
+            agentTrace:item.agentTrace || [],
             timeText:item.timeText,
             modelid:item.modelid
         })
@@ -241,7 +246,9 @@ const handleChatScroll = async () => {
     return /(^|[-_])r1($|[-_])|reason|thinking/i.test(modelName)
 }
 const isMessageReasoning = (message) => {
-    return Boolean(message.reasoning) || isReasoningModel(message.modelid)
+    return Boolean(message.reasoning)
+        || Boolean(message.agentTrace?.length)
+        || isReasoningModel(message.modelid)
 }
  const handleThinkDelta = (message, delta) => {
     const openTag = '<think>'
@@ -328,6 +335,7 @@ const getTitleMessage = async ()=> {
         content: '',
         reasoning: '',
         answer: '',
+        agentTrace: [],
         inThink: reasoningEnabled,
         reasoningEnabled,
         streaming: true,
@@ -355,6 +363,16 @@ const getTitleMessage = async ()=> {
                         handleThinkDelta(aiMessage, event.content)
                     } else {
                         aiMessage.content += event.content
+                    }
+                } else if (event.type === 'agent_trace') {
+                    aiMessage.showloding = false
+                    const traceIndex = aiMessage.agentTrace.findIndex(
+                        item => item.id === event.trace.id
+                    )
+                    if (traceIndex === -1) {
+                        aiMessage.agentTrace.push(event.trace)
+                    } else {
+                        Object.assign(aiMessage.agentTrace[traceIndex], event.trace)
                     }
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false

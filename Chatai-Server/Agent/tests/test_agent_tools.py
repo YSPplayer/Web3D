@@ -57,15 +57,17 @@ class AgentToolModuleTests(unittest.IsolatedAsyncioTestCase):
             conversation_id=None,
             tool_name="get_current_time",
             arguments={},
+            step_index=2,
         )
 
         self.assertEqual(result.status, "success")
         self.assertIn("datetime", result.data)
         run = self.db_manager.connection.execute(
-            "SELECT status FROM agent_tool_runs WHERE id = ?",
+            "SELECT status, step_index FROM agent_tool_runs WHERE id = ?",
             (result.run_id,),
         ).fetchone()
         self.assertEqual(run["status"], "success")
+        self.assertEqual(run["step_index"], 2)
 
     async def test_system_disabled_tool_is_denied_and_audited(self):
         self.db_manager.connection.execute(

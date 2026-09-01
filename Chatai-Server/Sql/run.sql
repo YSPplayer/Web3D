@@ -194,7 +194,9 @@ CREATE TABLE IF NOT EXISTS agent_tool_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     conversation_id INTEGER,
+    message_id INTEGER,
     tool_id INTEGER NOT NULL,
+    step_index INTEGER NOT NULL DEFAULT 0,
     tools_name TEXT NOT NULL,
     arguments_json TEXT NOT NULL DEFAULT '{}',
     status TEXT NOT NULL
@@ -208,6 +210,7 @@ CREATE TABLE IF NOT EXISTS agent_tool_runs (
     ended_at TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE SET NULL,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE SET NULL,
     FOREIGN KEY (tool_id) REFERENCES agent_tools(id) ON DELETE CASCADE
 );
 

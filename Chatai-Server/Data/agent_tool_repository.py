@@ -195,6 +195,7 @@ class AgentToolRepository:
         arguments: dict,
         status: str,
         error_message: str | None = None,
+        step_index: int = 0,
     ) -> int:
         with self.db_manager.lock:
             connection = self.db_manager.get_db_connection()
@@ -209,9 +210,10 @@ class AgentToolRepository:
                         arguments_json,
                         status,
                         error_message,
+                        step_index,
                         started_at,
                         ended_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         user_id,
@@ -221,6 +223,7 @@ class AgentToolRepository:
                         json.dumps(arguments, ensure_ascii=False, default=str),
                         status,
                         error_message,
+                        step_index,
                         self.db_manager.now_time(),
                         self.db_manager.now_time() if status == "denied" else None,
                     ),

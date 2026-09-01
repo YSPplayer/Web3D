@@ -10,6 +10,7 @@ from Config.config import config
 import uvicorn
 import mimetypes
 from Agent import AgentRunner, AgentSkillLoader, create_default_dispatcher
+from Agent.trace_formatter import agent_trace_formatter
 from Data.db_manager import db_manager
 from Model.key import key
 from Model.modelapi import modelApi
@@ -30,6 +31,25 @@ logger = get_logger(__name__)
 agent_dispatcher = create_default_dispatcher(db_manager)
 agent_skill_loader = AgentSkillLoader()
 agent_runner = AgentRunner(agent_dispatcher, agent_skill_loader)
+
+
+def attach_agent_traces(messages: list[dict]) -> list[dict]:
+    message_ids = [
+        int(message["id"])
+        for message in messages
+        if message.get("role") == "assistant" and message.get("id") is not None
+    ]
+    rows = db_manager.get_agent_tool_runs_by_message_ids(message_ids)
+    check_result(rows)
+    traces_by_message: dict[int, list[dict]] = {}
+    for row in rows:
+        message_id = int(row["message_id"])
+        traces_by_message.setdefault(message_id, []).append(
+            agent_trace_formatter.from_audit_row(row)
+        )
+    for message in messages:
+        message["agent_trace"] = traces_by_message.get(message.get("id"), [])
+    return messages
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -546,6 +566,7 @@ async def models():
 async def get_model_chat_message(conversationid:int):
     messages = db_manager.get_messages(conversationid)
     check_result(messages)
+    messages = attach_agent_traces(messages)
     if not messages:
         return success("当前会话中的消息不存在！",[])
     else:
@@ -566,6 +587,7 @@ async def get_tokens_count(conversationid: int, date: str):
 async def get_model_chat_message_page(conversationid:int,limit: int,beforeid:int):#获取当前模型的会话记录，分页查询
     messages = db_manager.get_messages_page(conversationid,limit,beforeid)
     check_result(messages)
+    messages["messages"] = attach_agent_traces(messages["messages"])
     return success("当前会话消息查询成功！",messages)
 
 @app.get("/chatai/user/modelConfgState") #获取到模型配置
@@ -808,6 +830,7 @@ async def create_chat_message(chatMessage:ChatMessage):
 
     async def generate():
         full_content: list[str] = []
+        agent_run_ids: list[int] = []
         stream_failed = False
         try:
             if chatMessage.mode == "agent":
@@ -876,6 +899,15 @@ async def create_chat_message(chatMessage:ChatMessage):
                     complete_model=complete_agent_model,
                     stream_model=stream_agent_model,
                 ):
+                    if event.get("type") in {"tool_start", "tool_result"}:
+                        if (
+                            event.get("type") == "tool_result"
+                            and event.get("run_id") is not None
+                        ):
+                            agent_run_ids.append(int(event["run_id"]))
+                        public_event = agent_trace_formatter.from_event(event)
+                        yield json.dumps(public_event, ensure_ascii=False) + "\n"
+                        continue
                     if event.get("type") == "delta":
                         full_content.append(event.get("content", ""))
                     elif event.get("type") == "agent_error":
@@ -913,6 +945,11 @@ async def create_chat_message(chatMessage:ChatMessage):
                 chatMessage.conversationid,"assistant",
                 ai_message,ai_tokens_used)
             check_result(ai_result)
+            bind_result = db_manager.bind_agent_tool_runs_to_message(
+                agent_run_ids,
+                ai_result["message_id"],
+            )
+            check_result(bind_result)
             yield json.dumps(
                 {
                     "type": "done",

@@ -23,6 +23,15 @@ interface Conversation {
 
 type ChatMode = 'chat' | 'agent'
 
+export interface AgentTraceItem {
+  id: string
+  kind: 'tool'
+  toolName: string
+  command: string
+  status: 'running' | 'success' | 'failed' | 'denied' | 'timeout'
+  summary: string
+}
+
 interface ChatMessage {
   userid: number
   modelconfigid: number
@@ -34,12 +43,10 @@ interface ChatMessage {
 
 type ChatStreamEvent =
   | { type: 'delta'; content: string }
-  | { type: 'tool_start'; tool_name: string }
   | {
-      type: 'tool_result'
-      tool_name: string
-      status: 'success' | 'failed' | 'denied' | 'timeout'
-      run_id: number | null
+      type: 'agent_trace'
+      action: 'start' | 'finish'
+      trace: AgentTraceItem
     }
   | {
       type: 'agent_error'

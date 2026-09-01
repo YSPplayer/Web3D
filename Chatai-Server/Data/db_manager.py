@@ -73,6 +73,23 @@ class DBManager:
                 conn.execute(
                     f"ALTER TABLE models ADD COLUMN {column_name} {column_type}"
                 )
+        run_columns = {
+            row["name"]
+            for row in conn.execute("PRAGMA table_info(agent_tool_runs)").fetchall()
+        }
+        run_migrations = {
+            "message_id": "INTEGER",
+            "step_index": "INTEGER NOT NULL DEFAULT 0",
+        }
+        for column_name, column_type in run_migrations.items():
+            if column_name not in run_columns:
+                conn.execute(
+                    f"ALTER TABLE agent_tool_runs ADD COLUMN {column_name} {column_type}"
+                )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_tool_runs_message_id "
+            "ON agent_tool_runs(message_id)"
+        )
     def get_models(self):
         with self.lock:
             try:
@@ -788,6 +805,59 @@ class DBManager:
                  return {
                     "code":500
                 }
+
+    def get_agent_tool_runs_by_message_ids(self, message_ids: list[int]):
+        if not message_ids:
+            return []
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                placeholders = ",".join("?" for _ in message_ids)
+                rows = conn.execute(
+                    f"""
+                    SELECT id, message_id, step_index, tools_name,
+                           arguments_json, status, result_json
+                    FROM agent_tool_runs
+                    WHERE message_id IN ({placeholders})
+                    ORDER BY message_id ASC, step_index ASC, id ASC
+                    """,
+                    tuple(message_ids),
+                ).fetchall()
+                return [dict(row) for row in rows]
+            except Exception:
+                logger.exception(
+                    "数据库操作失败，operation=get_agent_tool_runs_by_message_ids"
+                )
+                return {"code": 500}
+
+    def bind_agent_tool_runs_to_message(
+        self,
+        run_ids: list[int],
+        message_id: int,
+    ):
+        if not run_ids:
+            return {"code": 200}
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                placeholders = ",".join("?" for _ in run_ids)
+                conn.execute(
+                    f"""
+                    UPDATE agent_tool_runs
+                    SET message_id = ?
+                    WHERE id IN ({placeholders})
+                    """,
+                    (message_id, *run_ids),
+                )
+                conn.commit()
+                return {"code": 200}
+            except Exception:
+                conn.rollback()
+                logger.exception(
+                    "数据库操作失败，operation=bind_agent_tool_runs_to_message"
+                )
+                return {"code": 500}
+
     def create_messages(self,model_id:int,conversation_id:int,role: str,content:str, tokens_used: int = 0):
         with self.lock:
             conn = self.get_db_connection()
