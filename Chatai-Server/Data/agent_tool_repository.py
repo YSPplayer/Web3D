@@ -32,7 +32,7 @@ class AgentToolRepository:
                             max_output_bytes,
                             created_at,
                             updated_at
-                        ) VALUES (?, ?, ?, 'python_builtin', ?, ?, '[]', 1, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ) VALUES (?, ?, ?, 'python_builtin', ?, ?, '["*"]', 1, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                         ON CONFLICT(tools_name) DO UPDATE SET
                             display_name = excluded.display_name,
                             description = excluded.description,
@@ -102,6 +102,10 @@ class AgentToolRepository:
             raise ToolRepositoryError(
                 f"工具 {tool_name} 的 allowed_roots_json 必须是字符串数组"
             )
+        if "*" in roots and roots != ["*"]:
+            raise ToolRepositoryError(
+                f"工具 {tool_name} 的路径通配符不能和其他路径混用"
+            )
 
         return ToolPolicy(
             tool_id=row["tool_id"],
@@ -124,19 +128,14 @@ class AgentToolRepository:
             try:
                 rows = connection.execute(
                     """
-                    SELECT tool.tools_name
-                    FROM agent_tools AS tool
-                    INNER JOIN agent_tool_bindings AS binding
-                      ON binding.tool_id = tool.id
-                    WHERE binding.user_id = ?
-                      AND binding.is_enabled = 1
-                      AND tool.is_enabled = 1
-                      AND tool.tool_type = 'python_builtin'
-                    """,
-                    (user_id,),
+                    SELECT tools_name
+                    FROM agent_tools
+                    WHERE is_enabled = 1
+                      AND tool_type = 'python_builtin'
+                    """
                 ).fetchall()
             except Exception as exc:
-                raise ToolRepositoryError(f"查询用户 Agent 工具失败：{exc}") from exc
+                raise ToolRepositoryError(f"查询已启用 Agent 工具失败：{exc}") from exc
         return {row["tools_name"] for row in rows}
 
     def set_user_tool_binding(

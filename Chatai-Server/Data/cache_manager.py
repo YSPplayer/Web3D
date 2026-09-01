@@ -1,6 +1,10 @@
 from cachetools import TTLCache
 from threading import RLock
 from copy import deepcopy
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
 
 class CacheManager:
     def __init__(self, maxsize: int = 512, ttl: int = 60):
@@ -11,18 +15,18 @@ class CacheManager:
         with self.lock:
             if key not in self.cache:
                 return None
-            print(f'已读取缓存 key{key},value{self.cache[key]}')
+            logger.debug("缓存命中，key=%s", key)
             return deepcopy(self.cache[key])
     
     def set(self, key, value):
         with self.lock:
             self.cache[key] = deepcopy(value)
-            print(f'已存储缓存 key{key},value{self.cache[key]}')
+            logger.debug("缓存写入，key=%s", key)
 
     def delete(self, key):
         with self.lock:
             self.cache.pop(key, None)
-            print(f'已删除缓存 key{key}')
+            logger.debug("缓存删除，key=%s", key)
 
     def delete_prefix(self, prefix: tuple):
          with self.lock:

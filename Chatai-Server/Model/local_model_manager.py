@@ -8,6 +8,10 @@ import time
 from pathlib import Path
 
 from Config.config import config
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class LocalModelManager:
@@ -64,7 +68,7 @@ class LocalModelManager:
             for line in process.stderr:
                 line = line.strip()
                 if line:
-                    print(f"本地模型子进程: {line}")
+                    logger.warning("本地模型子进程 stderr：%s", line)
         except Exception:
             pass
 

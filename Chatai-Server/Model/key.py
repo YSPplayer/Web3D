@@ -1,6 +1,10 @@
 from cryptography.fernet import Fernet, InvalidToken
 import bcrypt
 import base64
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
 CHATAI_API_KEY_ENCRYPTION_KEY = 'sDgR_PM7H4EJ95V4mZL5Wyywkp5qR3DqS4azg5Pytgw='
 encryption_key = CHATAI_API_KEY_ENCRYPTION_KEY
 api_key_cipher = Fernet(encryption_key.encode())
@@ -23,7 +27,7 @@ class Key:
                 encrypted_api_key.encode("utf-8")
             ).decode("utf-8")
         except InvalidToken as exc:
-           print("API Key 解密失败或密文已被修改")
+           logger.warning("API Key 解密失败或密文已被修改")
            return ''
         
     def img_bytes_to_base64(self,bytes:bytes)->str:

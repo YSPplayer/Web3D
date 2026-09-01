@@ -5,6 +5,10 @@ from contextlib import contextmanager
 from Config.config import config
 from datetime import datetime
 from Data.cache_manager import cache_manager
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
 class DBManager:
     def __init__(self):
         self.db_path = config.db_path / "chat_data.db"
@@ -30,7 +34,7 @@ class DBManager:
             if self.conn is not None:
                 self.conn.close()
                 self.conn = None
-                print("数据库连接已关闭")
+                logger.info("数据库连接已关闭")
 
     def init_db(self):
         cache_manager.clear()
@@ -46,10 +50,10 @@ class DBManager:
                 conn.executescript(sql_script)
                 conn.commit()
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库初始化失败")
                 conn.rollback()
                 raise
-        print(f"数据库初始化成功，从 {sql_path} 加载")
+        logger.info("数据库初始化成功，sql_path=%s", sql_path)
     def get_models(self):
         with self.lock:
             try:
@@ -60,7 +64,7 @@ class DBManager:
                 """).fetchall()
                 return [dict(row) for row in rows] if rows else []
             except Exception as exc:
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败，operation=get_models")
                  return {
                     "code":500
                 }
@@ -81,7 +85,7 @@ class DBManager:
                 ).fetchone()
                 return dict(row) if row else {"code":401}
             except Exception as exc:
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败，operation=get_user_by_username")
                  return {
                     "code":500
                 }
@@ -111,7 +115,7 @@ class DBManager:
                 result = {**dict(row), **dict(imgs)} if imgs else dict(row)
                 return result
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }   
@@ -144,7 +148,7 @@ class DBManager:
                 cache_manager.set(("model_config", user_id),result)
                 return result
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }   
@@ -175,7 +179,7 @@ class DBManager:
                     return {}
                 return dict(row)
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }
@@ -201,7 +205,7 @@ class DBManager:
                 }
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }
@@ -275,7 +279,7 @@ class DBManager:
                     "message": "小时格式错误，应为数字，例如 2026-07-30-9"
                 }
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code": 500
                 }
@@ -351,7 +355,7 @@ class DBManager:
                     "message": "小时格式错误，应为数字，例如 2026-07-30-9"
                 }
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code": 500
                 }
@@ -378,7 +382,7 @@ class DBManager:
                 cache_manager.set(("proxy_config", user_id),result)
                 return result
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }   
@@ -429,7 +433,7 @@ class DBManager:
                 return result
             except Exception as exc:
                 conn.rollback()
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }
@@ -501,7 +505,7 @@ class DBManager:
                 return result
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }
@@ -520,7 +524,7 @@ class DBManager:
                 return {}
             except Exception as exc:
                 conn.rollback()
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }
@@ -539,7 +543,7 @@ class DBManager:
                 return [dict(row) for row in rows] if rows else []
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }
@@ -559,7 +563,7 @@ class DBManager:
                 return [dict(row) for row in rows] if rows else []
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }
@@ -580,7 +584,7 @@ class DBManager:
                 messages = [dict(row) for row in reversed(rows)] #这里倒叙查询要二次反转作为输入
                 return messages
             except Exception as exc:
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code": 500
                 }
@@ -612,7 +616,7 @@ class DBManager:
                 }
             except Exception as exc:
                 conn.rollback()
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code": 500
                 }
@@ -632,7 +636,7 @@ class DBManager:
                 return [dict(row) for row in rows] if rows else []
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }
@@ -656,7 +660,7 @@ class DBManager:
                 }
             except Exception as exc:
                 conn.rollback()
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 return {
                     "code":500
                 }
@@ -680,7 +684,7 @@ class DBManager:
                 }
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }
@@ -710,7 +714,7 @@ class DBManager:
                 return dict(row)
             except sqlite3.IntegrityError as exc:
                 conn.rollback()
-                print(f"数据库操作错误: {exc}")
+                logger.exception("数据库操作失败")
                 if "UNIQUE constraint failed: users.username" in str(exc):
                     return {
                         "code":409
@@ -720,7 +724,7 @@ class DBManager:
                 }
             except Exception as exc:
                  conn.rollback()
-                 print(f"数据库操作错误: {exc}")
+                 logger.exception("数据库操作失败")
                  return {
                     "code":500
                 }

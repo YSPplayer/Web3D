@@ -20,6 +20,14 @@
 #uv venv --python "D:\YueShaoPu\lutis\.venv\Scripts\python.exe" 
 #.venv\Scripts\activate
 #uv run python D:\YueShaoPu\Web3D\Chatai-Server\main.py
+from System.log_manager import setup_logging, shutdown_logging
+
+setup_logging()
+
 import Server.server as server
+
 if __name__ == "__main__":
-    server.run()
+    try:
+        server.run()
+    finally:
+        shutdown_logging()

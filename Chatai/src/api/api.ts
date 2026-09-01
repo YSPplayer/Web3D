@@ -21,17 +21,27 @@ interface Conversation {
    title: string
 }
 
+type ChatMode = 'chat' | 'agent'
+
 interface ChatMessage {
   userid: number
   modelconfigid: number
   conversationid: number
   message: string
   istiTle:boolean
+  mode: ChatMode
 }
 
 type ChatStreamEvent =
   | { type: 'delta'; content: string }
-  | { type: 'done' }
+  | { type: 'tool_start'; tool_name: string }
+  | {
+      type: 'tool_result'
+      tool_name: string
+      status: 'success' | 'failed' | 'denied' | 'timeout'
+      run_id: number | null
+    }
+  | { type: 'done'; user_created_at: string; ai_created_at: string }
   | { type: 'error'; message: string }
 
 export const ChatAiApi = {

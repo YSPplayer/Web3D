@@ -38,7 +38,7 @@
                 <div class="flex_colum">
                     <textarea  v-model="inputChatText" @keydown.enter.exact.prevent ="handleEnter()">
                     </textarea>
-                    <el-select class="chat_model_select" v-model="selecteValue" placeholder="">
+                    <el-select class="chat_model_select" v-model="selectValue" :disabled="generating" placeholder="">
                         <el-option
                         v-for="item in selectOptions"
                         :key="item.value"
@@ -69,11 +69,11 @@
  const inputChatText = ref('')
  const chatMainRef = ref(null)
  const messages = ref([])
- const selecteValue = ref('') //当前模式选择
  const selectOptions = [
   { label: 'Chat', value: 'chat' },
   { label: 'Agent', value: 'agent' },
 ]
+ const selectValue = ref(selectOptions[0].value) //当前模式选择
  const isLoding = ref(false)
  const showLoadMore = ref(false)
  const showScrollBtn = ref(false)
@@ -313,6 +313,7 @@ const getTitleMessage = async ()=> {
  const sendChatMessage = async () => {
     const userContent = inputChatText.value.trim()
     if (!userContent || generating.value) return
+    const requestMode = selectValue.value
     const userMessage = reactive({
         id: lastid + 1,
         role: 'user',
@@ -345,7 +346,8 @@ const getTitleMessage = async ()=> {
                 modelconfigid: user.modelconfigid,
                 conversationid:user.conversationid,
                 message: userContent,
-                istiTle:false
+                istiTle:false,
+                mode: requestMode
             },
             event => {
                 if (event.type === 'delta') {

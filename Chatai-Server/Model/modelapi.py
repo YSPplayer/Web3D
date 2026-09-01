@@ -5,6 +5,10 @@ import json
 import os
 import sys
 from pathlib import Path
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
 class ModelApi:
     def get_token_count(self,model:str,message: str):
         return litellm.token_counter(
@@ -35,7 +39,8 @@ class ModelApi:
             temperature=0.6,
             api_key = api_key
         )
-        print(response.choices[0].message.content)
+        content = response.choices[0].message.content or ""
+        logger.debug("模型同步调用完成，response_chars=%s", len(content))
 
     async def collect_stderr(self, stream):
         errors = []
@@ -46,7 +51,7 @@ class ModelApi:
             text = line.decode("utf-8", errors="replace").strip()
             if text:
                 errors.append(text)
-                print(text)
+                logger.warning("模型子进程 stderr：%s", text)
 
         return errors
     
@@ -73,7 +78,7 @@ class ModelApi:
                     if content:
                         yield content
             except asyncio.CancelledError:
-                print("model stream cancelled")
+                logger.info("模型流式生成已取消")
                 raise
             finally:
                 close = getattr(response, "aclose", None)
@@ -86,7 +91,7 @@ class ModelApi:
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         proxy_url = self.build_proxy_url(proxy_host, proxy_port)
-        print("proxy enabled:" + proxy_url)
+        logger.info("模型代理已启用，proxy=%s", proxy_url)
         env["HTTP_PROXY"] = proxy_url
         env["HTTPS_PROXY"] = proxy_url
         env["ALL_PROXY"] = proxy_url
@@ -124,7 +129,7 @@ class ModelApi:
                 if not text:
                     continue
                 if not text.startswith("{"):
-                    print(f"子进程非JSON输出: {text}")
+                    logger.warning("模型子进程非 JSON 输出：%s", text[:2000])
                     continue
                 event = json.loads(text)
 
@@ -150,7 +155,7 @@ class ModelApi:
                 except asyncio.TimeoutError:
                     process.kill()
                     await process.wait()
-            print("模型流式生成已取消")
+            logger.info("代理模型流式生成已取消")
             raise
 
         finally:

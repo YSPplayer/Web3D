@@ -1,6 +1,10 @@
 import asyncio
 import time
 import psutil
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
 
 try:
     import pynvml
@@ -88,7 +92,7 @@ class SystemMonitor:
         psutil.cpu_percent(interval=None)
 
         self.task = asyncio.create_task(self.loop())
-    print('已启动硬件资源检测服务')
+        logger.info("已启动硬件资源检测服务")
     async def loop(self):
         while self.running:
             self.snapshot = self.collect_once()
@@ -100,7 +104,7 @@ class SystemMonitor:
         if self.task:
             self.task.cancel()
             self.task = None
-        print('已关闭硬件资源检测服务')
+        logger.info("已关闭硬件资源检测服务")
     def get_snapshot(self):
         return self.snapshot
     

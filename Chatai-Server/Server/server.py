@@ -3,30 +3,44 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import Literal, Optional
 import asyncio
 import json
 from Config.config import config
 import uvicorn
 import mimetypes
+from Agent import AgentRunner, create_default_dispatcher
 from Data.db_manager import db_manager
 from Model.key import key
 from Model.modelapi import modelApi
 from datetime import datetime
 from Model.local_model_manager import local_model_manager
 from System.system_monitor import system_monitor
+from System.log_manager import get_logger
+
+
+logger = get_logger(__name__)
+
+agent_dispatcher = create_default_dispatcher(db_manager)
+agent_runner = AgentRunner(agent_dispatcher)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
+    logger.info("后端服务开始初始化")
     db_manager.init_db()
+    await agent_dispatcher.sync_registered_tools()
     await system_monitor.start()
+    logger.info("后端服务初始化完成")
     try:
         yield
     finally:
+        logger.info("后端服务开始关闭")
         await system_monitor.stop()
         # 服务关闭，例如 Ctrl+C、正常停止 Uvicorn
         db_manager.close_db()
         local_model_manager.stop()
+        logger.info("后端服务已关闭")
 app = FastAPI(title="Chat API",lifespan=lifespan)
 # 重要：允许前端跨域请求
 app.add_middleware(
@@ -71,7 +85,8 @@ class ChatMessage(BaseModel):
     modelconfigid: int
     conversationid:int
     message:str
-    istiTle:bool 
+    istiTle:bool
+    mode: Literal["chat", "agent"] = "chat"
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -116,7 +131,7 @@ def image_to_data_url(logo_path: str)-> str:
     if not image_path.is_relative_to(logo_root):
         return ""
     if not image_path.is_file():
-        print(f"模型Logo不存在：{image_path}")
+        logger.warning("模型 Logo 不存在，path=%s", image_path)
         return ""
     mime_type, _ = mimetypes.guess_type(image_path.name)
     mime_type = mime_type or "application/octet-stream"
@@ -191,6 +206,12 @@ async def stream_model_content(runtime: dict, model_messages: list[dict]):
         proxy_config["is_active"]
     ):
         yield content
+
+async def collect_model_content(runtime: dict, model_messages: list[dict]) -> str:
+    content_parts: list[str] = []
+    async for content in stream_model_content(runtime, model_messages):
+        content_parts.append(content)
+    return "".join(content_parts)
 
 def normalize_conversation_title(title: str) -> str:
     text = title.strip()
@@ -393,8 +414,12 @@ async def create_conversation_title(req:ConversationTitle):
     try:
         async for content in stream_model_content(runtime, model_messages):
             full_content.append(content)
-    except Exception as exc:
-        print(f"会话标题生成失败: {exc}")
+    except Exception:
+        logger.exception(
+            "会话标题生成失败，user_id=%s conversation_id=%s",
+            req.userid,
+            req.conversationid,
+        )
         raise HTTPException(
             status_code=500,
             detail="会话标题生成失败"
@@ -410,6 +435,13 @@ async def create_conversation_title(req:ConversationTitle):
 @app.post("/chatai/user/chat")
 async def create_chat_message(chatMessage:ChatMessage):
     user_message = chatMessage.message.strip()
+    logger.info(
+        "收到聊天请求，user_id=%s conversation_id=%s model_config_id=%s mode=%s",
+        chatMessage.userid,
+        chatMessage.conversationid,
+        chatMessage.modelconfigid,
+        chatMessage.mode,
+    )
     # 必须在流开始前完成参数校验
     if not user_message:
         raise HTTPException(
@@ -446,16 +478,46 @@ async def create_chat_message(chatMessage:ChatMessage):
     user_created_at = user_result["created_at"]
     async def generate():
         full_content: list[str] = []
+        stream_failed = False
         try:
-            async for content in stream_model_content(runtime, model_messages):
-                full_content.append(content)
-                yield json.dumps(
-                    {
-                        "type": "delta",
-                        "content": content
-                    },
-                    ensure_ascii=False
-                ) + "\n"
+            if chatMessage.mode == "agent":
+                logger.info(
+                    "进入 Agent 流程，user_id=%s conversation_id=%s",
+                    chatMessage.userid,
+                    chatMessage.conversationid,
+                )
+                async def complete_agent_model(messages: list[dict]) -> str:
+                    return await collect_model_content(runtime, messages)
+
+                def stream_agent_model(messages: list[dict]):
+                    return stream_model_content(runtime, messages)
+
+                async for event in agent_runner.run_stream(
+                    user_id=chatMessage.userid,
+                    conversation_id=chatMessage.conversationid,
+                    messages=model_messages,
+                    complete_model=complete_agent_model,
+                    stream_model=stream_agent_model,
+                ):
+                    if event.get("type") == "delta":
+                        full_content.append(event.get("content", ""))
+                    elif event.get("type") == "error":
+                        stream_failed = True
+                    yield json.dumps(event, ensure_ascii=False) + "\n"
+            else:
+                async for content in stream_model_content(runtime, model_messages):
+                    full_content.append(content)
+                    yield json.dumps(
+                        {
+                            "type": "delta",
+                            "content": content
+                        },
+                        ensure_ascii=False
+                    ) + "\n"
+
+            if stream_failed:
+                return
+
             ai_message = "".join(full_content)
             # 把完整 AI 消息存入数据库
             ai_tokens_used = 0 if is_local_model else modelApi.get_token_count(model_name,
@@ -476,9 +538,20 @@ async def create_chat_message(chatMessage:ChatMessage):
             ) + "\n"
         except asyncio.CancelledError:
             # 前端断开或用户点击“停止生成”
+            logger.info(
+                "模型生成已取消，user_id=%s conversation_id=%s mode=%s",
+                chatMessage.userid,
+                chatMessage.conversationid,
+                chatMessage.mode,
+            )
             raise
-        except Exception as exc:
-            print(f"模型流式调用失败: {exc}")
+        except Exception:
+            logger.exception(
+                "模型流式调用失败，user_id=%s conversation_id=%s mode=%s",
+                chatMessage.userid,
+                chatMessage.conversationid,
+                chatMessage.mode,
+            )
             yield json.dumps(
                 {
                     "type": "error",
