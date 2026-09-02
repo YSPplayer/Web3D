@@ -90,7 +90,13 @@
                     </div>
                 </div>
             </el-tab-pane>
-        </el-tabs>
+             <el-tab-pane name="agent">
+                 <template #label>
+                        <span class="config_tab_label"> 工具管理</span>
+                </template>
+                <configAgent></configAgent>
+             </el-tab-pane>
+            </el-tabs>
         <div class="config_bottom flex_row">
             <el-button :loading="saveconfigLoading" type="primary" @click="saveConfig">
                 保存
@@ -111,6 +117,7 @@
     import modelStop from '@/assets/modelStop.svg'
     import modelStarting from '@/assets/modelStarting.svg'
     import tokenchart from './tokenchart.vue'
+    import configAgent from './configAgent.vue'
     const modelSelectValue = ref([])
     const configForm = reactive({
         apikey: '',
@@ -433,7 +440,7 @@
 .config_tab .tab_child_span {
      font-size: 0.75rem;
 }
-.config_model {
+.config_model,.config_agent {
     width: 100%;
     gap:1rem;
 }
