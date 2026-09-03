@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from typing import Literal, Optional
 import asyncio
@@ -10,6 +11,7 @@ from Config.config import config
 import uvicorn
 import mimetypes
 from uuid import uuid4
+from Auth import AuthTokenError, auth_manager
 from Agent import AgentRunner, AgentSkillLoader, create_default_dispatcher
 from Agent.trace_formatter import agent_trace_formatter
 from Data.db_manager import db_manager
@@ -34,6 +36,66 @@ agent_skill_loader = AgentSkillLoader()
 agent_runner = AgentRunner(agent_dispatcher, agent_skill_loader)
 active_generation_tasks: dict[str, dict] = {}
 active_generation_lock = asyncio.Lock()
+bearer_scheme = HTTPBearer(auto_error=False)
+REFRESH_COOKIE_NAME = "chatai_refresh_token"
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> dict:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(
+            status_code=401,
+            detail="未登录或 Access Token 缺失",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    try:
+        claims = auth_manager.decode_access_token(credentials.credentials)
+    except AuthTokenError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=str(exc),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    session_active = db_manager.is_auth_session_active(
+        claims.session_id,
+        claims.user_id,
+        auth_manager.utc_now_string(),
+    )
+    if isinstance(session_active, dict):
+        raise HTTPException(status_code=500, detail="数据库操作失败")
+    if not session_active:
+        raise HTTPException(
+            status_code=401,
+            detail="登录会话已失效，请重新登录",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return {"id": claims.user_id, "session_id": claims.session_id}
+
+
+def require_same_user(claimed_user_id: int, current_user: dict):
+    if claimed_user_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="无权操作其他用户的数据")
+
+
+def require_conversation_owner(conversation_id: int, current_user: dict):
+    owner_id = db_manager.get_conversation_owner_id(conversation_id)
+    if isinstance(owner_id, dict):
+        check_result(owner_id)
+    if owner_id is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    if owner_id != current_user["id"]:
+        raise HTTPException(status_code=404, detail="会话不存在")
+
+
+def require_model_config_owner(model_config_id: int, current_user: dict):
+    owner_id = db_manager.get_model_config_owner_id(model_config_id)
+    if isinstance(owner_id, dict):
+        check_result(owner_id)
+    if owner_id is None:
+        raise HTTPException(status_code=404, detail="模型配置不存在")
+    if owner_id != current_user["id"]:
+        raise HTTPException(status_code=404, detail="模型配置不存在")
 
 
 def attach_agent_traces(messages: list[dict]) -> list[dict]:
@@ -59,6 +121,7 @@ async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
     logger.info("后端服务开始初始化")
     db_manager.init_db()
+    check_result(db_manager.cleanup_auth_sessions(auth_manager.utc_now_string()))
     agent_skill = agent_skill_loader.load()
     logger.info(
         "Agent Skill 已加载，name=%s version=%s hash=%s",
@@ -82,10 +145,10 @@ app = FastAPI(title="Chat API",lifespan=lifespan)
 # 重要：允许前端跨域请求
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],           # 开发环境允许所有，生产环境要限制
+    allow_origins=config.allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 def run():
@@ -126,7 +189,6 @@ class ChatMessage(BaseModel):
     mode: Literal["chat", "agent"] = "chat"
 
 
-@app.post("/chatai/user/chat/stop")
 async def stop_chat_generation(userid: int, requestid: str):
     async with active_generation_lock:
         generation = active_generation_tasks.get(requestid)
@@ -137,6 +199,16 @@ async def stop_chat_generation(userid: int, requestid: str):
         if not task.done():
             task.cancel()
     return success("停止生成请求已提交", {"stopped": True})
+
+
+@app.post("/chatai/user/chat/stop")
+async def stop_chat_generation_endpoint(
+    userid: int,
+    requestid: str,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(userid, current_user)
+    return await stop_chat_generation(userid, requestid)
 
 def success(message:str = "成功",data:any = None) ->dict:
     return {
@@ -158,7 +230,7 @@ def check_result(result:dict):
             )
         elif result["code"] == 401:
              raise HTTPException(
-                status_code=409,
+                status_code=401,
                 detail="账号或密码不正确"
             )
         elif result["code"] == 500:
@@ -173,6 +245,44 @@ def check_result(result:dict):
                 status_code=500,
                 detail="数据库操作失败"
             )
+
+
+def build_user_response(user_row: dict) -> dict:
+    avatar_base64 = user_row.get("avatar_base64") or ""
+    avatar_mime = user_row.get("avatar_mime") or "image/png"
+    return {
+        "id": int(user_row.get("id", user_row.get("user_id"))),
+        "username": user_row["username"],
+        "imgurl": (
+            f"data:{avatar_mime};base64,{avatar_base64}"
+            if avatar_base64
+            else ""
+        ),
+    }
+
+
+def set_refresh_cookie(response: Response, refresh_token: str):
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        max_age=config.auth_refresh_token_days * 24 * 60 * 60,
+        httponly=True,
+        secure=config.auth_cookie_secure,
+        samesite="lax",
+        path="/chatai/auth",
+    )
+
+
+def delete_refresh_cookie(response: Response):
+    response.delete_cookie(
+        key=REFRESH_COOKIE_NAME,
+        path="/chatai/auth",
+        secure=config.auth_cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
+
+
 def image_to_data_url(logo_path: str)-> str:
     # 数据库中是 /logo/glm.svg，去掉开头的斜杠
     relative_path = logo_path.lstrip("/\\")
@@ -563,8 +673,24 @@ async def health():
     return success("服务器访问正常")
 
 @app.get("/chatai/system/metrics")
-async def get_system_metrics():
+async def get_system_metrics(current_user: dict = Depends(get_current_user)):
     return success("系统状态查询成功", system_monitor.get_snapshot())
+
+@app.get("/chatai/agent/tools")
+async def get_agent_tools(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=6, ge=1, le=50),
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        result = await agent_dispatcher.list_tools_page(page, page_size)
+        return success("Agent 工具查询成功", result)
+    except Exception as exc:
+        logger.exception("Agent 工具分页查询失败")
+        raise HTTPException(
+            status_code=500,
+            detail="Agent 工具查询失败",
+        ) from exc
 
 @app.get("/chatai/models") #获取到当前后端存储的所有类别的模型
 async def models():
@@ -582,7 +708,11 @@ async def models():
     return success("模型数据查询成功！",models)
 
 @app.get("/chatai/user/chatMessages") #获取当前模型的会话记录
-async def get_model_chat_message(conversationid:int):
+async def get_model_chat_message(
+    conversationid: int,
+    current_user: dict = Depends(get_current_user),
+):
+    require_conversation_owner(conversationid, current_user)
     messages = db_manager.get_messages(conversationid)
     check_result(messages)
     messages = attach_agent_traces(messages)
@@ -591,19 +721,35 @@ async def get_model_chat_message(conversationid:int):
     else:
          return  success("当前会话消息查询成功！",messages)
 @app.get("/chatai/user/tokensCountByUserId")
-async def get_tokens_count_by_user_id(userid: int, date: str):
+async def get_tokens_count_by_user_id(
+    userid: int,
+    date: str,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(userid, current_user)
     result = db_manager.get_tokens_count_by_user_id(userid, date)
     check_result(result)
     return success("Token 使用量查询成功", result)
 
 @app.get("/chatai/user/tokensCount")
-async def get_tokens_count(conversationid: int, date: str):
+async def get_tokens_count(
+    conversationid: int,
+    date: str,
+    current_user: dict = Depends(get_current_user),
+):
+    require_conversation_owner(conversationid, current_user)
     result = db_manager.get_tokens_count(conversationid, date)
     check_result(result)
     return success("Token 使用量查询成功", result)
 
 @app.get("/chatai/user/chatPageMessages") 
-async def get_model_chat_message_page(conversationid:int,limit: int,beforeid:int):#获取当前模型的会话记录，分页查询
+async def get_model_chat_message_page(
+    conversationid: int,
+    limit: int,
+    beforeid: int,
+    current_user: dict = Depends(get_current_user),
+):#获取当前模型的会话记录，分页查询
+    require_conversation_owner(conversationid, current_user)
     messages = db_manager.get_messages_page(conversationid,limit,beforeid)
     check_result(messages)
     messages["messages"] = attach_agent_traces(messages["messages"])
@@ -611,7 +757,9 @@ async def get_model_chat_message_page(conversationid:int,limit: int,beforeid:int
 
 @app.get("/chatai/user/modelConfgState") #获取到模型配置
 async def get_model_config_state(userid:int,
-            modeltype:str,modelname:str):
+            modeltype:str,modelname:str,
+            current_user: dict = Depends(get_current_user)):
+    require_same_user(userid, current_user)
     config_state = db_manager.get_model_config_state_by_user_par(userid,
                     modeltype,modelname)
     check_result(config_state)
@@ -625,7 +773,11 @@ async def get_model_config_state(userid:int,
         })
 
 @app.get("/chatai/user/modelConfg") #获取到当前用户的模型配置
-async def get_user_model_config(userid:int):
+async def get_user_model_config(
+    userid: int,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(userid, current_user)
     config = db_manager.get_model_config_by_userid(userid)
     check_result(config)
     proxy_config = db_manager.get_proxy_config_by_user_id(userid)
@@ -647,7 +799,11 @@ async def get_user_model_config(userid:int):
         })
     
 @app.get("/chatai/user/getConversationByUserId")
-async def get_conversation_by_user_id(userid:int):
+async def get_conversation_by_user_id(
+    userid: int,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(userid, current_user)
     result = db_manager.get_conversation_by_user_id(userid)
     check_result(result)
     if not result:
@@ -656,7 +812,13 @@ async def get_conversation_by_user_id(userid:int):
         return success("当前用户会话记录查询成功！",result)
 
 @app.get("/chatai/user/getConversation")
-async def get_conversation(userid:int,modelconfigid:int):
+async def get_conversation(
+    userid: int,
+    modelconfigid: int,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(userid, current_user)
+    require_model_config_owner(modelconfigid, current_user)
     result = db_manager.get_conversation(userid,modelconfigid)
     check_result(result)
     if not result:
@@ -665,7 +827,11 @@ async def get_conversation(userid:int,modelconfigid:int):
         return success("当前用户会话记录查询成功！",result)
 ##put
 @app.put("/chatai/saveModelConfig")
-async def save_model_config(config:ModelConfig):
+async def save_model_config(
+    config: ModelConfig,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(config.userid, current_user)
     encrypted_api_key = key.encrypt_api_key(
        key.base64_to_string(config.apikey)
     )
@@ -690,14 +856,24 @@ async def save_model_config(config:ModelConfig):
 
 ##delete
 @app.delete("/chatai/user/conversation")
-async def delete_conversation(conversationid:int):
+async def delete_conversation(
+    conversationid: int,
+    current_user: dict = Depends(get_current_user),
+):
+    require_conversation_owner(conversationid, current_user)
     result = db_manager.delete_conversation(conversationid)
     check_result(result)
     return success('会话删除操作成功')
 
 ##post
 @app.post("/chatai/localModel/start")
-async def start_local_model(userid:int, modelconfigid:int):
+async def start_local_model(
+    userid: int,
+    modelconfigid: int,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(userid, current_user)
+    require_model_config_owner(modelconfigid, current_user)
     model_config = db_manager.get_active_local_model_config(userid, modelconfigid)
     check_result(model_config)
     if not model_config:
@@ -716,17 +892,22 @@ async def start_local_model(userid:int, modelconfigid:int):
     })
 
 @app.get("/chatai/localModel/status")
-async def get_local_model_status():
+async def get_local_model_status(current_user: dict = Depends(get_current_user)):
     return success("本地模型状态查询成功", local_model_manager.get_status())
 
 @app.post("/chatai/localModel/stop")
-async def stop_local_model():
+async def stop_local_model(current_user: dict = Depends(get_current_user)):
     result = await asyncio.to_thread(local_model_manager.stop)
     check_result(result)
     return success(result["message"])
 
 @app.post("/chatai/user/conversation")
-async def create_conversation(conversation:Conversation):
+async def create_conversation(
+    conversation: Conversation,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(conversation.userid, current_user)
+    require_model_config_owner(conversation.modelconfigid, current_user)
     result = db_manager.create_conversation(conversation.userid,conversation.modelconfigid,conversation.title)
     check_result(result)
     return success("会话新建成功！",{
@@ -734,7 +915,12 @@ async def create_conversation(conversation:Conversation):
     })
 
 @app.post("/chatai/user/conversation/title")
-async def create_conversation_title(req:ConversationTitle):
+async def create_conversation_title(
+    req: ConversationTitle,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(req.userid, current_user)
+    require_conversation_owner(req.conversationid, current_user)
     history_messages = db_manager.get_all_messages_for_context(
         req.conversationid
     )
@@ -790,7 +976,13 @@ async def create_conversation_title(req:ConversationTitle):
     })
 
 @app.post("/chatai/user/chat")
-async def create_chat_message(chatMessage:ChatMessage):
+async def create_chat_message(
+    chatMessage: ChatMessage,
+    current_user: dict = Depends(get_current_user),
+):
+    require_same_user(chatMessage.userid, current_user)
+    require_conversation_owner(chatMessage.conversationid, current_user)
+    require_model_config_owner(chatMessage.modelconfigid, current_user)
     user_message = chatMessage.message.strip()
     logger.info(
         "收到聊天请求，user_id=%s conversation_id=%s model_config_id=%s mode=%s",
@@ -1116,22 +1308,98 @@ async def register(user:UserRegister):
     })
 
 @app.post("/chatai/login")
-async def login(user:UserLogin):
+async def login(user: UserLogin, request: Request, response: Response):
     #获取前端传输数据
     username = user.username.strip()
     password = user.password
     db_user = db_manager.get_user_by_username(username)
     check_result(db_user)
     if key.checkpw_bcrypt(password.encode(), db_user["password_hash"]):
-            avatar_base64 = db_user.get("avatar_base64") or ""
-            avatar_mime = db_user.get("avatar_mime") or "image/png"
-            imgurl = ""
-            if avatar_base64:
-                imgurl = f"data:{avatar_mime};base64,{avatar_base64}"
-            return success("登录成功",{
-                "id": db_user["id"],
-                "username": db_user["username"],
-                "imgurl": imgurl
-            })
-    return error("登录失败，账号或密码不正确！",401)
+        session_id = str(uuid4())
+        refresh_token = auth_manager.create_refresh_token()
+        now = auth_manager.utc_now_string()
+        session_result = db_manager.create_auth_session(
+            session_id=session_id,
+            user_id=db_user["id"],
+            refresh_token_hash=auth_manager.hash_refresh_token(refresh_token),
+            expires_at=auth_manager.refresh_expires_at(),
+            created_at=now,
+            user_agent=request.headers.get("user-agent", "")[:512],
+            ip_address=request.client.host if request.client else "",
+        )
+        check_result(session_result)
+        response.headers["Cache-Control"] = "no-store"
+        set_refresh_cookie(response, refresh_token)
+        return success("登录成功", {
+            "access_token": auth_manager.create_access_token(
+                db_user["id"], session_id
+            ),
+            "token_type": "bearer",
+            "expires_in": config.auth_access_token_minutes * 60,
+            "user": build_user_response(db_user),
+        })
+    raise HTTPException(
+        status_code=401,
+        detail="登录失败，账号或密码不正确！",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+@app.post("/chatai/auth/refresh")
+async def refresh_session(request: Request, response: Response):
+    refresh_token = request.cookies.get(REFRESH_COOKIE_NAME, "")
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="登录会话不存在")
+
+    new_refresh_token = auth_manager.create_refresh_token()
+    session_result = db_manager.rotate_auth_session(
+        refresh_token_hash=auth_manager.hash_refresh_token(refresh_token),
+        new_refresh_token_hash=auth_manager.hash_refresh_token(new_refresh_token),
+        now=auth_manager.utc_now_string(),
+    )
+    if session_result.get("code") == 401:
+        delete_refresh_cookie(response)
+        raise HTTPException(status_code=401, detail="登录会话已过期，请重新登录")
+    check_result(session_result)
+
+    response.headers["Cache-Control"] = "no-store"
+    set_refresh_cookie(response, new_refresh_token)
+    user_id = int(session_result["user_id"])
+    session_id = session_result["session_id"]
+    return success("登录状态已恢复", {
+        "access_token": auth_manager.create_access_token(user_id, session_id),
+        "token_type": "bearer",
+        "expires_in": config.auth_access_token_minutes * 60,
+        "user": build_user_response(session_result),
+    })
+
+
+@app.post("/chatai/auth/logout")
+async def logout(request: Request, response: Response):
+    now = auth_manager.utc_now_string()
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        try:
+            claims = auth_manager.decode_access_token(
+                authorization[7:].strip(),
+                verify_expiration=False,
+            )
+            result = db_manager.revoke_auth_session_by_id(
+                claims.session_id,
+                claims.user_id,
+                now,
+            )
+            check_result(result)
+        except AuthTokenError:
+            pass
+
+    refresh_token = request.cookies.get(REFRESH_COOKIE_NAME, "")
+    if refresh_token:
+        result = db_manager.revoke_auth_session(
+            auth_manager.hash_refresh_token(refresh_token),
+            now,
+        )
+        check_result(result)
+    delete_refresh_cookie(response)
+    return success("退出登录成功")
 

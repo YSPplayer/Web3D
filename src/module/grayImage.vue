@@ -68,6 +68,7 @@ const handleCurrentChange = async (page: number) => {
   currentPage.value = page
   await updateTableData()
 }
+
 const setTableData = (data: any) => {
   tableData.value = data.map((edata: any, index: number) => ({
     id: index + 1,
@@ -79,6 +80,7 @@ const setTableData = (data: any) => {
 </script>
 
 <style scoped>
+
 .sample-btn {
   align-self: flex-start;
   width: auto;

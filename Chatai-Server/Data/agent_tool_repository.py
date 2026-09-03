@@ -58,6 +58,57 @@ class AgentToolRepository:
                 connection.rollback()
                 raise ToolRepositoryError(f"同步 Agent 工具定义失败：{exc}") from exc
 
+    def list_tools_page(self, page: int, page_size: int) -> dict:
+        page = max(1, page)
+        page_size = max(1, min(page_size, 50))
+        offset = (page - 1) * page_size
+
+        with self.db_manager.lock:
+            connection = self.db_manager.get_db_connection()
+            try:
+                total_row = connection.execute(
+                    """
+                    SELECT COUNT(*) AS total
+                    FROM agent_tools
+                    """
+                ).fetchone()
+                rows = connection.execute(
+                    """
+                    SELECT
+                        id,
+                        tools_name,
+                        display_name,
+                        description,
+                        risk_level,
+                        is_enabled,
+                        created_at,
+                        updated_at
+                    FROM agent_tools
+                    ORDER BY id ASC
+                    LIMIT ? OFFSET ?
+                    """,
+                    (page_size, offset),
+                ).fetchall()
+            except Exception as exc:
+                raise ToolRepositoryError(
+                    f"分页查询 Agent 工具失败：{exc}"
+                ) from exc
+
+        total = int(total_row["total"]) if total_row else 0
+        items = []
+        for row in rows:
+            item = dict(row)
+            item["is_enabled"] = bool(item["is_enabled"])
+            items.append(item)
+
+        return {
+            "items": items,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size,
+        }
+
     def get_user_tool_policy(self, user_id: int, tool_name: str) -> ToolPolicy | None:
         with self.db_manager.lock:
             connection = self.db_manager.get_db_connection()

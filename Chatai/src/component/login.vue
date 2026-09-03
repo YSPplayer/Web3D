@@ -25,11 +25,11 @@
     import { ChatAiApi } from '@/api/api'
     import { ElMessage } from 'element-plus'
     import CryptoJS from 'crypto-js'
-    import {user} from '@/store/store'
+    import {applyAuthenticatedUser} from '@/store/store'
     const userImageUrl = ref('')
     const loginLoading = ref(false)
     const registerLoading = ref(false)
-    const dialogVisible = ref(true)
+    const dialogVisible = ref(false)
     const registerVisible = ref(false)
     const usernameRef = ref(null)
     const passwordRef = ref(null)
@@ -100,16 +100,14 @@
             password : CryptoJS.SHA256(loginForm.password).toString()
         })
         if(result?.code == 200) {
-            const data = result.data
-            user.userid = data.id
-            user.username = data.username
-            user.userlogo = data.imgurl
+            const data = result.data?.user
+            applyAuthenticatedUser(data)
             ElMessage.success('用户登录成功！')
             closeDialog()
+            emits('updateUserModelConfig')
         } else {
             ElMessage.error('用户登录失败！')
         }
-        emits('updateUserModelConfig')
         loginLoading.value = false
     }
     const clickRegisterA = async ()=> {

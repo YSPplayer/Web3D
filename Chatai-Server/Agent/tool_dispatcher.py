@@ -27,6 +27,13 @@ class ToolDispatcher:
             self.registry.definitions(),
         )
 
+    async def list_tools_page(self, page: int, page_size: int) -> dict:
+        return await asyncio.to_thread(
+            self.repository.list_tools_page,
+            page,
+            page_size,
+        )
+
     async def model_schemas_for_user(self, user_id: int) -> list[dict]:
         enabled_names = await asyncio.to_thread(
             self.repository.list_user_enabled_tool_names,

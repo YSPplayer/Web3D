@@ -153,6 +153,210 @@ class DBManager:
                  return {
                     "code":500
                 }
+
+    def create_auth_session(
+        self,
+        session_id: str,
+        user_id: int,
+        refresh_token_hash: str,
+        expires_at: str,
+        created_at: str,
+        user_agent: str = "",
+        ip_address: str = "",
+    ):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO auth_sessions (
+                        id, user_id, refresh_token_hash, expires_at,
+                        created_at, last_used_at, user_agent, ip_address
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        session_id,
+                        user_id,
+                        refresh_token_hash,
+                        expires_at,
+                        created_at,
+                        created_at,
+                        user_agent,
+                        ip_address,
+                    ),
+                )
+                conn.commit()
+                return {"id": session_id, "user_id": user_id}
+            except Exception:
+                conn.rollback()
+                logger.exception("数据库操作失败，operation=create_auth_session")
+                return {"code": 500}
+
+    def rotate_auth_session(
+        self,
+        refresh_token_hash: str,
+        new_refresh_token_hash: str,
+        now: str,
+    ):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                row = conn.execute(
+                    """
+                    SELECT
+                        sessions.id AS session_id,
+                        sessions.user_id,
+                        users.username,
+                        users.avatar_base64,
+                        users.avatar_mime
+                    FROM auth_sessions AS sessions
+                    JOIN users ON users.id = sessions.user_id
+                    WHERE sessions.refresh_token_hash = ?
+                      AND sessions.revoked_at IS NULL
+                      AND sessions.expires_at > ?
+                    """,
+                    (refresh_token_hash, now),
+                ).fetchone()
+                if row is None:
+                    return {"code": 401}
+
+                cursor = conn.execute(
+                    """
+                    UPDATE auth_sessions
+                    SET refresh_token_hash = ?, last_used_at = ?
+                    WHERE id = ?
+                      AND refresh_token_hash = ?
+                      AND revoked_at IS NULL
+                    """,
+                    (
+                        new_refresh_token_hash,
+                        now,
+                        row["session_id"],
+                        refresh_token_hash,
+                    ),
+                )
+                if cursor.rowcount != 1:
+                    conn.rollback()
+                    return {"code": 401}
+                conn.commit()
+                return dict(row)
+            except sqlite3.IntegrityError:
+                conn.rollback()
+                logger.warning("Refresh Token 已被轮换或发生并发刷新")
+                return {"code": 401}
+            except Exception:
+                conn.rollback()
+                logger.exception("数据库操作失败，operation=rotate_auth_session")
+                return {"code": 500}
+
+    def revoke_auth_session(self, refresh_token_hash: str, revoked_at: str):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                conn.execute(
+                    """
+                    UPDATE auth_sessions
+                    SET revoked_at = ?
+                    WHERE refresh_token_hash = ? AND revoked_at IS NULL
+                    """,
+                    (revoked_at, refresh_token_hash),
+                )
+                conn.commit()
+                return {"code": 200}
+            except Exception:
+                conn.rollback()
+                logger.exception("数据库操作失败，operation=revoke_auth_session")
+                return {"code": 500}
+
+    def revoke_auth_session_by_id(
+        self,
+        session_id: str,
+        user_id: int,
+        revoked_at: str,
+    ):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                conn.execute(
+                    """
+                    UPDATE auth_sessions
+                    SET revoked_at = ?
+                    WHERE id = ? AND user_id = ? AND revoked_at IS NULL
+                    """,
+                    (revoked_at, session_id, user_id),
+                )
+                conn.commit()
+                return {"code": 200}
+            except Exception:
+                conn.rollback()
+                logger.exception("数据库操作失败，operation=revoke_auth_session_by_id")
+                return {"code": 500}
+
+    def is_auth_session_active(self, session_id: str, user_id: int, now: str):
+        with self.lock:
+            try:
+                conn = self.get_db_connection()
+                row = conn.execute(
+                    """
+                    SELECT 1
+                    FROM auth_sessions
+                    WHERE id = ?
+                      AND user_id = ?
+                      AND revoked_at IS NULL
+                      AND expires_at > ?
+                    """,
+                    (session_id, user_id, now),
+                ).fetchone()
+                return row is not None
+            except Exception:
+                logger.exception("数据库操作失败，operation=is_auth_session_active")
+                return {"code": 500}
+
+    def cleanup_auth_sessions(self, now: str):
+        with self.lock:
+            conn = self.get_db_connection()
+            try:
+                cursor = conn.execute(
+                    """
+                    DELETE FROM auth_sessions
+                    WHERE expires_at <= ? OR revoked_at IS NOT NULL
+                    """,
+                    (now,),
+                )
+                conn.commit()
+                return {"code": 200, "deleted": cursor.rowcount}
+            except Exception:
+                conn.rollback()
+                logger.exception("数据库操作失败，operation=cleanup_auth_sessions")
+                return {"code": 500}
+
+    def get_conversation_owner_id(self, conversation_id: int):
+        with self.lock:
+            try:
+                conn = self.get_db_connection()
+                row = conn.execute(
+                    "SELECT user_id FROM conversations WHERE id = ?",
+                    (conversation_id,),
+                ).fetchone()
+                return int(row["user_id"]) if row else None
+            except Exception:
+                logger.exception("数据库操作失败，operation=get_conversation_owner_id")
+                return {"code": 500}
+
+    def get_model_config_owner_id(self, model_config_id: int):
+        with self.lock:
+            try:
+                conn = self.get_db_connection()
+                row = conn.execute(
+                    "SELECT user_id FROM model_configs WHERE id = ?",
+                    (model_config_id,),
+                ).fetchone()
+                return int(row["user_id"]) if row else None
+            except Exception:
+                logger.exception("数据库操作失败，operation=get_model_config_owner_id")
+                return {"code": 500}
+
     def get_model_config_state_by_user_par(self,user_id:int,
             model_type:str,model_name:str):
         with self.lock:

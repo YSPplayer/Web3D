@@ -10,6 +10,26 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS auth_sessions (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    refresh_token_hash TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    revoked_at TEXT,
+    created_at TEXT NOT NULL,
+    last_used_at TEXT NOT NULL,
+    user_agent TEXT NOT NULL DEFAULT '',
+    ip_address TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_user_id
+ON auth_sessions(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_auth_sessions_expires_at
+ON auth_sessions(expires_at);
+
 CREATE TABLE IF NOT EXISTS model_configs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,

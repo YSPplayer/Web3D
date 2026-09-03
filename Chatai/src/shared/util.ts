@@ -9,7 +9,7 @@ export const Util = {
         // 1. 将字符串转为 UTF-8 编码的 URL 安全字符串
         const encoded = encodeURIComponent(str)
         // 2. 将 %XX 格式转为原始字节（还原为二进制字符串）
-        const binary = encoded.replace(/%([0-9A-F]{2})/g, (match, hex) => {
+        const binary = encoded.replace(/%([0-9A-F]{2})/g, (_match, hex) => {
             return String.fromCharCode(parseInt(hex, 16))
         })
         // 3. 编码为 Base64
@@ -60,4 +60,4 @@ export const Util = {
     }
 
 
-};                                                              
+};

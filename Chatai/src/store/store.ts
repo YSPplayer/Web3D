@@ -37,3 +37,31 @@ export const user = reactive<User>({
     pagenumber:20,
     conversations:new Map()
 })
+
+export interface AuthenticatedUser {
+    id: number
+    username: string
+    imgurl: string
+}
+
+export const applyAuthenticatedUser = (data: AuthenticatedUser) => {
+    user.userid = data.id
+    user.username = data.username
+    user.userlogo = data.imgurl
+}
+
+export const resetUser = () => {
+    user.localmodelstate = ''
+    user.userid = -1
+    user.conversationsid = []
+    user.userlogo = ''
+    user.modeltype = ''
+    user.models = []
+    user.modellogo = ''
+    user.modelname = ''
+    user.modelid = -1
+    user.modelconfigid = -1
+    user.conversationid = -1
+    user.username = ''
+    user.conversations.clear()
+}

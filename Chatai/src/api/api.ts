@@ -4,6 +4,10 @@ interface UserRegister {
     password:string
     imgurl:string
 }
+interface UserLogin {
+    username:string
+    password:string
+}
 interface ModelConfig {
     userid:number
     modeltype:string
@@ -30,6 +34,25 @@ export interface AgentTraceItem {
   command: string
   status: 'running' | 'success' | 'failed' | 'denied' | 'timeout'
   summary: string
+}
+
+export interface AgentTool {
+  id: number
+  tools_name: string
+  display_name: string
+  description: string
+  risk_level: 'low' | 'medium' | 'high'
+  is_enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface AgentToolPage {
+  items: AgentTool[]
+  page: number
+  page_size: number
+  total: number
+  total_pages: number
 }
 
 interface ChatMessage {
@@ -85,8 +108,23 @@ export const ChatAiApi = {
   async stopLocalModelApi() {
     return await request.post('/chatai/localModel/stop')
   },
-  async userLoginApi(user: UserRegister): Promise<any> {
-    return await request.post('/chatai/login', user)
+  async userLoginApi(user: UserLogin): Promise<any> {
+    const result = await request.post('/chatai/login', user)
+    if (result?.data?.access_token) {
+      request.setAccessToken(result.data.access_token)
+    }
+    return result
+  },
+  async refreshSessionApi(): Promise<any> {
+    return request.refreshSession()
+  },
+  async logoutApi(): Promise<any> {
+    request.beginLogout()
+    try {
+      return await request.post('/chatai/auth/logout')
+    } finally {
+      request.finishLogout()
+    }
   },
   async createConversationApi(conversation:Conversation) : Promise<any> {
     return await request.post('/chatai/user/conversation',conversation)
@@ -105,17 +143,24 @@ export const ChatAiApi = {
   async createChatMessageApi(data:ChatMessage,
     onEvent:(event:ChatStreamEvent)=>void,signal?: AbortSignal) {
     const apiUrl = import.meta.env.VITE_SERVER_API_URL.replace(/\/$/, '')
-    const response = await fetch(
-      `${apiUrl}/chatai/user/chat`,
-      {
+    const sendRequest = () => fetch(
+        `${apiUrl}/chatai/user/chat`,
+        {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${request.getAccessToken()}`
         },
         body: JSON.stringify(data),
-        signal
-      }
+        signal,
+        credentials: 'include'
+        }
     )
+    let response = await sendRequest()
+    if (response.status === 401) {
+      await request.refreshSessionOrLogout()
+      response = await sendRequest()
+    }
     if (!response.ok) {
       const errorText = await response.text()
       throw new Error(errorText || `HTTP ${response.status}`)
@@ -166,6 +211,14 @@ export const ChatAiApi = {
   //get
   async getSystemMetricsApi() {
     return await request.get('/chatai/system/metrics')
+  },
+  async getAgentToolsPageApi(page: number, pageSize: number): Promise<any> {
+    return await request.get('/chatai/agent/tools', {
+      params: {
+        page,
+        page_size: pageSize
+      }
+    })
   },
   async getDefaultUserImageApi(): Promise<any> {
     return await request.get('/chatai/user/defaultUserImage')
