@@ -16,3 +16,29 @@ class ToolArgumentError(AgentToolError):
 
 class ToolRepositoryError(AgentToolError):
     pass
+
+
+class ToolConflictError(AgentToolError):
+    pass
+
+
+class ToolValidationError(AgentToolError):
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__("；".join(errors))
+
+
+class ToolStorageError(AgentToolError):
+    pass
+
+
+class ToolRuntimeError(AgentToolError):
+    pass
+
+
+class ToolRuntimeTimeoutError(ToolRuntimeError):
+    pass
+
+
+class ToolRuntimeOutputError(ToolRuntimeError):
+    pass

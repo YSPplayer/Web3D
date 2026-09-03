@@ -12,6 +12,10 @@ interface AuthRetryConfig extends InternalAxiosRequestConfig {
 
 type AuthFailureHandler = () => void
 
+interface RequestBehavior {
+    showError?: boolean
+}
+
 export class Request {
     private axios: AxiosInstance | null
     private baseURL = ''
@@ -166,6 +170,17 @@ export class Request {
         }
     }
 
+    async patch<T = any>(url: string, data: any = {}): Promise<any> {
+        if (!this.axios) return Promise.reject(new Error('Please call create() first'))
+
+        try {
+            const response = await this.axios.patch<T>(url, data)
+            return response.data
+        } catch (error) {
+            return this.handleRequestError(error)
+        }
+    }
+
     async delete<T = any>(url: string, data: AxiosRequestConfig = {}): Promise<any> {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
@@ -177,13 +192,26 @@ export class Request {
         }
     }
 
-    async post<T = any>(url: string, data: any = {}): Promise<any> {
+    async post<T = any>(
+        url: string,
+        data: any = {},
+        behavior: RequestBehavior = {}
+    ): Promise<any> {
         if (!this.axios) return Promise.reject(new Error('Please call create() first'))
 
         try {
             const response = await this.axios.post<T>(url, data)
             return response.data
         } catch (error) {
+            if (behavior.showError === false) {
+                return {
+                    code: axios.isAxiosError(error)
+                        ? (error.response?.status || 500)
+                        : 500,
+                    message: this.getErrorMessage(error),
+                    data: null
+                }
+            }
             return this.handleRequestError(error)
         }
     }
@@ -218,7 +246,29 @@ export class Request {
             }
             if (responseData && typeof responseData === 'object') {
                 const data = responseData as Record<string, unknown>
-                return String(data.message || data.msg || data.error || data.detail || 'Backend request failed')
+                const directMessage = data.message || data.msg || data.error
+                if (directMessage) return String(directMessage)
+
+                const detail = data.detail
+                if (typeof detail === 'string') return detail
+                if (Array.isArray(detail)) {
+                    return detail.map((item) => {
+                        if (item && typeof item === 'object') {
+                            const detailItem = item as Record<string, unknown>
+                            return String(detailItem.msg || detailItem.message || item)
+                        }
+                        return String(item)
+                    }).join('；')
+                }
+                if (detail && typeof detail === 'object') {
+                    const detailObject = detail as Record<string, unknown>
+                    const errors = detailObject.errors
+                    if (Array.isArray(errors) && errors.length > 0) {
+                        return errors.map(String).join('；')
+                    }
+                    if (detailObject.message) return String(detailObject.message)
+                }
+                return 'Backend request failed'
             }
             return error.message || 'Backend request failed'
         }

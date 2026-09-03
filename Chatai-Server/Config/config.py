@@ -7,6 +7,7 @@ class Config:
         self.log_path = self.main_path / "Logs"
         self.sql_path = self.main_path / "Sql"
         self.local_model_path = self.db_path / "model"
+        self.user_agent_tools_path = self.db_path / "agent_tools"
         self.server_ip = "127.0.0.1"
         self.server_port = 8231
         self.auth_access_token_minutes = max(

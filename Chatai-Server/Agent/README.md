@@ -8,13 +8,20 @@
 
 - 模型只能提交已注册的 `tool_name` 和 JSON 参数。
 - 不执行模型生成的 Python、PowerShell、CMD 或 Shell 文本。
-- 不使用数据库中的模块名动态导入 Python 代码。
+- 系统工具不使用数据库模块名动态导入；用户工具只允许从受控存储目录按数据库
+  记录加载，并且只能在独立子进程中导入。
 - 不注册 `executable` 和 `system_command` 类型工具。
 - 文件工具必须通过 `allowed_roots_json` 路径校验。
 - `allowed_roots_json` 为 `[]` 时拒绝路径访问，为 `["*"]` 时允许访问服务
   进程账号可访问的任意路径；`"*"` 不能和具体根目录混用。
 - Agent 模式下，所有用户默认可调用 `agent_tools` 中已启用的 Python 工具，
   不依赖 `agent_tool_bindings` 用户绑定记录。
+- `source_kind='system'` 的系统工具对所有用户可见，但不能由普通用户修改或删除。
+- `source_kind='user'` 的用户工具只对 `owner_user_id` 对应的用户可见；删除采用
+  `deleted_at` 软删除，保留 `agent_tool_runs` 审计记录。
+- 用户工具支持单文件上传、AST 静态校验、独立进程运行时校验、Schema 提取、
+  SHA-256 完整性校验和独立进程执行。新工具默认禁用，启用成功后才进入模型
+  Schema，任何时候都不会动态导入主进程。
 - `confirmation_granted` 只能由后端可信的用户确认流程设置，不能采用模型参数。
 
 ## 入口

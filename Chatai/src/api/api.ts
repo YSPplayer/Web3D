@@ -45,6 +45,16 @@ export interface AgentTool {
   is_enabled: boolean
   created_at: string
   updated_at: string
+  can_delete: boolean
+  can_update: boolean
+}
+
+export interface AgentToolUpload {
+  file: File
+  tools_name: string
+  display_name: string
+  description: string
+  platform: 'all' | 'windows' | 'linux'
 }
 
 export interface AgentToolPage {
@@ -53,6 +63,11 @@ export interface AgentToolPage {
   page_size: number
   total: number
   total_pages: number
+}
+
+export interface AgentToolExample {
+  filename: string
+  source: string
 }
 
 interface ChatMessage {
@@ -197,11 +212,33 @@ export const ChatAiApi = {
       onEvent(JSON.parse(buffer))
     }
   },
+  async uploadAgentToolApi(tool: AgentToolUpload): Promise<any> {
+    const formData = new FormData()
+    formData.append('file', tool.file)
+    formData.append('tools_name', tool.tools_name)
+    formData.append('display_name', tool.display_name)
+    formData.append('description', tool.description)
+    formData.append('platform', tool.platform)
+    return request.post('/chatai/agent/tools', formData, {
+      showError: false
+    })
+  },
+  async updateAgentToolStateApi(
+    toolId: number,
+    isEnabled: boolean
+  ): Promise<any> {
+    return request.patch(`/chatai/agent/tools/${toolId}/state`, {
+      is_enabled: isEnabled
+    })
+  },
   //delete
   async deleteCconversationApi(conversationid:number):Promise<any> {
     return await request.delete('/chatai/user/conversation', {
       params: { conversationid }
     })
+  },
+  async deleteAgentToolApi(toolId: number): Promise<any> {
+    return request.delete(`/chatai/agent/tools/${toolId}`)
   },
   //put
   async saveModelConfigApi(config: ModelConfig):Promise<any> {
@@ -219,6 +256,9 @@ export const ChatAiApi = {
         page_size: pageSize
       }
     })
+  },
+  async getAgentToolExampleApi(): Promise<any> {
+    return await request.get('/chatai/agent/tools/example')
   },
   async getDefaultUserImageApi(): Promise<any> {
     return await request.get('/chatai/user/defaultUserImage')

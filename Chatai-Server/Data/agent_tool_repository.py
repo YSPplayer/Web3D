@@ -1,13 +1,16 @@
 import json
+import sqlite3
 from typing import Any
 
 from Agent.base import ToolDefinition
 from Agent.context import ToolPolicy
 from Agent.exceptions import (
+    ToolConflictError,
     ToolNotFoundError,
     ToolPermissionError,
     ToolRepositoryError,
 )
+from Agent.user_tools.contract import UserToolUploadMetadata
 
 
 PUBLIC_TOOL_COLUMNS = """
@@ -171,11 +174,104 @@ class AgentToolRepository:
             raise ToolNotFoundError("Agent 工具不存在")
         return self._to_public_tool(row)
 
+    def create_user_tool(
+        self,
+        *,
+        user_id: int,
+        metadata: UserToolUploadMetadata,
+        input_schema: dict,
+        storage_path: str,
+        entrypoint: str,
+        code_sha256: str,
+    ) -> dict:
+        with self.db_manager.lock:
+            connection = self.db_manager.get_db_connection()
+            try:
+                now = self.db_manager.now_time()
+                cursor = connection.execute(
+                    """
+                    INSERT INTO agent_tools (
+                        tools_name,
+                        display_name,
+                        description,
+                        owner_user_id,
+                        source_kind,
+                        tool_type,
+                        platform,
+                        executable_path,
+                        working_dir,
+                        argv_template_json,
+                        input_schema_json,
+                        allowed_roots_json,
+                        storage_path,
+                        entrypoint,
+                        code_sha256,
+                        validation_status,
+                        validation_error,
+                        is_enabled,
+                        requires_confirmation,
+                        risk_level,
+                        timeout_seconds,
+                        max_output_bytes,
+                        created_at,
+                        updated_at
+                    ) VALUES (
+                        ?, ?, ?, ?, 'user', 'python_builtin', ?, '', '',
+                        '[]', ?, '["*"]',
+                        ?, ?, ?, 'valid', '', 0, 1, 'high', 30, 65536, ?, ?
+                    )
+                    """,
+                    (
+                        metadata.tools_name,
+                        metadata.display_name,
+                        metadata.description,
+                        user_id,
+                        metadata.platform,
+                        json.dumps(input_schema, ensure_ascii=False),
+                        storage_path,
+                        entrypoint,
+                        code_sha256,
+                        now,
+                        now,
+                    ),
+                )
+                row = connection.execute(
+                    f"""
+                    SELECT {PUBLIC_TOOL_COLUMNS}
+                    FROM agent_tools
+                    WHERE id = ? AND owner_user_id = ?
+                    LIMIT 1
+                    """,
+                    (cursor.lastrowid, user_id),
+                ).fetchone()
+                if row is None:
+                    raise ToolRepositoryError("创建用户 Agent 工具后无法读取记录")
+                connection.commit()
+                return self._to_public_tool(row)
+            except sqlite3.IntegrityError as exc:
+                connection.rollback()
+                if "agent_tools.tools_name" in str(exc):
+                    raise ToolConflictError(
+                        f"工具名称已存在：{metadata.tools_name}"
+                    ) from exc
+                raise ToolRepositoryError(
+                    f"创建用户 Agent 工具失败：{exc}"
+                ) from exc
+            except Exception as exc:
+                connection.rollback()
+                if isinstance(exc, (ToolConflictError, ToolRepositoryError)):
+                    raise
+                raise ToolRepositoryError(
+                    f"创建用户 Agent 工具失败：{exc}"
+                ) from exc
+
     def set_user_tool_enabled(
         self,
         user_id: int,
         tool_id: int,
         is_enabled: bool,
+        *,
+        input_schema: dict | None = None,
     ) -> dict:
         with self.db_manager.lock:
             connection = self.db_manager.get_db_connection()
@@ -190,19 +286,35 @@ class AgentToolRepository:
                     (tool_id,),
                 ).fetchone()
                 self._require_user_tool_owner(row, user_id, "修改")
-                connection.execute(
-                    """
-                    UPDATE agent_tools
-                    SET is_enabled = ?, updated_at = ?
-                    WHERE id = ? AND owner_user_id = ?
-                    """,
-                    (
-                        int(is_enabled),
-                        self.db_manager.now_time(),
-                        tool_id,
-                        user_id,
-                    ),
-                )
+                if input_schema is None:
+                    connection.execute(
+                        """
+                        UPDATE agent_tools
+                        SET is_enabled = ?, updated_at = ?
+                        WHERE id = ? AND owner_user_id = ?
+                        """,
+                        (
+                            int(is_enabled),
+                            self.db_manager.now_time(),
+                            tool_id,
+                            user_id,
+                        ),
+                    )
+                else:
+                    connection.execute(
+                        """
+                        UPDATE agent_tools
+                        SET is_enabled = ?, input_schema_json = ?, updated_at = ?
+                        WHERE id = ? AND owner_user_id = ?
+                        """,
+                        (
+                            int(is_enabled),
+                            json.dumps(input_schema, ensure_ascii=False),
+                            self.db_manager.now_time(),
+                            tool_id,
+                            user_id,
+                        ),
+                    )
                 connection.commit()
             except (ToolNotFoundError, ToolPermissionError):
                 connection.rollback()
@@ -213,6 +325,39 @@ class AgentToolRepository:
                     f"更新 Agent 工具状态失败：{exc}"
                 ) from exc
         return self.get_tool_detail(user_id, tool_id)
+
+    def get_user_tool_runtime_by_id(self, user_id: int, tool_id: int) -> dict:
+        with self.db_manager.lock:
+            connection = self.db_manager.get_db_connection()
+            try:
+                row = connection.execute(
+                    """
+                    SELECT id, tools_name, display_name, description,
+                           owner_user_id, source_kind, tool_type, platform,
+                           input_schema_json, storage_path, entrypoint,
+                           code_sha256, validation_status, timeout_seconds,
+                           max_output_bytes
+                    FROM agent_tools
+                    WHERE id = ?
+                      AND owner_user_id = ?
+                      AND source_kind = 'user'
+                      AND deleted_at IS NULL
+                    LIMIT 1
+                    """,
+                    (tool_id, user_id),
+                ).fetchone()
+            except Exception as exc:
+                raise ToolRepositoryError(
+                    f"读取用户 Agent 工具运行配置失败：{exc}"
+                ) from exc
+        if row is None:
+            raise ToolNotFoundError("用户 Agent 工具不存在")
+        result = dict(row)
+        try:
+            result["input_schema"] = json.loads(result.pop("input_schema_json"))
+        except json.JSONDecodeError as exc:
+            raise ToolRepositoryError("用户工具参数 Schema 不是合法 JSON") from exc
+        return result
 
     def delete_user_tool(self, user_id: int, tool_id: int) -> dict:
         with self.db_manager.lock:
@@ -271,7 +416,12 @@ class AgentToolRepository:
                         tool.id AS tool_id,
                         tool.tools_name,
                         tool.tool_type,
+                        tool.source_kind,
                         tool.platform,
+                        tool.input_schema_json,
+                        tool.storage_path,
+                        tool.entrypoint,
+                        tool.code_sha256,
                         tool.allowed_roots_json,
                         tool.is_enabled,
                         tool.requires_confirmation,
@@ -315,11 +465,22 @@ class AgentToolRepository:
             raise ToolRepositoryError(
                 f"工具 {tool_name} 的路径通配符不能和其他路径混用"
             )
+        try:
+            input_schema = json.loads(row["input_schema_json"] or "{}")
+        except json.JSONDecodeError as exc:
+            raise ToolRepositoryError(
+                f"工具 {tool_name} 的 input_schema_json 不是合法 JSON"
+            ) from exc
+        if not isinstance(input_schema, dict):
+            raise ToolRepositoryError(
+                f"工具 {tool_name} 的 input_schema_json 必须是 JSON 对象"
+            )
 
         return ToolPolicy(
             tool_id=row["tool_id"],
             tool_name=row["tools_name"],
             tool_type=row["tool_type"],
+            source_kind=row["source_kind"],
             platform=row["platform"],
             allowed_roots=tuple(roots),
             is_enabled=bool(row["is_enabled"]),
@@ -329,7 +490,57 @@ class AgentToolRepository:
             risk_level=row["risk_level"],
             timeout_seconds=max(1, int(row["timeout_seconds"])),
             max_output_bytes=max(1, int(row["max_output_bytes"])),
+            storage_path=row["storage_path"],
+            entrypoint=row["entrypoint"],
+            code_sha256=row["code_sha256"],
+            input_schema=input_schema,
         )
+
+    def list_user_enabled_tool_schemas(self, user_id: int) -> list[dict]:
+        with self.db_manager.lock:
+            connection = self.db_manager.get_db_connection()
+            try:
+                rows = connection.execute(
+                    """
+                    SELECT tools_name, description, input_schema_json
+                    FROM agent_tools
+                    WHERE is_enabled = 1
+                      AND tool_type = 'python_builtin'
+                      AND validation_status = 'valid'
+                      AND deleted_at IS NULL
+                      AND (source_kind = 'system' OR owner_user_id = ?)
+                    ORDER BY id ASC
+                    """,
+                    (user_id,),
+                ).fetchall()
+            except Exception as exc:
+                raise ToolRepositoryError(
+                    f"查询已启用 Agent 工具 Schema 失败：{exc}"
+                ) from exc
+
+        schemas: list[dict] = []
+        for row in rows:
+            try:
+                parameters = json.loads(row["input_schema_json"] or "{}")
+            except json.JSONDecodeError as exc:
+                raise ToolRepositoryError(
+                    f"工具 {row['tools_name']} 的参数 Schema 不是合法 JSON"
+                ) from exc
+            if not isinstance(parameters, dict):
+                raise ToolRepositoryError(
+                    f"工具 {row['tools_name']} 的参数 Schema 必须是 JSON 对象"
+                )
+            schemas.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": row["tools_name"],
+                        "description": row["description"],
+                        "parameters": parameters,
+                    },
+                }
+            )
+        return schemas
 
     def list_user_enabled_tool_names(self, user_id: int) -> set[str]:
         with self.db_manager.lock:

@@ -14,6 +14,7 @@ class ToolPolicy:
     tool_id: int
     tool_name: str
     tool_type: str
+    source_kind: str
     platform: str
     allowed_roots: tuple[str, ...]
     is_enabled: bool
@@ -23,3 +24,7 @@ class ToolPolicy:
     risk_level: str
     timeout_seconds: int
     max_output_bytes: int
+    storage_path: str
+    entrypoint: str
+    code_sha256: str
+    input_schema: dict
