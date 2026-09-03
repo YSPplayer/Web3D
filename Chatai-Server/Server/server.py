@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -27,6 +27,7 @@ from Model.context_budget import (
 from Model.token_manager import ModelTokenProfile, token_manager
 from System.system_monitor import system_monitor
 from System.log_manager import get_logger
+from Server.routes.agent_tools import create_agent_tools_router
 
 
 logger = get_logger(__name__)
@@ -149,6 +150,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
+)
+app.include_router(
+    create_agent_tools_router(agent_dispatcher, get_current_user)
 )
 
 def run():
@@ -675,22 +679,6 @@ async def health():
 @app.get("/chatai/system/metrics")
 async def get_system_metrics(current_user: dict = Depends(get_current_user)):
     return success("系统状态查询成功", system_monitor.get_snapshot())
-
-@app.get("/chatai/agent/tools")
-async def get_agent_tools(
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=6, ge=1, le=50),
-    current_user: dict = Depends(get_current_user),
-):
-    try:
-        result = await agent_dispatcher.list_tools_page(page, page_size)
-        return success("Agent 工具查询成功", result)
-    except Exception as exc:
-        logger.exception("Agent 工具分页查询失败")
-        raise HTTPException(
-            status_code=500,
-            detail="Agent 工具查询失败",
-        ) from exc
 
 @app.get("/chatai/models") #获取到当前后端存储的所有类别的模型
 async def models():

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from Config.config import config
 from datetime import datetime
 from Data.cache_manager import cache_manager
+from Data.schema_migrations import migrate_schema
 from System.log_manager import get_logger
 
 
@@ -48,7 +49,7 @@ class DBManager:
             conn = self.get_db_connection()
             try:
                 conn.executescript(sql_script)
-                self._migrate_schema(conn)
+                migrate_schema(conn)
                 conn.commit()
             except Exception as exc:
                 logger.exception("数据库初始化失败")
@@ -56,68 +57,6 @@ class DBManager:
                 raise
         logger.info("数据库初始化成功，sql_path=%s", sql_path)
 
-    @staticmethod
-    def _migrate_schema(conn):
-        """为已有 SQLite 数据库补充 CREATE TABLE 无法新增的字段。"""
-        model_columns = {
-            row["name"]
-            for row in conn.execute("PRAGMA table_info(models)").fetchall()
-        }
-        migrations = {
-            "context_window": "INTEGER",
-            "max_output_tokens": "INTEGER",
-            "safety_margin_tokens": "INTEGER NOT NULL DEFAULT 512",
-        }
-        for column_name, column_type in migrations.items():
-            if column_name not in model_columns:
-                conn.execute(
-                    f"ALTER TABLE models ADD COLUMN {column_name} {column_type}"
-                )
-        run_columns = {
-            row["name"]
-            for row in conn.execute("PRAGMA table_info(agent_tool_runs)").fetchall()
-        }
-        run_migrations = {
-            "message_id": "INTEGER",
-            "step_index": "INTEGER NOT NULL DEFAULT 0",
-        }
-        for column_name, column_type in run_migrations.items():
-            if column_name not in run_columns:
-                conn.execute(
-                    f"ALTER TABLE agent_tool_runs ADD COLUMN {column_name} {column_type}"
-                )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_agent_tool_runs_message_id "
-            "ON agent_tool_runs(message_id)"
-        )
-        message_columns = {
-            row["name"]
-            for row in conn.execute("PRAGMA table_info(messages)").fetchall()
-        }
-        message_migrations = {
-            "status": "TEXT NOT NULL DEFAULT 'completed'",
-            "finish_reason": "TEXT",
-            "request_id": "TEXT",
-            "updated_at": "TEXT",
-        }
-        for column_name, column_type in message_migrations.items():
-            if column_name not in message_columns:
-                conn.execute(
-                    f"ALTER TABLE messages ADD COLUMN {column_name} {column_type}"
-                )
-        conn.execute(
-            "UPDATE messages SET updated_at = created_at "
-            "WHERE updated_at IS NULL"
-        )
-        conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_messages_request_id "
-            "ON messages(request_id) WHERE request_id IS NOT NULL"
-        )
-        conn.execute(
-            "UPDATE messages SET status = 'failed', "
-            "finish_reason = 'server_restarted' "
-            "WHERE status = 'streaming'"
-        )
     def get_models(self):
         with self.lock:
             try:

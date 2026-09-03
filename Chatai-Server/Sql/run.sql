@@ -181,6 +181,9 @@ CREATE TABLE IF NOT EXISTS agent_tools (
     tools_name TEXT NOT NULL UNIQUE,
     display_name TEXT NOT NULL DEFAULT '',
     description TEXT NOT NULL DEFAULT '',
+    owner_user_id INTEGER,
+    source_kind TEXT NOT NULL DEFAULT 'system'
+        CHECK (source_kind IN ('system', 'user')),
     tool_type TEXT NOT NULL DEFAULT 'python_builtin'
         CHECK (tool_type IN ('python_builtin', 'executable', 'system_command')),
     platform TEXT NOT NULL DEFAULT 'all'
@@ -190,6 +193,13 @@ CREATE TABLE IF NOT EXISTS agent_tools (
     argv_template_json TEXT NOT NULL DEFAULT '[]',
     input_schema_json TEXT NOT NULL DEFAULT '{}',
     allowed_roots_json TEXT NOT NULL DEFAULT '["*"]',
+    storage_path TEXT NOT NULL DEFAULT '',
+    entrypoint TEXT NOT NULL DEFAULT '',
+    code_sha256 TEXT NOT NULL DEFAULT '',
+    validation_status TEXT NOT NULL DEFAULT 'valid'
+        CHECK (validation_status IN ('pending', 'valid', 'invalid')),
+    validation_error TEXT NOT NULL DEFAULT '',
+    deleted_at TEXT,
     is_enabled INTEGER NOT NULL DEFAULT 1
         CHECK (is_enabled IN (0, 1)),
     requires_confirmation INTEGER NOT NULL DEFAULT 0
@@ -199,7 +209,8 @@ CREATE TABLE IF NOT EXISTS agent_tools (
     timeout_seconds INTEGER NOT NULL DEFAULT 30,
     max_output_bytes INTEGER NOT NULL DEFAULT 65536,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS agent_tool_bindings (

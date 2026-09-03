@@ -27,11 +27,44 @@ class ToolDispatcher:
             self.registry.definitions(),
         )
 
-    async def list_tools_page(self, page: int, page_size: int) -> dict:
+    async def list_tools_page(
+        self,
+        user_id: int,
+        page: int,
+        page_size: int,
+    ) -> dict:
         return await asyncio.to_thread(
             self.repository.list_tools_page,
+            user_id,
             page,
             page_size,
+        )
+
+    async def get_tool_detail(self, user_id: int, tool_id: int) -> dict:
+        return await asyncio.to_thread(
+            self.repository.get_tool_detail,
+            user_id,
+            tool_id,
+        )
+
+    async def set_user_tool_enabled(
+        self,
+        user_id: int,
+        tool_id: int,
+        is_enabled: bool,
+    ) -> dict:
+        return await asyncio.to_thread(
+            self.repository.set_user_tool_enabled,
+            user_id,
+            tool_id,
+            is_enabled,
+        )
+
+    async def delete_user_tool(self, user_id: int, tool_id: int) -> dict:
+        return await asyncio.to_thread(
+            self.repository.delete_user_tool,
+            user_id,
+            tool_id,
         )
 
     async def model_schemas_for_user(self, user_id: int) -> list[dict]:
