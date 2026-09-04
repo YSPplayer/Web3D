@@ -6,6 +6,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from typing import Literal, Optional
 import asyncio
+import base64
+import binascii
 import json
 from Config.config import config
 import uvicorn
@@ -304,6 +306,53 @@ def image_to_data_url(logo_path: str)-> str:
     image_bytes = image_path.read_bytes()
     encoded = key.img_bytes_to_base64(image_bytes)
     return f"data:{mime_type};base64,{encoded}"
+
+
+MAX_AVATAR_BYTES = 512 * 1024
+MAX_AVATAR_BASE64_CHARS = ((MAX_AVATAR_BYTES + 2) // 3) * 4
+
+
+def parse_avatar_data_url(imgurl: str) -> tuple[str, str]:
+    value = imgurl.strip()
+    if not value:
+        return "", "image/png"
+
+    declared_mime = ""
+    encoded = value
+    if value.startswith("data:"):
+        if ";base64," not in value:
+            raise HTTPException(status_code=400, detail="头像数据格式不正确")
+        header, encoded = value.split(";base64,", 1)
+        declared_mime = header.removeprefix("data:").strip().lower()
+        if declared_mime == "image/jpg":
+            declared_mime = "image/jpeg"
+        if declared_mime not in {"image/jpeg", "image/png"}:
+            raise HTTPException(status_code=400, detail="头像只支持 JPG 或 PNG")
+
+    encoded = encoded.strip()
+    if not encoded or len(encoded) > MAX_AVATAR_BASE64_CHARS:
+        raise HTTPException(status_code=400, detail="头像文件过大或数据为空")
+
+    try:
+        image_bytes = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error) as exc:
+        raise HTTPException(status_code=400, detail="头像 Base64 数据无效") from exc
+
+    if len(image_bytes) > MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=400, detail="头像文件不能超过 512KB")
+
+    if image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        actual_mime = "image/png"
+    elif image_bytes.startswith(b"\xff\xd8\xff"):
+        actual_mime = "image/jpeg"
+    else:
+        raise HTTPException(status_code=400, detail="头像文件内容不是有效的 JPG 或 PNG")
+
+    if declared_mime and declared_mime != actual_mime:
+        raise HTTPException(status_code=400, detail="头像格式与文件内容不一致")
+
+    normalized_base64 = base64.b64encode(image_bytes).decode("ascii")
+    return normalized_base64, actual_mime
 
 TITLE_PROMPT = (
     "基于当前会话内容生成一个简短标题，只返回标题文本，"
@@ -1290,14 +1339,7 @@ async def register(user:UserRegister):
             status_code=400,
             detail="账号不能为空"
         )
-    avatar_mime = "image/png"
-    avatar_base64 = ""
-    if imgurl:
-          if imgurl.startswith("data:") and ";base64," in imgurl:
-            header, avatar_base64 = imgurl.split(";base64,", 1)
-            avatar_mime = header.replace("data:", "").strip() or "image/png"
-          else:
-            avatar_base64 = imgurl
+    avatar_base64, avatar_mime = parse_avatar_data_url(imgurl)
     
     # 1. 后端用 bcrypt 再加盐哈希（安全存储）
     result = db_manager.create_user(username, key.string_to_bcrypt_hash(password),
