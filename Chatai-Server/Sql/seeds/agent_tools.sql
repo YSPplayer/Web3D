@@ -58,4 +58,5 @@ INSERT OR IGNORE INTO agent_tools (
 ('get_file_diff', '比较文本文件差异', '使用 difflib 比较两个文本文件。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 20, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('list_registered_tasks', '列出注册任务', '列出后端预定义的 Python 测试和编译任务。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 10, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('run_registered_task', '运行注册任务', '按 task_id 运行后端预定义任务。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 1, 'medium', 15, 16384, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('get_task_status', '查询任务状态', '查询注册任务状态和有限日志尾部。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 10, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+('get_task_status', '查询任务状态', '查询注册任务状态和有限日志尾部。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 10, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('compare_path_names', '比较路径名称集合', '比较文本逐行名称与目录条目名称，返回统计和有限样本。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 120, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

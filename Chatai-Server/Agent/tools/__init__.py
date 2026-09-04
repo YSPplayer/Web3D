@@ -65,6 +65,7 @@ from Agent.tools.workspace_tools import (
     GetDirectorySnapshotTool,
     ReadFileRangeTool,
 )
+from Agent.tools.comparison_tools import ComparePathNamesTool
 
 
 def default_tools():
@@ -87,6 +88,7 @@ def default_tools():
         ReadFileRangeTool(),
         GetDirectorySnapshotTool(),
         CompareDirectorySnapshotsTool(),
+        ComparePathNamesTool(),
         CalculateFileHashTool(),
         CompareFilesTool(),
         ListArchiveTool(),

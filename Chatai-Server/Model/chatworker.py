@@ -28,8 +28,13 @@ async def main():
         if max_output_tokens is not None:
             request_data["max_tokens"] = max_output_tokens
         response = await litellm.acompletion(**request_data)
+        finish_reason = None
         async for chunk in response:
-            content = chunk.choices[0].delta.content
+            choice = chunk.choices[0]
+            choice_finish_reason = getattr(choice, "finish_reason", None)
+            if choice_finish_reason:
+                finish_reason = str(choice_finish_reason)
+            content = choice.delta.content
             if content:
                 print(
                     json.dumps(
@@ -44,7 +49,8 @@ async def main():
         print(
             json.dumps(
                 {
-                    "type": "done"
+                    "type": "done",
+                    "finish_reason": finish_reason or "stop"
                 },
                 ensure_ascii=False
             ),

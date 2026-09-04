@@ -28,6 +28,7 @@ from Model.token_manager import ModelTokenProfile, token_manager
 from System.system_monitor import system_monitor
 from System.log_manager import get_logger
 from Server.routes.agent_tools import create_agent_tools_router
+from Server.routes.agent_results import create_agent_results_router
 
 
 logger = get_logger(__name__)
@@ -154,6 +155,7 @@ app.add_middleware(
 app.include_router(
     create_agent_tools_router(agent_dispatcher, get_current_user)
 )
+app.include_router(create_agent_results_router(get_current_user))
 
 def run():
     uvicorn.run("Server.server:app", host=config.server_ip, port=config.server_port, reload=False)
@@ -344,12 +346,14 @@ async def stream_model_content(
     model_messages: list[dict],
     temperature: float = 0.6,
     max_output_tokens: int | None = None,
+    finish_state: dict | None = None,
 ):
     if runtime["is_local_model"]:
         for content in local_model_manager.chat_stream(
             model_messages,
             temperature=temperature,
             max_output_tokens=max_output_tokens or 1024,
+            finish_state=finish_state,
         ):
             yield content
             await asyncio.sleep(0)
@@ -365,6 +369,7 @@ async def stream_model_content(
         proxy_config["is_active"],
         temperature=temperature,
         max_output_tokens=max_output_tokens,
+        finish_state=finish_state,
     ):
         yield content
 
@@ -468,6 +473,7 @@ async def stream_recorded_model_call(
     temperature: float,
     max_output_tokens: int | None = None,
     agent_step: int = 0,
+    finish_state: dict | None = None,
 ):
     output_parts: list[str] = []
     status = "failed"
@@ -478,6 +484,7 @@ async def stream_recorded_model_call(
             prepared.messages,
             temperature=temperature,
             max_output_tokens=requested_output_tokens,
+            finish_state=finish_state,
         ):
             output_parts.append(content)
             yield content
@@ -1068,6 +1075,7 @@ async def create_chat_message(
         full_content: list[str] = []
         agent_run_ids: list[int] = []
         stream_failed = False
+        generation_finish_state = {"reason": "stop"}
         generation = {
             "user_id": chatMessage.userid,
             "task": asyncio.current_task(),
@@ -1142,6 +1150,7 @@ async def create_chat_message(
                             profile.max_output_tokens,
                         ),
                         agent_step=metadata["agent_step"],
+                        finish_state=generation_finish_state,
                     ):
                         yield content
 
@@ -1166,6 +1175,10 @@ async def create_chat_message(
                         full_content.append(event.get("content", ""))
                     elif event.get("type") == "agent_error":
                         full_content.append(event.get("message", "Agent 执行失败"))
+                        generation_finish_state["reason"] = event.get(
+                            "code",
+                            "agent_error",
+                        )
                     elif event.get("type") == "error":
                         stream_failed = True
                     yield json.dumps(event, ensure_ascii=False) + "\n"
@@ -1177,6 +1190,7 @@ async def create_chat_message(
                     usage_base,
                     "chat_final",
                     temperature=0.6,
+                    finish_state=generation_finish_state,
                 ):
                     full_content.append(content)
                     yield json.dumps(
@@ -1200,7 +1214,7 @@ async def create_chat_message(
             await finalize_generation(
                 ai_message,
                 "completed",
-                "stop",
+                generation_finish_state["reason"],
                 agent_run_ids,
             )
             yield json.dumps(
@@ -1209,7 +1223,8 @@ async def create_chat_message(
                     "user_created_at":user_created_at,
                     "ai_created_at":assistant_created_at,
                     "assistant_message_id": assistant_message_id,
-                    "status": "completed"
+                    "status": "completed",
+                    "finish_reason": generation_finish_state["reason"],
                 },
                 ensure_ascii=False
             ) + "\n"

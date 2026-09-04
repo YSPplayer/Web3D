@@ -69,6 +69,7 @@ def run_chat(
     generation_kwargs = None
     thread = None
     error = None
+    generated_token_count = 0
 
     try:
         prompt = tokenizer.apply_chat_template(
@@ -94,9 +95,14 @@ def run_chat(
             generation_kwargs["top_p"] = 0.9
 
         def generate():
-            nonlocal error
+            nonlocal error, generated_token_count
             try:
-                model.generate(**generation_kwargs)
+                generated = model.generate(**generation_kwargs)
+                input_token_count = int(inputs["input_ids"].shape[-1])
+                generated_token_count = max(
+                    0,
+                    int(generated.shape[-1]) - input_token_count,
+                )
             except Exception as exc:
                 error = exc
             finally:
@@ -119,7 +125,13 @@ def run_chat(
 
         write_event({
             "id": request_id,
-            "type": "done"
+            "type": "done",
+            "finish_reason": (
+                "length"
+                if generated_token_count >= max_output_tokens
+                else "stop"
+            ),
+            "generated_tokens": generated_token_count,
         })
     except Exception as exc:
         write_event({

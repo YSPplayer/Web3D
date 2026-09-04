@@ -13,7 +13,7 @@ interface ModelConfig {
     modeltype:string
     modelname:string
     apikey:string
-    isonline:number
+    isonline?:number
     proxyhost:string
     proxyport:number
     proxyactive:number

@@ -231,6 +231,7 @@ class LocalModelManager:
         messages: list[dict],
         temperature: float = 0.6,
         max_output_tokens: int = 1024,
+        finish_state: dict | None = None,
     ):
         if not self.chat_lock.acquire(blocking=False):
             raise RuntimeError("本地模型正在生成中")
@@ -272,6 +273,14 @@ class LocalModelManager:
                 if event_type == "delta":
                     yield event.get("content", "")
                 elif event_type == "done":
+                    if finish_state is not None:
+                        finish_state["reason"] = event.get(
+                            "finish_reason",
+                            "stop",
+                        )
+                        finish_state["generated_tokens"] = event.get(
+                            "generated_tokens",
+                        )
                     break
                 elif event_type == "error":
                     raise RuntimeError(event.get("message", "本地模型生成失败"))

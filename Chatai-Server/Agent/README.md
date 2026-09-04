@@ -58,4 +58,12 @@ Runner 只允许模型返回 `tool` 或 `final` 两种 JSON 决策，非法 JSON
 不存在、系统禁用、参数不合法、路径越界和执行超时都不会绕过原有保护。
 `agent_tool_bindings` 表目前仅为兼容旧数据库保留，不参与工具发现和执行授权。
 
+## 大结果策略
+
+文本名称与目录条目的比较统一使用 `compare_path_names`，由 Python 完成名称
+规范化、扫描和集合匹配。工具只向模型返回统计信息和最多20条样本；用户明确
+要求全部结果时，通过 `export_full_result=true` 把完整匹配项写入服务端 CSV，
+聊天正文仍不展开超大列表。`has_more`、`result_complete`、`result_file` 和
+`result_download_url` 用于区分样本、完整性、服务端文件和受鉴权保护的下载地址。
+
 进程工具使用 `psutil`。没有安装时，只有进程类工具会返回清晰错误，不影响其他工具注册和运行。

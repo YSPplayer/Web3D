@@ -48,6 +48,7 @@
                 </span>
             </div>
             <span>{{ user.username }}</span>
+            <img class="exit_img" :src="exitChat"/>
             <div class="user_edit flex_row_center" @click="showConfigDialog">
                 <img :src="editChat" class="fill_img" />
             </div>
@@ -58,6 +59,7 @@
 <script setup>
  import svgChat from "@/assets/chat.svg";
  import editChat from "@/assets/edit.svg";
+ import exitChat from "@/assets/exit.svg"
  import { Search } from '@element-plus/icons-vue'
  import {defineEmits,ref } from 'vue'
  import {user} from '@/store/store'
@@ -302,6 +304,11 @@ defineExpose({
     height: 2.6rem;
     border: 1px solid #ccc;
     margin-left: 1rem;
+}
+.exit_img {
+    width: 1.3rem;
+    height: 1.3rem;
+    margin-left: 0.5rem;
 }
 .user_img img {
     width: 100%;

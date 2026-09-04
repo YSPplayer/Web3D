@@ -65,7 +65,8 @@ class ModelApi:
         proxy_port: int | None = None,
         proxy_active: int = 0,
         temperature: float = 0.6,
-        max_output_tokens: int | None = None):
+        max_output_tokens: int | None = None,
+        finish_state: dict | None = None):
         response = None
         use_proxy = (
             int(proxy_active or 0) == 1
@@ -87,7 +88,11 @@ class ModelApi:
                     **request_data
                 )
                 async for chunk in response:
-                    content = chunk.choices[0].delta.content
+                    choice = chunk.choices[0]
+                    finish_reason = getattr(choice, "finish_reason", None)
+                    if finish_reason and finish_state is not None:
+                        finish_state["reason"] = str(finish_reason)
+                    content = choice.delta.content
                     if content:
                         yield content
             except asyncio.CancelledError:
@@ -150,6 +155,11 @@ class ModelApi:
                 if event["type"] == "delta":
                     yield event["content"]
                 elif event["type"] == "done":
+                    if finish_state is not None:
+                        finish_state["reason"] = event.get(
+                            "finish_reason",
+                            "stop",
+                        )
                     break
                 elif event["type"] == "error":
                     raise RuntimeError(event.get("message", "模型调用失败"))

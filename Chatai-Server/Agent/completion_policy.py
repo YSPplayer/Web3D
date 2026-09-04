@@ -11,6 +11,7 @@ class ToolCompletionPolicy:
     def __init__(self):
         self._rules: dict[str, CompletionRule] = {
             "list_directory": self._list_directory_ready,
+            "compare_path_names": self._path_name_comparison_ready,
         }
 
     def can_finalize(
@@ -52,6 +53,21 @@ class ToolCompletionPolicy:
         ):
             return False
         return directory_count == len(entries)
+
+    @staticmethod
+    def _path_name_comparison_ready(
+        arguments: dict,
+        result_data: Any,
+        request_context: dict,
+    ) -> bool:
+        if not isinstance(result_data, dict):
+            return False
+        return (
+            isinstance(result_data.get("match_count"), int)
+            and isinstance(result_data.get("items"), list)
+            and isinstance(result_data.get("has_more"), bool)
+            and isinstance(result_data.get("result_complete"), bool)
+        )
 
 
 tool_completion_policy = ToolCompletionPolicy()
