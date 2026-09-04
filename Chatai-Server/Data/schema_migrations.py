@@ -70,6 +70,52 @@ def _migrate_agent_tools(connection: sqlite3.Connection) -> None:
         "ON agent_tools(source_kind, owner_user_id)"
     )
 
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            migration_name TEXT PRIMARY KEY,
+            applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    migration_name = "agent_system_tools_catalog_v1"
+    applied = connection.execute(
+        "SELECT 1 FROM schema_migrations WHERE migration_name = ?",
+        (migration_name,),
+    ).fetchone()
+    if applied is None:
+        columns = _column_names(connection, "agent_tools")
+        # 旧版本曾把 Windows 专用 EXE 作为系统工具写入 run.sql。
+        # 保留历史运行记录，通过软删除退出当前工具目录。
+        if {"is_enabled", "updated_at"}.issubset(columns):
+            connection.execute(
+                """
+                UPDATE agent_tools
+                SET is_enabled = 0,
+                    validation_status = 'invalid',
+                    validation_error = '已退出跨平台系统工具目录',
+                    deleted_at = COALESCE(deleted_at, CURRENT_TIMESTAMP),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE tools_name = 'run_registered_executable'
+                  AND source_kind = 'system'
+                """
+            )
+            # 原始 ICMP 在普通服务账号下不稳定；只在首次升级时改为禁用，
+            # 后续不覆盖管理员显式调整的状态。
+            connection.execute(
+                """
+                UPDATE agent_tools
+                SET is_enabled = 0,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE tools_name = 'ping_host'
+                  AND source_kind = 'system'
+                """
+            )
+        connection.execute(
+            "INSERT INTO schema_migrations (migration_name) VALUES (?)",
+            (migration_name,),
+        )
+
 
 def _migrate_agent_tool_runs(connection: sqlite3.Connection) -> None:
     table_exists = _add_missing_columns(

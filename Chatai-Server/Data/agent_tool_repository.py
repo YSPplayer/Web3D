@@ -58,7 +58,7 @@ class AgentToolRepository:
                             updated_at
                         ) VALUES (
                             ?, ?, ?, NULL, 'system', 'python_builtin', ?, ?,
-                            '["*"]', 'valid', '', 1, ?, ?, ?, ?,
+                            '["*"]', 'valid', '', ?, ?, ?, ?, ?,
                             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                         )
                         ON CONFLICT(tools_name) DO UPDATE SET
@@ -87,6 +87,7 @@ class AgentToolRepository:
                             definition.description,
                             definition.platform,
                             json.dumps(definition.input_schema, ensure_ascii=False),
+                            int(definition.risk_level != "high"),
                             int(definition.requires_confirmation),
                             definition.risk_level,
                             definition.timeout_seconds,

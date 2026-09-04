@@ -9,17 +9,44 @@ from Agent.tools.file_tools import (
     ReadTextFileTool,
     SearchTextTool,
 )
-from Agent.tools.network_tools import CheckTcpPortTool, HttpGetTool, PingHostTool
+from Agent.tools.archive_tools import (
+    CreateArchiveTool,
+    ExtractArchiveTool,
+    ListArchiveTool,
+)
+from Agent.tools.file_mutation_tools import (
+    AppendTextFileTool,
+    BulkReplaceTextTool,
+    CopyPathTool,
+    CreateDirectoryTool,
+    DeleteDirectoryContentsTool,
+    DeletePathTool,
+    MovePathTool,
+    RenamePathTool,
+    ReplaceTextInFileTool,
+    WriteTextFileTool,
+)
+from Agent.tools.integrity_tools import CalculateFileHashTool, CompareFilesTool
+from Agent.tools.network_tools import (
+    CheckTcpPortTool,
+    DownloadFileTool,
+    HttpGetTool,
+    PingHostTool,
+    ResolveHostTool,
+)
 from Agent.tools.process_tools import (
     GetProcessDetailTool,
     GetProcessListTool,
     KillProcessTool,
+    KillProcessTreeTool,
 )
 from Agent.tools.system_tools import (
     GetCurrentTimeTool,
     GetCurrentUserTool,
     GetHostnameTool,
     GetOsInfoTool,
+    GetPythonRuntimeInfoTool,
+    GetSystemMetricsTool,
 )
 
 
@@ -29,6 +56,8 @@ def default_tools():
         GetHostnameTool(),
         GetCurrentUserTool(),
         GetOsInfoTool(),
+        GetPythonRuntimeInfoTool(),
+        GetSystemMetricsTool(),
         ListDirectoryTool(),
         FileStatTool(),
         ReadTextFileTool(),
@@ -38,12 +67,30 @@ def default_tools():
         SearchTextTool(),
         GetDiskUsageTool(),
         GetDirectorySizeTool(),
+        CalculateFileHashTool(),
+        CompareFilesTool(),
+        ListArchiveTool(),
         GetProcessListTool(),
         GetProcessDetailTool(),
         KillProcessTool(),
+        KillProcessTreeTool(),
         PingHostTool(),
         CheckTcpPortTool(),
+        ResolveHostTool(),
         HttpGetTool(),
+        CreateDirectoryTool(),
+        CopyPathTool(),
+        RenamePathTool(),
+        WriteTextFileTool(),
+        AppendTextFileTool(),
+        ReplaceTextInFileTool(),
+        CreateArchiveTool(),
+        ExtractArchiveTool(),
+        DownloadFileTool(),
+        MovePathTool(),
+        DeletePathTool(),
+        DeleteDirectoryContentsTool(),
+        BulkReplaceTextTool(),
     ]
 
 

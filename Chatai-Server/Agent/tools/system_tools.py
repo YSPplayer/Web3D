@@ -1,7 +1,11 @@
 import getpass
+import asyncio
+import os
 import platform
 import socket
+import sys
 from datetime import datetime
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
@@ -72,3 +76,64 @@ class GetOsInfoTool(PythonTool[EmptyArguments]):
             "processor": platform.processor(),
             "python_version": platform.python_version(),
         }
+
+
+class GetPythonRuntimeInfoTool(PythonTool[EmptyArguments]):
+    name = "get_python_runtime_info"
+    display_name = "获取 Python 运行环境"
+    description = "返回 Python 解释器、实现、版本和虚拟环境状态，不读取环境变量内容。"
+    args_model = EmptyArguments
+    max_output_bytes = 16_384
+
+    async def execute(self, context: ToolContext, arguments: EmptyArguments) -> dict:
+        base_prefix = getattr(sys, "base_prefix", sys.prefix)
+        return {
+            "implementation": platform.python_implementation(),
+            "version": platform.python_version(),
+            "executable": sys.executable,
+            "prefix": sys.prefix,
+            "base_prefix": base_prefix,
+            "is_virtual_environment": sys.prefix != base_prefix,
+        }
+
+
+class GetSystemMetricsTool(PythonTool[EmptyArguments]):
+    name = "get_system_metrics"
+    display_name = "获取系统资源指标"
+    description = "返回 CPU、内存和当前工作目录所在磁盘的基础指标，不包含 GPU 厂商专用数据。"
+    args_model = EmptyArguments
+    timeout_seconds = 10
+    max_output_bytes = 16_384
+
+    async def execute(self, context: ToolContext, arguments: EmptyArguments) -> dict:
+        try:
+            import psutil
+        except ImportError as exc:
+            raise RuntimeError("系统资源指标工具需要安装 Python 包 psutil") from exc
+
+        def collect() -> dict:
+            disk_path = Path.cwd().anchor or os.sep
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage(disk_path)
+            return {
+                "cpu": {
+                    "percent": psutil.cpu_percent(interval=0.1),
+                    "logical_count": psutil.cpu_count(logical=True),
+                    "physical_count": psutil.cpu_count(logical=False),
+                },
+                "memory": {
+                    "percent": memory.percent,
+                    "total_bytes": memory.total,
+                    "used_bytes": memory.used,
+                    "available_bytes": memory.available,
+                },
+                "disk": {
+                    "path": disk_path,
+                    "percent": disk.percent,
+                    "total_bytes": disk.total,
+                    "used_bytes": disk.used,
+                    "free_bytes": disk.free,
+                },
+            }
+
+        return await asyncio.to_thread(collect)

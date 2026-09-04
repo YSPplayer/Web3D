@@ -42,9 +42,12 @@
         <div class="chat_line"></div>
         <div class="chat_config_user flex_row">
             <div class="user_img">
-                <img :src="userImgUrl">
+                <img v-if="user.userlogo" :src="user.userlogo" alt="用户头像">
+                <span v-else class="user_avatar_fallback">
+                    {{ user.username.slice(0, 1).toUpperCase() || '用' }}
+                </span>
             </div>
-            <span>{{userName}}</span>
+            <span>{{ user.username }}</span>
             <div class="user_edit flex_row_center" @click="showConfigDialog">
                 <img :src="editChat" class="fill_img" />
             </div>
@@ -56,14 +59,12 @@
  import svgChat from "@/assets/chat.svg";
  import editChat from "@/assets/edit.svg";
  import { Search } from '@element-plus/icons-vue'
- import {defineEmits,ref,watch } from 'vue'
+ import {defineEmits,ref } from 'vue'
  import {user} from '@/store/store'
  import { ChatAiApi } from "@/api/api";
  import { Delete } from '@element-plus/icons-vue'
  import { ElMessageBox, ElMessage } from 'element-plus'
- const userName = ref('')
  const searchText = ref('')
- const userImgUrl = ref('')
  const chatList = ref([])
  const rawChatList = ref([])
  const newbuttonDisable = ref(false)
@@ -190,14 +191,6 @@ const updateChatMessage = async ()=> {
         emits('updateChatMessage',data.messages)
     }
 }
-watch(() => user.username,(newName) => {
-       userName.value = newName
-    }
-)
-watch(() => user.userlogo,(userlogo) => {
-       userImgUrl.value = userlogo
-    }
-)
 defineExpose({
   updateChatList,
   updateTitleMessage
@@ -315,6 +308,19 @@ defineExpose({
     height: 100%;
     border-radius: 5px;
     object-fit: fill;
+}
+.user_avatar_fallback {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    background-color: var(--el-fill-color-light);
+    color: var(--el-text-color-regular);
+    font-size: 1rem;
+    line-height: 1;
+    user-select: none;
 }
 .chat_title span {
     display: grid;

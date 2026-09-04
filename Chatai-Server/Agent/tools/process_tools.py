@@ -24,6 +24,10 @@ class ProcessIdArguments(BaseModel):
     pid: int = Field(ge=1)
 
 
+class KillProcessTreeArguments(ProcessIdArguments):
+    include_parent: bool = True
+
+
 def _require_psutil():
     if psutil is None:
         raise RuntimeError("进程工具需要安装 Python 包 psutil")
@@ -144,3 +148,41 @@ class KillProcessTool(PythonTool[ProcessIdArguments]):
             }
 
         return await asyncio.to_thread(terminate)
+
+
+class KillProcessTreeTool(PythonTool[KillProcessTreeArguments]):
+    name = "kill_process_tree"
+    display_name = "结束进程树"
+    description = "使用 psutil 终止指定进程的子进程，并可同时终止父进程。"
+    args_model = KillProcessTreeArguments
+    risk_level = "high"
+    requires_confirmation = True
+    timeout_seconds = 20
+    max_output_bytes = 32_768
+
+    async def execute(self, context: ToolContext, arguments: KillProcessTreeArguments) -> dict:
+        protected_pids = {0, 1, 4, os.getpid(), os.getppid()}
+        if arguments.pid in protected_pids:
+            raise ToolPermissionError(f"禁止结束受保护进程：{arguments.pid}")
+
+        def terminate_tree() -> dict:
+            process_api = _require_psutil()
+            parent = process_api.Process(arguments.pid)
+            processes = parent.children(recursive=True)
+            if any(process.pid in protected_pids for process in processes):
+                raise ToolPermissionError("进程树包含受保护进程，拒绝执行")
+            targets = processes + ([parent] if arguments.include_parent else [])
+            for process in reversed(targets):
+                try:
+                    process.terminate()
+                except process_api.NoSuchProcess:
+                    continue
+            gone, alive = process_api.wait_procs(targets, timeout=5)
+            return {
+                "pid": arguments.pid,
+                "include_parent": arguments.include_parent,
+                "terminated_pids": [process.pid for process in gone],
+                "alive_pids": [process.pid for process in alive],
+            }
+
+        return await asyncio.to_thread(terminate_tree)

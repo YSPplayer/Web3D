@@ -39,23 +39,28 @@ class DBManager:
 
     def init_db(self):
         cache_manager.clear()
-        sql_path = config.sql_path / "run.sql"
-        if not os.path.exists(sql_path):
-            raise FileNotFoundError(f"SQL文件不存在: {sql_path}")
-        with open(sql_path, 'r', encoding='utf-8') as f:
-            sql_script = f.read()
+        sql_paths = (
+            config.sql_path / "run.sql",
+            config.sql_path / "seeds" / "agent_tools.sql",
+        )
+        for sql_path in sql_paths:
+            if not os.path.exists(sql_path):
+                raise FileNotFoundError(f"SQL文件不存在: {sql_path}")
         """初始化数据库：创建所有表"""
         with self.lock:
             conn = self.get_db_connection()
             try:
-                conn.executescript(sql_script)
+                with open(sql_paths[0], 'r', encoding='utf-8') as f:
+                    conn.executescript(f.read())
                 migrate_schema(conn)
+                with open(sql_paths[1], 'r', encoding='utf-8') as f:
+                    conn.executescript(f.read())
                 conn.commit()
             except Exception as exc:
                 logger.exception("数据库初始化失败")
                 conn.rollback()
                 raise
-        logger.info("数据库初始化成功，sql_path=%s", sql_path)
+        logger.info("数据库初始化成功，sql_paths=%s", sql_paths)
 
     def get_models(self):
         with self.lock:

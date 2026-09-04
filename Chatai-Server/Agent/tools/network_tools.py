@@ -1,15 +1,19 @@
 import asyncio
+import ipaddress
 import os
 import socket
 import struct
 import time
 import urllib.parse
 import urllib.request
+import tempfile
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from Agent.base import PythonTool
 from Agent.context import ToolContext
+from Agent.tool_policy import resolve_allowed_path
 
 
 class PingHostArguments(BaseModel):
@@ -30,6 +34,20 @@ class HttpGetArguments(BaseModel):
     url: str
     timeout_seconds: int = Field(default=5, ge=1, le=15)
     max_bytes: int = Field(default=20_000, ge=1, le=65_536)
+
+
+class ResolveHostArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    host: str = Field(min_length=1, max_length=253)
+
+
+class DownloadFileArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str
+    destination: str
+    timeout_seconds: int = Field(default=30, ge=1, le=120)
+    max_bytes: int = Field(default=100 * 1024 * 1024, ge=1, le=1024 * 1024 * 1024)
+    overwrite: bool = False
 
 
 def _icmp_checksum(payload: bytes) -> int:
@@ -105,6 +123,7 @@ class PingHostTool(PythonTool[PingHostArguments]):
     display_name = "Ping 主机"
     description = "使用 Python ICMP 原始套接字检测 IPv4 主机，不调用系统 ping 命令。"
     args_model = PingHostArguments
+    risk_level = "medium"
     timeout_seconds = 10
     max_output_bytes = 32_768
 
@@ -144,6 +163,50 @@ class CheckTcpPortTool(PythonTool[CheckTcpPortArguments]):
         }
 
 
+class ResolveHostTool(PythonTool[ResolveHostArguments]):
+    name = "resolve_host"
+    display_name = "解析主机地址"
+    description = "使用 Python DNS 接口解析主机名并返回去重后的 IP 地址。"
+    args_model = ResolveHostArguments
+    max_output_bytes = 16_384
+
+    async def execute(self, context: ToolContext, arguments: ResolveHostArguments) -> dict:
+        def resolve() -> dict:
+            infos = socket.getaddrinfo(arguments.host, None, type=socket.SOCK_STREAM)
+            addresses = sorted({info[4][0] for info in infos})
+            return {"host": arguments.host, "addresses": addresses}
+
+        return await asyncio.to_thread(resolve)
+
+
+def validate_public_http_url(url: str) -> urllib.parse.ParseResult:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("只允许 http 和 https URL")
+    if not parsed.hostname:
+        raise ValueError("URL 缺少主机名")
+    if parsed.username or parsed.password:
+        raise ValueError("URL 中不允许携带用户名或密码")
+
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, parsed.port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        raise ValueError(f"无法解析目标主机：{parsed.hostname}") from exc
+    if not infos:
+        raise ValueError(f"无法解析目标主机：{parsed.hostname}")
+    for info in infos:
+        address = ipaddress.ip_address(info[4][0].split("%", 1)[0])
+        if not address.is_global:
+            raise ValueError(f"禁止访问非公网地址：{address}")
+    return parsed
+
+
+class SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        validate_public_http_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 class HttpGetTool(PythonTool[HttpGetArguments]):
     name = "http_get"
     display_name = "HTTP GET 请求"
@@ -153,13 +216,7 @@ class HttpGetTool(PythonTool[HttpGetArguments]):
     timeout_seconds = 15
 
     async def execute(self, context: ToolContext, arguments: HttpGetArguments) -> dict:
-        parsed = urllib.parse.urlparse(arguments.url)
-        if parsed.scheme not in {"http", "https"}:
-            raise ValueError("只允许 http 和 https URL")
-        if not parsed.hostname:
-            raise ValueError("URL 缺少主机名")
-        if parsed.username or parsed.password:
-            raise ValueError("URL 中不允许携带用户名或密码")
+        validate_public_http_url(arguments.url)
 
         def request_url() -> dict:
             request = urllib.request.Request(
@@ -167,7 +224,8 @@ class HttpGetTool(PythonTool[HttpGetArguments]):
                 method="GET",
                 headers={"User-Agent": "Chatai-Agent/1.0"},
             )
-            with urllib.request.urlopen(request, timeout=arguments.timeout_seconds) as response:
+            opener = urllib.request.build_opener(SafeRedirectHandler())
+            with opener.open(request, timeout=arguments.timeout_seconds) as response:
                 payload = response.read(arguments.max_bytes + 1)
                 truncated = len(payload) > arguments.max_bytes
                 payload = payload[: arguments.max_bytes]
@@ -182,3 +240,61 @@ class HttpGetTool(PythonTool[HttpGetArguments]):
                 }
 
         return await asyncio.to_thread(request_url)
+
+
+class DownloadFileTool(PythonTool[DownloadFileArguments]):
+    name = "download_file"
+    display_name = "下载文件"
+    description = "从经过公网地址校验的 HTTP/HTTPS URL 下载有限大小的文件到允许路径。"
+    args_model = DownloadFileArguments
+    risk_level = "medium"
+    requires_confirmation = True
+    timeout_seconds = 130
+    max_output_bytes = 16_384
+
+    async def execute(self, context: ToolContext, arguments: DownloadFileArguments) -> dict:
+        validate_public_http_url(arguments.url)
+        destination = resolve_allowed_path(arguments.destination, context.allowed_roots)
+        if destination.exists() and not arguments.overwrite:
+            raise FileExistsError(f"目标已存在：{destination}")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        def download() -> dict:
+            request = urllib.request.Request(
+                arguments.url,
+                method="GET",
+                headers={"User-Agent": "Chatai-Agent/1.0"},
+            )
+            opener = urllib.request.build_opener(SafeRedirectHandler())
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=f".{destination.name}.",
+                suffix=".download",
+                dir=destination.parent,
+            )
+            temporary = Path(temporary_name)
+            downloaded = 0
+            try:
+                with os.fdopen(descriptor, "wb") as output:
+                    with opener.open(request, timeout=arguments.timeout_seconds) as response:
+                        final_url = response.geturl()
+                        validate_public_http_url(final_url)
+                        while True:
+                            chunk = response.read(min(1024 * 1024, arguments.max_bytes - downloaded + 1))
+                            if not chunk:
+                                break
+                            downloaded += len(chunk)
+                            if downloaded > arguments.max_bytes:
+                                raise ValueError("下载内容超过 max_bytes 限制")
+                            output.write(chunk)
+                    output.flush()
+                    os.fsync(output.fileno())
+                os.replace(temporary, destination)
+                return {
+                    "url": final_url,
+                    "destination": str(destination),
+                    "size_bytes": downloaded,
+                }
+            finally:
+                temporary.unlink(missing_ok=True)
+
+        return await asyncio.to_thread(download)

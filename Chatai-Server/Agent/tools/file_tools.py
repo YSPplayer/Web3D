@@ -191,6 +191,7 @@ class ReadFileHeadTool(PythonTool[ReadLinesArguments]):
     display_name = "读取文件开头"
     description = "使用 Python 读取允许文本文件的前 N 行。"
     args_model = ReadLinesArguments
+    risk_level = "medium"
     timeout_seconds = 10
     max_output_bytes = 32_768
 
@@ -217,6 +218,7 @@ class ReadFileTailTool(PythonTool[ReadLinesArguments]):
     display_name = "读取文件结尾"
     description = "使用 Python 读取允许文本文件的最后 N 行。"
     args_model = ReadLinesArguments
+    risk_level = "medium"
     timeout_seconds = 10
     max_output_bytes = 32_768
 
@@ -319,8 +321,12 @@ class GetDiskUsageTool(PythonTool[DiskUsageArguments]):
 
     async def execute(self, context: ToolContext, arguments: DiskUsageArguments) -> dict:
         if arguments.path:
-            path = Path(arguments.path).expanduser().resolve(strict=True)
-        elif context.allowed_roots:
+            path = resolve_allowed_path(
+                arguments.path,
+                context.allowed_roots,
+                must_exist=True,
+            )
+        elif context.allowed_roots and tuple(str(root) for root in context.allowed_roots) != ("*",):
             path = context.allowed_roots[0].resolve(strict=True)
         else:
             path = Path.cwd().resolve()
