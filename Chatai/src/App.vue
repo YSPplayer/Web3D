@@ -1,7 +1,7 @@
 <template>
     <div v-if="authStatus === 'checking'" class="auth_bootstrap" v-loading="true"></div>
     <div v-else-if="authStatus === 'authenticated'" class ='container flex_row'>
-        <leftmenu ref="leftmenuRef" @showConfigDialog= 'showConfigDialog' @updateChatMessage = 'updateChatMessage'  />
+        <leftmenu ref="leftmenuRef" @showConfigDialog= 'showConfigDialog' @updateChatMessage = 'updateChatMessage' @requestLogout="handleLogout" />
         <chatcontainer ref="chatcontainerRef" @updateTitleMessage ='updateTitleMessage'/>
     </div>
     <login ref="loginRef" @updateUserModelConfig = 'updateUserModelConfig'/>
@@ -16,11 +16,13 @@ import { ref, onMounted, nextTick } from 'vue'
 import { ChatAiApi } from '@/api/api.ts';
 import { applyAuthenticatedUser, resetUser, user } from '@/store/store.ts';
 import { request } from '@/api/request.ts';
+import { ElMessage, ElMessageBox } from 'element-plus';
 const loginRef = ref(null)
 const configRef = ref(null)
 const leftmenuRef = ref(null)
 const chatcontainerRef = ref(null)
 const authStatus = ref('checking')
+const logoutLoading = ref(false)
 const showConfigDialog = ()=>{
    configRef.value?.openDialog()
 }
@@ -32,6 +34,39 @@ const handleAuthFailure = () => {
    resetUser()
    authStatus.value = 'anonymous'
    openLoginAfterRender()
+}
+const handleLogout = async () => {
+   if(logoutLoading.value) return
+   try {
+      await ElMessageBox.confirm(
+         '退出后需要重新登录，是否确认退出？',
+         '退出登录',
+         {
+            confirmButtonText: '退出',
+            cancelButtonText: '取消',
+            type: 'warning',
+            closeOnClickModal: false,
+            closeOnPressEscape: true
+         }
+      )
+   } catch {
+      return
+   }
+
+   logoutLoading.value = true
+   try {
+      try {
+         await chatcontainerRef.value?.stopChatMessage?.()
+      } catch {
+         // 停止生成失败时仍需继续退出登录
+      }
+      const result = await ChatAiApi.logoutApi()
+      if(result?.code === 200) {
+         ElMessage.success('已退出登录')
+      }
+   } finally {
+      logoutLoading.value = false
+   }
 }
 onMounted(async()=>{
    request.setAuthFailureHandler(handleAuthFailure)

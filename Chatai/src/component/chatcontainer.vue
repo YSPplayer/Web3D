@@ -69,7 +69,7 @@
 <script setup>
  import postChat from "@/assets/post.svg";
  import stopChat from "@/assets/stop.svg";
- import { ref,reactive,nextTick   } from 'vue'
+ import { ref,reactive,nextTick,onUnmounted } from 'vue'
  import {user} from '@/store/store'
  import { Util } from "@/shared/util";
  import {ChatAiApi} from '@/api/api'
@@ -499,9 +499,16 @@ const getTitleMessage = async ()=> {
         if(activeRequestId === aiMessage.requestId) activeRequestId = ''
         abortController = null
     }
-} 
+ }
+ onUnmounted(() => {
+    if(abortController) {
+        abortController.abort()
+        abortController = null
+    }
+ })
  defineExpose({
-    updateChatMessage
+    updateChatMessage,
+    stopChatMessage
  })
 </script>
 

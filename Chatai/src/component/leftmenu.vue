@@ -48,7 +48,15 @@
                 </span>
             </div>
             <span>{{ user.username }}</span>
-            <img class="exit_img" :src="exitChat"/>
+            <img
+                class="exit_img"
+                :src="exitChat"
+                title="退出登录"
+                role="button"
+                tabindex="0"
+                @click="requestLogout"
+                @keyup.enter="requestLogout"
+            />
             <div class="user_edit flex_row_center" @click="showConfigDialog">
                 <img :src="editChat" class="fill_img" />
             </div>
@@ -71,7 +79,10 @@
  const rawChatList = ref([])
  const newbuttonDisable = ref(false)
  const activeId = ref(chatList.value[0]?.id || null)
- const emits = defineEmits(['showConfigDialog','updateChatMessage'])
+ const emits = defineEmits(['showConfigDialog','updateChatMessage','requestLogout'])
+ const requestLogout = () => {
+    emits('requestLogout')
+ }
  const showConfigDialog = ()=> {
     emits('showConfigDialog')
  }
@@ -309,6 +320,24 @@ defineExpose({
     width: 1.3rem;
     height: 1.3rem;
     margin-left: 0.5rem;
+    padding: 0.3rem;
+    border-radius: 6px;
+    box-sizing: content-box;
+    opacity: 0.65;
+    cursor: pointer;
+    transition: opacity 0.18s ease,
+                background-color 0.18s ease,
+                transform 0.18s ease;
+}
+.exit_img:hover,
+.exit_img:focus-visible {
+    opacity: 1;
+    background-color: var(--el-fill-color-light);
+    transform: scale(1.06);
+    outline: none;
+}
+.exit_img:active {
+    transform: scale(0.96);
 }
 .user_img img {
     width: 100%;

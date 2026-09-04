@@ -49,6 +49,8 @@
         loginForm.dfpassword = ''
     }
     const openDialog = () => {
+        clearLoginForm()
+        registerVisible.value = false
         dialogVisible.value = true
     }
     const closeDialog = () => {
