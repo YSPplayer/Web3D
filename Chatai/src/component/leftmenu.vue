@@ -332,7 +332,7 @@ defineExpose({
 .exit_img:hover,
 .exit_img:focus-visible {
     opacity: 1;
-    background-color: var(--el-fill-color-light);
+    /* background-color: var(--el-fill-color-light); */
     transform: scale(1.06);
     outline: none;
 }
