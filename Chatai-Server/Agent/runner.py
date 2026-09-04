@@ -702,10 +702,14 @@ class AgentRunner:
         external_objects = (
             "文件", "目录", "文件夹", "进程", "端口", "主机",
             "磁盘", "CPU", "GPU", "内存", "显存", "网络", "网址",
+            "代码", "源码", "仓库", "Git", "数据库", "SQLite",
+            "JSON", "Python", "补丁", "测试", "编译", "任务",
         )
         external_qualifiers = (
             "当前", "现在", "本机", "我的", "这个路径", "实时",
             "占用率", "是否运行", "是否存在", "数量",
+            "检查", "校验", "读取", "查看", "比较", "差异", "修改",
+            "应用", "运行", "状态", "结构", "语法", "快照",
         )
         return (
             any(word.lower() in request.lower() for word in external_objects)
@@ -725,7 +729,7 @@ class AgentRunner:
 
         request = user_messages[-1]
         provided_fields: set[str] = set()
-        if re.search(r"(?i)(?:[a-z]:[\\/]|\\\\)", request):
+        if re.search(r"(?i)(?:[a-z]:[\\/]|\\\\|(?<!\w)/(?:[^\s/]+/)*[^\s/]+)", request):
             provided_fields.add("path")
         return provided_fields
 
@@ -762,6 +766,9 @@ class AgentRunner:
             tool_name = str(function.get("name", "")).lower()
             if tool_name and tool_name in request:
                 score += 20
+            for name_part in tool_name.split("_"):
+                if len(name_part) >= 3 and name_part in request:
+                    score += 8
             if score > 0:
                 scored.append((score, -index, schema))
 

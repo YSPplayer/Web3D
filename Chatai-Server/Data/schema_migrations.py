@@ -116,6 +116,41 @@ def _migrate_agent_tools(connection: sqlite3.Connection) -> None:
             (migration_name,),
         )
 
+    retire_x3p_migration = "retire_non_generic_x3p_tools_v1"
+    x3p_retired = connection.execute(
+        "SELECT 1 FROM schema_migrations WHERE migration_name = ?",
+        (retire_x3p_migration,),
+    ).fetchone()
+    if x3p_retired is None:
+        columns = _column_names(connection, "agent_tools")
+        required_columns = {
+            "is_enabled",
+            "source_kind",
+            "validation_status",
+            "validation_error",
+            "deleted_at",
+            "updated_at",
+        }
+        if required_columns.issubset(columns):
+            # X3P 属于业务专用格式，不再作为通用系统工具提供。这里采用软删除，
+            # 避免破坏历史 agent_tool_runs 记录与外键关系。
+            connection.execute(
+                """
+                UPDATE agent_tools
+                SET is_enabled = 0,
+                    validation_status = 'invalid',
+                    validation_error = '已退出通用系统工具目录',
+                    deleted_at = COALESCE(deleted_at, CURRENT_TIMESTAMP),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE tools_name IN ('inspect_x3p_metadata', 'validate_x3p_file')
+                  AND source_kind = 'system'
+                """
+            )
+        connection.execute(
+            "INSERT INTO schema_migrations (migration_name) VALUES (?)",
+            (retire_x3p_migration,),
+        )
+
 
 def _migrate_agent_tool_runs(connection: sqlite3.Connection) -> None:
     table_exists = _add_missing_columns(

@@ -74,14 +74,22 @@ class AgentToolRouteTests(unittest.TestCase):
         return cursor.lastrowid
 
     def test_routes_scope_tools_and_protect_system_rows(self):
-        page = self.client.get(
+        first_page = self.client.get(
             "/chatai/agent/tools",
             params={"page": 1, "page_size": 50},
         )
-        self.assertEqual(page.status_code, 200)
+        second_page = self.client.get(
+            "/chatai/agent/tools",
+            params={"page": 2, "page_size": 50},
+        )
+        self.assertEqual(first_page.status_code, 200)
+        self.assertEqual(second_page.status_code, 200)
         names = {
             item["tools_name"]
-            for item in page.json()["data"]["items"]
+            for item in (
+                first_page.json()["data"]["items"]
+                + second_page.json()["data"]["items"]
+            )
         }
         self.assertIn("own_route_tool", names)
         self.assertNotIn("other_route_tool", names)

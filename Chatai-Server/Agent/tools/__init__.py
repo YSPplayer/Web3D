@@ -34,6 +34,7 @@ from Agent.tools.network_tools import (
     PingHostTool,
     ResolveHostTool,
 )
+from Agent.tools.patch_tools import ApplyTextPatchTool, PreviewTextPatchTool
 from Agent.tools.process_tools import (
     GetProcessDetailTool,
     GetProcessListTool,
@@ -47,6 +48,22 @@ from Agent.tools.system_tools import (
     GetOsInfoTool,
     GetPythonRuntimeInfoTool,
     GetSystemMetricsTool,
+)
+from Agent.tools.repository_tools import GetFileDiffTool, GetRepositoryStatusTool
+from Agent.tools.task_tools import (
+    GetTaskStatusTool,
+    ListRegisteredTasksTool,
+    RunRegisteredTaskTool,
+)
+from Agent.tools.validation_tools import (
+    InspectSqliteSchemaTool,
+    ValidateJsonTool,
+    ValidatePythonSyntaxTool,
+)
+from Agent.tools.workspace_tools import (
+    CompareDirectorySnapshotsTool,
+    GetDirectorySnapshotTool,
+    ReadFileRangeTool,
 )
 
 
@@ -67,6 +84,9 @@ def default_tools():
         SearchTextTool(),
         GetDiskUsageTool(),
         GetDirectorySizeTool(),
+        ReadFileRangeTool(),
+        GetDirectorySnapshotTool(),
+        CompareDirectorySnapshotsTool(),
         CalculateFileHashTool(),
         CompareFilesTool(),
         ListArchiveTool(),
@@ -78,6 +98,14 @@ def default_tools():
         CheckTcpPortTool(),
         ResolveHostTool(),
         HttpGetTool(),
+        ValidatePythonSyntaxTool(),
+        ValidateJsonTool(),
+        InspectSqliteSchemaTool(),
+        GetRepositoryStatusTool(),
+        GetFileDiffTool(),
+        ListRegisteredTasksTool(),
+        GetTaskStatusTool(),
+        PreviewTextPatchTool(),
         CreateDirectoryTool(),
         CopyPathTool(),
         RenamePathTool(),
@@ -87,6 +115,8 @@ def default_tools():
         CreateArchiveTool(),
         ExtractArchiveTool(),
         DownloadFileTool(),
+        ApplyTextPatchTool(),
+        RunRegisteredTaskTool(),
         MovePathTool(),
         DeletePathTool(),
         DeleteDirectoryContentsTool(),

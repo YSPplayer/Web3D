@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from Data.db_manager import DBManager
+from Data.schema_migrations import migrate_schema
 
 
 class MessageLifecycleTests(unittest.TestCase):
@@ -97,7 +98,7 @@ class MessageLifecycleTests(unittest.TestCase):
             """
         )
 
-        DBManager._migrate_schema(connection)
+        migrate_schema(connection)
         columns = {
             row["name"]
             for row in connection.execute("PRAGMA table_info(messages)")

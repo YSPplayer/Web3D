@@ -45,4 +45,17 @@ INSERT OR IGNORE INTO agent_tools (
 ('delete_directory_contents', '清空目录内容', '批量删除目录直接子项。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 0, 1, 'high', 120, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('kill_process', '结束进程', '结束指定进程。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 0, 1, 'high', 10, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('kill_process_tree', '结束进程树', '结束指定进程树。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 0, 1, 'high', 20, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('bulk_replace_text', '批量替换文本', '批量替换目录内文本。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 0, 1, 'high', 120, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+('bulk_replace_text', '批量替换文本', '批量替换目录内文本。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 0, 1, 'high', 120, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('read_file_range', '读取文件行范围', '按起止行读取文本文件片段。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 15, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('get_directory_snapshot', '获取目录快照', '获取目录条目、修改时间和可选摘要。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 60, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('compare_directory_snapshots', '比较目录快照', '比较两份目录快照的变化。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 10, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('validate_python_syntax', '校验 Python 语法', '使用 AST 校验 Python 文件，不执行代码。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 15, 16384, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('validate_json', '校验 JSON', '校验 JSON 文件并返回错误位置。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 15, 16384, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('inspect_sqlite_schema', '查看 SQLite 结构', '以只读模式查看 SQLite 表、字段、索引和外键。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 30, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('preview_text_patch', '预览文本补丁', '生成文本 unified diff 和短期操作令牌。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 20, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('apply_text_patch', '应用文本补丁', '使用已确认的短期操作令牌应用文本补丁。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 1, 'medium', 20, 16384, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('get_repository_status', '查看代码仓库状态', '使用纯 Python 比较 Git index 和工作区。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 60, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('get_file_diff', '比较文本文件差异', '使用 difflib 比较两个文本文件。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 20, 262144, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('list_registered_tasks', '列出注册任务', '列出后端预定义的 Python 测试和编译任务。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'low', 10, 32768, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('run_registered_task', '运行注册任务', '按 task_id 运行后端预定义任务。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 1, 'medium', 15, 16384, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('get_task_status', '查询任务状态', '查询注册任务状态和有限日志尾部。', NULL, 'system', 'python_builtin', 'all', '{}', '["*"]', 'valid', 1, 0, 'medium', 10, 65536, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
