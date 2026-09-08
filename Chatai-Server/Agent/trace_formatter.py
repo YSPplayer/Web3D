@@ -97,6 +97,10 @@ class AgentTraceFormatter:
             return f"{label} · {file_count} 个文件"
         return label
 
+    def sanitize_arguments(self, arguments: Mapping[str, Any]) -> dict:
+        sanitized = self._sanitize(arguments)
+        return sanitized if isinstance(sanitized, dict) else {}
+
     def _trace_id(self, event: Mapping[str, Any]) -> str:
         step_index = event.get("step_index") or 0
         run_id = event.get("run_id")

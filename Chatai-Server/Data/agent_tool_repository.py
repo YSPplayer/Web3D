@@ -87,7 +87,7 @@ class AgentToolRepository:
                             definition.description,
                             definition.platform,
                             json.dumps(definition.input_schema, ensure_ascii=False),
-                            int(definition.risk_level != "high"),
+                            1,
                             int(definition.requires_confirmation),
                             definition.risk_level,
                             definition.timeout_seconds,
@@ -416,6 +416,8 @@ class AgentToolRepository:
                     SELECT
                         tool.id AS tool_id,
                         tool.tools_name,
+                        tool.display_name,
+                        tool.description,
                         tool.tool_type,
                         tool.source_kind,
                         tool.platform,
@@ -480,6 +482,8 @@ class AgentToolRepository:
         return ToolPolicy(
             tool_id=row["tool_id"],
             tool_name=row["tools_name"],
+            display_name=row["display_name"],
+            description=row["description"],
             tool_type=row["tool_type"],
             source_kind=row["source_kind"],
             platform=row["platform"],

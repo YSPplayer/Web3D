@@ -8,10 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from Agent.tool_dispatcher import ToolDispatcher
 from Agent.skill_loader import AgentSkillLoader
+from Agent.approval_manager import AgentApprovalManager
 from Agent.completion_policy import (
     ToolCompletionPolicy,
     tool_completion_policy,
 )
+from Agent.trace_formatter import agent_trace_formatter
 from System.log_manager import get_logger
 
 
@@ -76,6 +78,7 @@ class AgentRunner:
         skill_loader: AgentSkillLoader | None = None,
         *,
         completion_policy: ToolCompletionPolicy | None = None,
+        approval_manager: AgentApprovalManager | None = None,
         max_steps: int = 5,
         max_decision_retries: int = 2,
         max_failed_tools: int = 2,
@@ -83,6 +86,7 @@ class AgentRunner:
         self.dispatcher = dispatcher
         self.skill_loader = skill_loader or AgentSkillLoader()
         self.completion_policy = completion_policy or tool_completion_policy
+        self.approval_manager = approval_manager
         self.max_steps = max_steps
         self.max_decision_retries = max_decision_retries
         self.max_failed_tools = max_failed_tools
@@ -93,6 +97,7 @@ class AgentRunner:
         user_id: int,
         conversation_id: int,
         message_id: int | None = None,
+        request_id: str | None = None,
         messages: list[dict],
         complete_model: ModelCompletion,
         stream_model: ModelStream,
@@ -197,6 +202,75 @@ class AgentRunner:
                         yield event
                     return
 
+                confirmation_granted = False
+                policy = await self.dispatcher.get_tool_policy(
+                    user_id,
+                    decision.tool_name,
+                )
+                requires_approval = bool(
+                    policy
+                    and policy.is_enabled
+                    and (
+                        policy.requires_confirmation
+                        or policy.risk_level == "high"
+                    )
+                )
+                if requires_approval:
+                    if self.approval_manager is None or not request_id:
+                        yield self._agent_error(
+                            "approval_unavailable",
+                            "高风险工具审批服务不可用，Agent 流程已结束",
+                            tool_name=decision.tool_name,
+                        )
+                        return
+                    approval = await self.approval_manager.create(
+                        request_id=request_id,
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        message_id=message_id,
+                        policy=policy,
+                        arguments=decision.arguments,
+                    )
+                    yield {
+                        "type": "agent_approval_required",
+                        "approval_id": approval.approval_id,
+                        "request_id": request_id,
+                        "tool": {
+                            "id": policy.tool_id,
+                            "tools_name": policy.tool_name,
+                            "display_name": policy.display_name,
+                            "description": policy.description,
+                            "risk_level": policy.risk_level,
+                        },
+                        "arguments": agent_trace_formatter.sanitize_arguments(
+                            decision.arguments
+                        ),
+                        "expires_in": self.approval_manager.timeout_seconds,
+                    }
+                    approval_status = await self.approval_manager.wait(
+                        approval.approval_id
+                    )
+                    if approval_status != "approved":
+                        reason = (
+                            "tool_approval_timeout"
+                            if approval_status == "expired"
+                            else "tool_approval_rejected"
+                        )
+                        message = (
+                            "高风险工具审批已超时，Agent 流程已结束。"
+                            if approval_status == "expired"
+                            else "已取消高风险工具操作，Agent 流程已结束。"
+                        )
+                        yield {
+                            "type": "agent_cancelled",
+                            "code": reason,
+                            "message": message,
+                            "approval_id": approval.approval_id,
+                            "tool_name": decision.tool_name,
+                        }
+                        return
+                    confirmation_granted = True
+
                 yield {
                     "type": "tool_start",
                     "trace_id": f"tool-{step_index + 1}",
@@ -210,6 +284,7 @@ class AgentRunner:
                     conversation_id=conversation_id,
                     tool_name=decision.tool_name,
                     arguments=decision.arguments,
+                    confirmation_granted=confirmation_granted,
                     step_index=step_index + 1,
                     message_id=message_id,
                 )

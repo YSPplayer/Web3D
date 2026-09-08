@@ -169,6 +169,42 @@ def _migrate_agent_tool_runs(connection: sqlite3.Connection) -> None:
     )
 
 
+def _enable_system_high_risk_tools(connection: sqlite3.Connection) -> None:
+    columns = _column_names(connection, "agent_tools")
+    required_columns = {
+        "source_kind",
+        "risk_level",
+        "is_enabled",
+        "requires_confirmation",
+        "deleted_at",
+        "updated_at",
+    }
+    if not required_columns.issubset(columns):
+        return
+    migration_name = "enable_system_high_risk_tools_v1"
+    applied = connection.execute(
+        "SELECT 1 FROM schema_migrations WHERE migration_name = ?",
+        (migration_name,),
+    ).fetchone()
+    if applied is not None:
+        return
+    connection.execute(
+        """
+        UPDATE agent_tools
+        SET is_enabled = 1,
+            requires_confirmation = 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE source_kind = 'system'
+          AND risk_level = 'high'
+          AND deleted_at IS NULL
+        """
+    )
+    connection.execute(
+        "INSERT INTO schema_migrations (migration_name) VALUES (?)",
+        (migration_name,),
+    )
+
+
 def _migrate_messages(connection: sqlite3.Connection) -> None:
     table_exists = _add_missing_columns(
         connection,
@@ -202,4 +238,5 @@ def migrate_schema(connection: sqlite3.Connection) -> None:
     _migrate_models(connection)
     _migrate_agent_tools(connection)
     _migrate_agent_tool_runs(connection)
+    _enable_system_high_risk_tools(connection)
     _migrate_messages(connection)

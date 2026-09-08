@@ -36,6 +36,20 @@ export interface AgentTraceItem {
   summary: string
 }
 
+export interface AgentToolApproval {
+  approval_id: string
+  request_id: string
+  tool: {
+    id: number
+    tools_name: string
+    display_name: string
+    description: string
+    risk_level: 'low' | 'medium' | 'high'
+  }
+  arguments: Record<string, unknown>
+  expires_in: number
+}
+
 export interface AgentTool {
   id: number
   tools_name: string
@@ -102,12 +116,21 @@ type ChatStreamEvent =
       requested_capability?: string
       missing_fields?: string[]
     }
+  | ({ type: 'agent_approval_required' } & AgentToolApproval)
+  | {
+      type: 'agent_cancelled'
+      code: 'tool_approval_rejected' | 'tool_approval_timeout'
+      message: string
+      approval_id: string
+      tool_name: string
+    }
   | {
       type: 'done'
       user_created_at: string
       ai_created_at: string
       assistant_message_id: number
-      status: 'completed'
+      status: 'completed' | 'cancelled'
+      finish_reason: string
     }
   | { type: 'error'; message: string }
 
@@ -147,6 +170,16 @@ export const ChatAiApi = {
   async stopChatMessageApi(userid: number, requestid: string) {
     return request.post(
       `/chatai/user/chat/stop?userid=${userid}&requestid=${encodeURIComponent(requestid)}`
+    )
+  },
+  async decideAgentToolApprovalApi(
+    approvalId: string,
+    approved: boolean
+  ): Promise<any> {
+    return request.post(
+      `/chatai/agent/approvals/${encodeURIComponent(approvalId)}/decision`,
+      { approved },
+      { showError: false }
     )
   },
   async createConversationTitleApi(userid:number, conversationid:number): Promise<any> {

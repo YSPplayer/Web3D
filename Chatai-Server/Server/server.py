@@ -15,7 +15,9 @@ import mimetypes
 from uuid import uuid4
 from Auth import AuthTokenError, auth_manager
 from Agent import AgentRunner, AgentSkillLoader, create_default_dispatcher
+from Agent.approval_manager import AgentApprovalManager
 from Agent.trace_formatter import agent_trace_formatter
+from Data.agent_approval_repository import AgentApprovalRepository
 from Data.db_manager import db_manager
 from Model.key import key
 from Model.modelapi import modelApi
@@ -30,6 +32,7 @@ from Model.token_manager import ModelTokenProfile, token_manager
 from System.system_monitor import system_monitor
 from System.log_manager import get_logger
 from Server.routes.agent_tools import create_agent_tools_router
+from Server.routes.agent_approvals import create_agent_approvals_router
 from Server.routes.agent_results import create_agent_results_router
 
 
@@ -37,7 +40,13 @@ logger = get_logger(__name__)
 
 agent_dispatcher = create_default_dispatcher(db_manager)
 agent_skill_loader = AgentSkillLoader()
-agent_runner = AgentRunner(agent_dispatcher, agent_skill_loader)
+agent_approval_repository = AgentApprovalRepository(db_manager)
+agent_approval_manager = AgentApprovalManager(agent_approval_repository)
+agent_runner = AgentRunner(
+    agent_dispatcher,
+    agent_skill_loader,
+    approval_manager=agent_approval_manager,
+)
 active_generation_tasks: dict[str, dict] = {}
 active_generation_lock = asyncio.Lock()
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -125,6 +134,7 @@ async def lifespan(app: FastAPI):
     # 服务启动,初始化数据库
     logger.info("后端服务开始初始化")
     db_manager.init_db()
+    await agent_approval_manager.startup()
     check_result(db_manager.cleanup_auth_sessions(auth_manager.utc_now_string()))
     agent_skill = agent_skill_loader.load()
     logger.info(
@@ -140,6 +150,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         logger.info("后端服务开始关闭")
+        await agent_approval_manager.cancel_all()
         await system_monitor.stop()
         # 服务关闭，例如 Ctrl+C、正常停止 Uvicorn
         db_manager.close_db()
@@ -156,6 +167,9 @@ app.add_middleware(
 )
 app.include_router(
     create_agent_tools_router(agent_dispatcher, get_current_user)
+)
+app.include_router(
+    create_agent_approvals_router(agent_approval_manager, get_current_user)
 )
 app.include_router(create_agent_results_router(get_current_user))
 
@@ -1124,7 +1138,10 @@ async def create_chat_message(
         full_content: list[str] = []
         agent_run_ids: list[int] = []
         stream_failed = False
-        generation_finish_state = {"reason": "stop"}
+        generation_finish_state = {
+            "reason": "stop",
+            "status": "completed",
+        }
         generation = {
             "user_id": chatMessage.userid,
             "task": asyncio.current_task(),
@@ -1207,6 +1224,7 @@ async def create_chat_message(
                     user_id=chatMessage.userid,
                     conversation_id=chatMessage.conversationid,
                     message_id=assistant_message_id,
+                    request_id=request_id,
                     messages=prepared_chat_context.messages,
                     complete_model=complete_agent_model,
                     stream_model=stream_agent_model,
@@ -1228,6 +1246,13 @@ async def create_chat_message(
                             "code",
                             "agent_error",
                         )
+                    elif event.get("type") == "agent_cancelled":
+                        full_content.append(event.get("message", "Agent 流程已取消"))
+                        generation_finish_state["reason"] = event.get(
+                            "code",
+                            "agent_cancelled",
+                        )
+                        generation_finish_state["status"] = "cancelled"
                     elif event.get("type") == "error":
                         stream_failed = True
                     yield json.dumps(event, ensure_ascii=False) + "\n"
@@ -1262,7 +1287,7 @@ async def create_chat_message(
             ai_message = "".join(full_content)
             await finalize_generation(
                 ai_message,
-                "completed",
+                generation_finish_state["status"],
                 generation_finish_state["reason"],
                 agent_run_ids,
             )
@@ -1272,7 +1297,7 @@ async def create_chat_message(
                     "user_created_at":user_created_at,
                     "ai_created_at":assistant_created_at,
                     "assistant_message_id": assistant_message_id,
-                    "status": "completed",
+                    "status": generation_finish_state["status"],
                     "finish_reason": generation_finish_state["reason"],
                 },
                 ensure_ascii=False

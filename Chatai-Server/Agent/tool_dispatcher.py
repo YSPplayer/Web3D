@@ -100,6 +100,17 @@ class ToolDispatcher:
             user_id,
         )
 
+    async def get_tool_policy(
+        self,
+        user_id: int,
+        tool_name: str,
+    ) -> ToolPolicy | None:
+        return await asyncio.to_thread(
+            self.repository.get_user_tool_policy,
+            user_id,
+            tool_name,
+        )
+
     async def execute(
         self,
         *,

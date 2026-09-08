@@ -255,3 +255,32 @@ ON agent_tool_runs(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_agent_tool_runs_conversation_id
 ON agent_tool_runs(conversation_id);
+
+CREATE TABLE IF NOT EXISTS agent_tool_approvals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    approval_id TEXT NOT NULL UNIQUE,
+    request_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    conversation_id INTEGER NOT NULL,
+    message_id INTEGER,
+    tool_id INTEGER NOT NULL,
+    tools_name TEXT NOT NULL,
+    display_name TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    arguments_json TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN ('pending', 'approved', 'rejected', 'expired', 'cancelled')),
+    decision_reason TEXT NOT NULL DEFAULT '',
+    requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    decided_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE SET NULL,
+    FOREIGN KEY (tool_id) REFERENCES agent_tools(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_tool_approvals_request_id
+ON agent_tool_approvals(request_id);
+
+CREATE INDEX IF NOT EXISTS idx_agent_tool_approvals_user_status
+ON agent_tool_approvals(user_id, status);

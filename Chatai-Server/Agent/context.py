@@ -13,6 +13,8 @@ class ToolContext:
 class ToolPolicy:
     tool_id: int
     tool_name: str
+    display_name: str
+    description: str
     tool_type: str
     source_kind: str
     platform: str

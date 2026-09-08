@@ -63,6 +63,14 @@
             @click="generating ? stopChatMessage() : sendChatMessage() " >
             </img>
         </div>
+        <AgentToolApprovalDialog
+            :visible="approvalDialogVisible"
+            :approval="pendingApproval"
+            :submitting="approvalSubmitting"
+            :error-message="approvalErrorMessage"
+            @approve="decideAgentToolApproval(true)"
+            @cancel="decideAgentToolApproval(false)"
+        />
     </div>
 </template>
 
@@ -75,6 +83,7 @@
  import {ChatAiApi} from '@/api/api'
  import { ArrowDown } from '@element-plus/icons-vue'
  import chatrolecontainer  from "@/component/chatrolecontainer.vue";
+ import AgentToolApprovalDialog from "@/component/agent/AgentToolApprovalDialog.vue";
  import { ca } from "element-plus/es/locales.mjs";
  const emits = defineEmits(['updateTitleMessage']) 
  const inputChatText = ref('')
@@ -88,6 +97,10 @@
  const isLoding = ref(false)
  const showLoadMore = ref(false)
  const showScrollBtn = ref(false)
+ const pendingApproval = ref(null)
+ const approvalDialogVisible = ref(false)
+ const approvalSubmitting = ref(false)
+ const approvalErrorMessage = ref('')
  const autoFollow = ref(true) // 是否自动跟随最新消息
  // 距离底部小于这个值，认为用户已经到底部
  const BOTTOM_DISTANCE = 40
@@ -355,7 +368,10 @@ const isMessageReasoning = (message) => {
             stopAccepted = true
         }
     }
-    if(!stopAccepted) return
+     if(!stopAccepted) return
+     approvalDialogVisible.value = false
+     pendingApproval.value = null
+     approvalErrorMessage.value = ''
     if(activeAiMessage) {
         activeAiMessage.status = 'cancelled'
         activeAiMessage.finishReason = 'user_cancelled'
@@ -372,7 +388,31 @@ const isMessageReasoning = (message) => {
         abortController.abort()
         abortController = null
     }
-    generating.value = false
+     generating.value = false
+  }
+ const decideAgentToolApproval = async approved => {
+    const approval = pendingApproval.value
+    if(!approval || approvalSubmitting.value) return
+    approvalSubmitting.value = true
+    approvalErrorMessage.value = ''
+    try {
+        const result = await ChatAiApi.decideAgentToolApprovalApi(
+            approval.approval_id,
+            approved
+        )
+        if(result?.code !== 200) {
+            if(!approved) {
+                await stopChatMessage()
+                return
+            }
+            approvalErrorMessage.value = result?.message || '审批提交失败，请稍后重试'
+            return
+        }
+        approvalDialogVisible.value = false
+        pendingApproval.value = null
+    } finally {
+        approvalSubmitting.value = false
+    }
  }
  //生成总结性会话标题
 const getTitleMessage = async ()=> {
@@ -460,10 +500,25 @@ const getTitleMessage = async ()=> {
                     } else {
                         Object.assign(aiMessage.agentTrace[traceIndex], event.trace)
                     }
+                } else if (event.type === 'agent_approval_required') {
+                    aiMessage.showloding = false
+                    pendingApproval.value = event
+                    approvalErrorMessage.value = ''
+                    approvalDialogVisible.value = true
+                } else if (event.type === 'agent_cancelled') {
+                    aiMessage.content += event.message
+                    aiMessage.streaming = false
+                    aiMessage.status = 'cancelled'
+                    aiMessage.finishReason = event.code
+                    if(pendingApproval.value?.approval_id === event.approval_id) {
+                        approvalDialogVisible.value = false
+                        pendingApproval.value = null
+                        approvalErrorMessage.value = ''
+                    }
                 } else if (event.type === 'done') {
                     aiMessage.streaming = false
                     aiMessage.status = event.status
-                    aiMessage.finishReason = 'stop'
+                    aiMessage.finishReason = event.finish_reason
                     aiMessage.databaseId = event.assistant_message_id
                     userMessage.timeText = Util.extractTime(event.user_created_at)
                     aiMessage.timeText =  Util.extractTime(event.ai_created_at)
@@ -497,6 +552,11 @@ const getTitleMessage = async ()=> {
         aiMessage.showloding = false
         if(activeAiMessage === aiMessage) activeAiMessage = null
         if(activeRequestId === aiMessage.requestId) activeRequestId = ''
+        if(pendingApproval.value?.request_id === aiMessage.requestId) {
+            approvalDialogVisible.value = false
+            pendingApproval.value = null
+            approvalErrorMessage.value = ''
+        }
         abortController = null
     }
  }
