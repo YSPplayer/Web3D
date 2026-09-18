@@ -6,6 +6,28 @@ import sys
 import json
 import asyncio
 import litellm
+
+
+def content_to_text(content) -> str:
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return "" if content is None else str(content)
+
+    parts = []
+    for item in content:
+        if isinstance(item, str):
+            parts.append(item)
+            continue
+        if isinstance(item, dict):
+            text = item.get("text") or item.get("content")
+        else:
+            text = getattr(item, "text", None)
+        if text:
+            parts.append(str(text))
+    return "".join(parts)
+
+
 async def main():
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -15,7 +37,12 @@ async def main():
     api_key = payload["api_key"]
     messages = payload["messages"]
     temperature = payload["temperature"]
-    max_output_tokens = payload.get("max_output_tokens")
+    max_output_tokens = payload.get(
+        "max_output_tokens",
+        payload.get("max_tokens"),
+    )
+    stream = bool(payload.get("stream", True))
+    response_format = payload.get("response_format")
     response = None
     try:
         request_data = {
@@ -23,11 +50,40 @@ async def main():
             "messages": messages,
             "temperature": temperature,
             "api_key": api_key,
-            "stream": True,
+            "stream": stream,
         }
         if max_output_tokens is not None:
             request_data["max_tokens"] = max_output_tokens
+        if response_format:
+            request_data["response_format"] = response_format
         response = await litellm.acompletion(**request_data)
+
+        if not stream:
+            choice = response.choices[0]
+            response_message = choice.message
+            content = content_to_text(
+                getattr(response_message, "content", None)
+            )
+            reasoning_content = content_to_text(
+                getattr(response_message, "reasoning_content", None)
+            )
+            print(
+                json.dumps(
+                    {
+                        "type": "complete",
+                        "content": content,
+                        "finish_reason": str(
+                            getattr(choice, "finish_reason", None) or "stop"
+                        ),
+                        "response_id": getattr(response, "id", None),
+                        "reasoning_chars": len(reasoning_content),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+            return
+
         finish_reason = None
         async for chunk in response:
             choice = chunk.choices[0]

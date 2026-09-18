@@ -110,22 +110,25 @@ class AgentRunner:
             for schema in tool_schemas
         ]
         working_messages = [dict(message) for message in messages]
+        required_tool_names = self._required_tool_names(working_messages)
         request_requires_tool = self._request_requires_tool(working_messages)
         logger.info(
             "Agent 开始，user_id=%s conversation_id=%s skill=%s "
             "skill_version=%s skill_hash=%s requires_tool=%s "
-            "tool_count=%s tools=%s",
+            "required_tools=%s tool_count=%s tools=%s",
             user_id,
             conversation_id,
             skill.name,
             skill.version,
             skill.content_hash[:12],
             request_requires_tool,
+            sorted(required_tool_names),
             len(tool_names),
             tool_names,
         )
         failed_tools = 0
         successful_tools = 0
+        successful_tool_names: set[str] = set()
         successful_call_signatures: set[str] = set()
 
         try:
@@ -135,7 +138,9 @@ class AgentRunner:
                     tool_schemas,
                     complete_model,
                     successful_tools=successful_tools,
+                    successful_tool_names=successful_tool_names,
                     request_requires_tool=request_requires_tool,
+                    required_tool_names=required_tool_names,
                     agent_step=step_index + 1,
                 )
                 logger.info(
@@ -189,17 +194,27 @@ class AgentRunner:
                         decision.tool_name,
                         decision.arguments,
                     )
-                    async for event in self._stream_final_answer(
-                        working_messages,
-                        tool_schemas,
-                        stream_model,
-                        fallback_reason=(
-                            "相同工具和参数已经成功执行，不得重复调用；"
-                            "请直接依据已有成功结果回答。"
-                        ),
-                        agent_step=step_index + 1,
+                    if not self._required_tools_satisfied(
+                        required_tool_names,
+                        successful_tool_names,
                     ):
-                        yield event
+                        yield self._agent_error(
+                            "required_tool_not_executed",
+                            "当前操作尚未由匹配工具成功执行，Agent 流程已结束",
+                            required_tools=sorted(required_tool_names),
+                        )
+                    else:
+                        async for event in self._stream_final_answer(
+                            working_messages,
+                            tool_schemas,
+                            stream_model,
+                            fallback_reason=(
+                                "相同工具和参数已经成功执行，不得重复调用；"
+                                "请直接依据已有成功结果回答。"
+                            ),
+                            agent_step=step_index + 1,
+                        ):
+                            yield event
                     return
 
                 confirmation_granted = False
@@ -304,6 +319,7 @@ class AgentRunner:
                     failed_tools += 1
                 else:
                     successful_tools += 1
+                    successful_tool_names.add(result.tool_name)
                     successful_call_signatures.add(call_signature)
 
                 model_result = result.to_model_content()
@@ -333,11 +349,16 @@ class AgentRunner:
 
                 if (
                     result.status == "success"
+                    and self._required_tools_satisfied(
+                        required_tool_names,
+                        successful_tool_names,
+                    )
                     and self.completion_policy.can_finalize(
                         decision.tool_name,
                         decision.arguments,
                         model_result.get("data"),
                         request_context={
+                            "required_tool_names": sorted(required_tool_names),
                             "directories_only": (
                                 self._requests_directories_only(
                                     working_messages
@@ -397,7 +418,9 @@ class AgentRunner:
         complete_model: ModelCompletion,
         *,
         successful_tools: int,
+        successful_tool_names: set[str],
         request_requires_tool: bool,
+        required_tool_names: set[str],
         agent_step: int,
     ) -> AgentDecision:
         decision_messages = [
@@ -407,6 +430,7 @@ class AgentRunner:
                     tool_schemas,
                     successful_tools=successful_tools,
                     request_requires_tool=request_requires_tool,
+                    required_tool_names=required_tool_names,
                     provided_fields=self._provided_request_fields(
                         working_messages
                     ),
@@ -418,6 +442,10 @@ class AgentRunner:
         provided_fields = self._provided_request_fields(working_messages)
         available_tool_names = {
             schema.get("function", {}).get("name", "")
+            for schema in tool_schemas
+        }
+        tool_schema_by_name = {
+            schema.get("function", {}).get("name", ""): schema
             for schema in tool_schemas
         }
 
@@ -440,12 +468,33 @@ class AgentRunner:
                 retry_index,
                 (raw_decision or "")[:2000],
             )
+            if not (raw_decision or "").strip():
+                last_error = "模型返回空决策"
+                logger.warning(
+                    "Agent 决策格式无效，retry=%s error=%s",
+                    retry_index,
+                    last_error,
+                )
+                decision_messages.append({
+                    "role": "user",
+                    "content": (
+                        "上一个决策不符合要求。错误：上一个模型响应为空。"
+                        "必须根据当前用户请求、"
+                        "required_tool_names 和工具 Schema 返回一个合法 JSON 对象；"
+                        "不得输出空内容、Markdown 或解释文字。"
+                    ),
+                })
+                continue
             try:
                 try:
                     decision = self._parse_decision(raw_decision)
                 except json.JSONDecodeError:
                     if (
                         successful_tools > 0
+                        and self._required_tools_satisfied(
+                            required_tool_names,
+                            successful_tool_names,
+                        )
                         and self._looks_like_natural_answer(raw_decision)
                     ):
                         logger.info(
@@ -462,8 +511,11 @@ class AgentRunner:
                 validation_error = self._validate_decision(
                     decision,
                     available_tool_names=available_tool_names,
+                    tool_schema_by_name=tool_schema_by_name,
                     successful_tools=successful_tools,
+                    successful_tool_names=successful_tool_names,
                     request_requires_tool=request_requires_tool,
+                    required_tool_names=required_tool_names,
                     provided_fields=provided_fields,
                 )
                 if validation_error:
@@ -488,9 +540,12 @@ class AgentRunner:
                             f"{last_error}。用户已经提供的字段："
                             f"{json.dumps(sorted(provided_fields), ensure_ascii=False)}。"
                             "不得把已经提供的字段列入 missing_fields。"
-                            "如果上一条内容表达了工具调用意图，请将它改写为："
-                            '{"type":"tool","tool_name":"工具名",'
-                            '"arguments":{}}。只返回一个合法 JSON 对象。'
+                            "如果上一条内容表达了工具调用意图，必须重新选择匹配工具，"
+                            "并按照该工具 Schema 将用户已经提供的真实值填入 arguments；"
+                            "不得把必填参数留空。"
+                            "本轮必须优先完成的工具为："
+                            f"{json.dumps(sorted(required_tool_names), ensure_ascii=False)}。"
+                            "只返回一个合法 JSON 对象。"
                         ),
                     },
                 ])
@@ -588,25 +643,41 @@ class AgentRunner:
             "type 只能是 tool、final、clarification 或 failure"
         )
 
-    @staticmethod
+    @classmethod
     def _validate_decision(
+        cls,
         decision: AgentDecision,
         *,
         available_tool_names: set[str],
+        tool_schema_by_name: dict[str, dict],
         successful_tools: int,
+        successful_tool_names: set[str],
         request_requires_tool: bool,
+        required_tool_names: set[str],
         provided_fields: set[str],
     ) -> str | None:
         if isinstance(decision, ToolDecision):
             if decision.tool_name not in available_tool_names:
                 return f"工具不在可用列表中：{decision.tool_name}"
-            return None
+            return cls._validate_tool_arguments(
+                decision.tool_name,
+                decision.arguments,
+                tool_schema_by_name.get(decision.tool_name),
+            )
 
         if isinstance(decision, FinalDecision):
             if decision.reason_code == "completed_with_tool" and successful_tools == 0:
                 return "尚未成功调用工具，不能返回 completed_with_tool"
             if request_requires_tool and successful_tools == 0:
                 return "当前请求涉及外部状态，必须先调用匹配工具，不能直接 final"
+            if not cls._required_tools_satisfied(
+                required_tool_names,
+                successful_tool_names,
+            ):
+                return (
+                    "当前请求要求的操作尚未完成，必须先成功调用以下工具之一："
+                    + ", ".join(sorted(required_tool_names))
+                )
             if successful_tools > 0 and decision.reason_code != "completed_with_tool":
                 return "已有成功工具结果，final 必须使用 completed_with_tool"
 
@@ -621,6 +692,77 @@ class AgentRunner:
                     "用户请求已经提供字段："
                     + ", ".join(sorted(duplicated_fields))
                     + "，不能再次请求补充"
+                )
+        return None
+
+    @staticmethod
+    def _validate_tool_arguments(
+        tool_name: str,
+        arguments: dict,
+        schema: dict | None,
+    ) -> str | None:
+        """在产生工具运行记录前完成基础 JSON Schema 校验。"""
+        if not isinstance(arguments, dict):
+            return f"工具 {tool_name} 的 arguments 必须是 JSON 对象"
+        if not schema:
+            return None
+
+        parameters = schema.get("function", {}).get("parameters", {})
+        if not isinstance(parameters, dict):
+            return None
+
+        required = parameters.get("required", [])
+        if isinstance(required, list):
+            missing = [
+                str(name)
+                for name in required
+                if name not in arguments
+                or arguments.get(name) is None
+                or (
+                    isinstance(arguments.get(name), str)
+                    and not arguments.get(name).strip()
+                )
+            ]
+            if missing:
+                return (
+                    f"工具 {tool_name} 缺少必填参数："
+                    + ", ".join(missing)
+                )
+
+        properties = parameters.get("properties", {})
+        if not isinstance(properties, dict):
+            return None
+        if parameters.get("additionalProperties") is False:
+            unexpected = sorted(set(arguments) - set(properties))
+            if unexpected:
+                return (
+                    f"工具 {tool_name} 包含未定义参数："
+                    + ", ".join(unexpected)
+                )
+
+        expected_types = {
+            "string": str,
+            "integer": int,
+            "number": (int, float),
+            "boolean": bool,
+            "array": list,
+            "object": dict,
+        }
+        for name, value in arguments.items():
+            property_schema = properties.get(name)
+            if not isinstance(property_schema, dict) or value is None:
+                continue
+            expected_name = property_schema.get("type")
+            expected_type = expected_types.get(expected_name)
+            if expected_type is None:
+                continue
+            valid = isinstance(value, expected_type)
+            if expected_name in {"integer", "number"} and isinstance(value, bool):
+                valid = False
+            if not valid:
+                return (
+                    f"工具 {tool_name} 的参数 {name} 类型错误，"
+                    f"应为 {expected_name}"
                 )
         return None
 
@@ -654,8 +796,29 @@ class AgentRunner:
 
     @staticmethod
     def _decision_context(working_messages: list[dict]) -> list[dict]:
-        """保留完整上下文，实际截断由统一 token 预算层完成。"""
-        return [dict(message) for message in working_messages]
+        """决策只保留系统信息和最近上下文，避免无关历史干扰 JSON 输出。"""
+        if len(working_messages) <= 8:
+            return [dict(message) for message in working_messages]
+
+        selected_indices = {
+            index
+            for index, message in enumerate(working_messages)
+            if message.get("role") == "system"
+        }
+        selected_indices.update(
+            range(max(0, len(working_messages) - 8), len(working_messages))
+        )
+        selected = [
+            dict(message)
+            for index, message in enumerate(working_messages)
+            if index in selected_indices
+        ]
+        logger.debug(
+            "Agent 决策上下文已收紧，original_messages=%s selected_messages=%s",
+            len(working_messages),
+            len(selected),
+        )
+        return selected
 
     @classmethod
     def _normalize_tool_decision(
@@ -697,12 +860,20 @@ class AgentRunner:
         if not request:
             return False
 
+        mutation_terms = (
+            "删除", "清空", "移除", "销毁", "delete", "remove", "clear",
+        )
+        if any(term in request for term in mutation_terms):
+            return False
+
         directory_terms = (
             "文件夹", "子目录", "目录名", "folder", "folders",
             "subdirectory", "subdirectories", "directory names",
         )
         mixed_terms = (
             "文件和文件夹", "文件及文件夹", "文件、文件夹",
+            "文件夹和其内部的文件", "文件夹及其内部的文件",
+            "文件夹和里面的文件", "文件夹及里面的文件",
             "files and folders", "files and directories",
         )
         recursive_terms = (
@@ -764,8 +935,8 @@ class AgentRunner:
         normalized_result["data"] = normalized_data
         return normalized_result
 
-    @staticmethod
-    def _request_requires_tool(working_messages: list[dict]) -> bool:
+    @classmethod
+    def _request_requires_tool(cls, working_messages: list[dict]) -> bool:
         user_messages = [
             str(message.get("content", ""))
             for message in working_messages
@@ -776,6 +947,8 @@ class AgentRunner:
             return False
 
         request = user_messages[-1]
+        if cls._required_tool_names(working_messages):
+            return True
         if re.search(r"(?i)(?:[a-z]:[\\/]|\\\\)", request):
             return True
 
@@ -790,10 +963,54 @@ class AgentRunner:
             "占用率", "是否运行", "是否存在", "数量",
             "检查", "校验", "读取", "查看", "比较", "差异", "修改",
             "应用", "运行", "状态", "结构", "语法", "快照",
+            "删除", "清空", "移除", "创建", "写入", "追加", "替换",
+            "重命名", "复制", "移动", "终止",
         )
         return (
             any(word.lower() in request.lower() for word in external_objects)
             and any(word.lower() in request.lower() for word in external_qualifiers)
+        )
+
+    @classmethod
+    def _required_tool_names(cls, working_messages: list[dict]) -> set[str]:
+        """返回完成当前高影响操作所必须成功调用的工具。"""
+        request = cls._latest_user_request(working_messages).lower()
+        if not request:
+            return set()
+
+        delete_terms = (
+            "删除", "移除", "删掉", "删了", "delete", "remove",
+        )
+        negated_delete_terms = (
+            "不要删除", "不删除", "无需删除", "禁止删除",
+            "do not delete", "don't delete", "without deleting",
+        )
+        clear_contents_terms = (
+            "清空目录", "清空文件夹", "清空里面", "清空内部",
+            "只删除内容", "删除目录内容", "删除文件夹内容",
+            "保留目录", "保留文件夹", "clear directory contents",
+            "empty directory", "keep the directory",
+        )
+
+        delete_requested = any(term in request for term in delete_terms)
+        delete_negated = any(term in request for term in negated_delete_terms)
+        clear_contents_requested = any(
+            term in request for term in clear_contents_terms
+        )
+        if clear_contents_requested:
+            return {"delete_directory_contents"}
+        if delete_requested and not delete_negated:
+            return {"delete_path"}
+        return set()
+
+    @staticmethod
+    def _required_tools_satisfied(
+        required_tool_names: set[str],
+        successful_tool_names: set[str],
+    ) -> bool:
+        return (
+            not required_tool_names
+            or bool(required_tool_names & successful_tool_names)
         )
 
     @staticmethod
@@ -830,6 +1047,26 @@ class AgentRunner:
             return tool_schemas
 
         request = user_requests[-1].lower()
+        required_tool_names = AgentRunner._required_tool_names(messages)
+        preferred = [
+            schema
+            for schema in tool_schemas
+            if schema.get("function", {}).get("name", "")
+            in required_tool_names
+        ]
+        if preferred:
+            logger.debug(
+                "Agent 已锁定必需工具 Schema，tools=%s",
+                [
+                    schema.get("function", {}).get("name", "")
+                    for schema in preferred
+                ],
+            )
+            return preferred
+        preferred_names = {
+            schema.get("function", {}).get("name", "")
+            for schema in preferred
+        }
         request_terms = AgentRunner._semantic_terms(request)
         scored: list[tuple[int, int, dict]] = []
         for index, schema in enumerate(tool_schemas):
@@ -849,13 +1086,27 @@ class AgentRunner:
             for name_part in tool_name.split("_"):
                 if len(name_part) >= 3 and name_part in request:
                     score += 8
-            if score > 0:
+            if score > 0 and tool_name not in preferred_names:
                 scored.append((score, -index, schema))
 
         if not scored:
-            return tool_schemas
+            if not preferred:
+                return tool_schemas
+            remaining = [
+                schema
+                for schema in tool_schemas
+                if schema.get("function", {}).get("name", "")
+                not in preferred_names
+            ]
+            return [*preferred, *remaining[:maximum - len(preferred)]]
         scored.sort(reverse=True, key=lambda item: (item[0], item[1]))
-        return [item[2] for item in scored[:maximum]]
+        return [
+            *preferred,
+            *[
+                item[2]
+                for item in scored[:maximum - len(preferred)]
+            ],
+        ]
 
     @staticmethod
     def _semantic_terms(text: str) -> set[str]:
@@ -924,6 +1175,7 @@ class AgentRunner:
         *,
         successful_tools: int,
         request_requires_tool: bool,
+        required_tool_names: set[str],
         provided_fields: set[str],
     ) -> str:
         skill = self.skill_loader.get()
@@ -934,6 +1186,9 @@ class AgentRunner:
             "<agent_state>\n"
             f"successful_tool_calls={successful_tools}\n"
             f"request_requires_tool={str(request_requires_tool).lower()}\n"
+            "required_tool_names="
+            + json.dumps(sorted(required_tool_names), ensure_ascii=False)
+            + "\n"
             "provided_request_fields="
             + json.dumps(sorted(provided_fields), ensure_ascii=False)
             + "\n"

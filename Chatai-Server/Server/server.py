@@ -441,6 +441,7 @@ async def collect_model_content(
     model_messages: list[dict],
     temperature: float = 0.6,
     max_output_tokens: int | None = None,
+    finish_state: dict | None = None,
 ) -> str:
     content_parts: list[str] = []
     async for content in stream_model_content(
@@ -448,9 +449,43 @@ async def collect_model_content(
         model_messages,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
+        finish_state=finish_state,
     ):
         content_parts.append(content)
     return "".join(content_parts)
+
+
+async def complete_model_content(
+    runtime: dict,
+    model_messages: list[dict],
+    temperature: float = 0,
+    max_output_tokens: int | None = None,
+    json_mode: bool = False,
+    finish_state: dict | None = None,
+) -> str:
+    """完成不需要向前端逐块展示的模型调用。"""
+    if runtime["is_local_model"]:
+        return await collect_model_content(
+            runtime,
+            model_messages,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            finish_state=finish_state,
+        )
+
+    proxy_config = runtime["proxy_config"]
+    return await modelApi.chat_complete(
+        runtime["model_name"],
+        runtime["api_key"],
+        model_messages,
+        proxy_config["proxy_host"],
+        proxy_config["proxy_port"],
+        proxy_config["is_active"],
+        temperature=temperature,
+        max_output_tokens=max_output_tokens,
+        json_mode=json_mode,
+        finish_state=finish_state,
+    )
 
 
 def record_model_usage(
@@ -496,18 +531,46 @@ async def collect_recorded_model_call(
     temperature: float,
     max_output_tokens: int | None = None,
     agent_step: int = 0,
+    decision_json: bool = False,
 ) -> str:
     output = ""
     status = "failed"
     requested_output_tokens = max_output_tokens or profile.max_output_tokens
+    finish_state: dict = {}
     try:
-        output = await collect_model_content(
-            runtime,
-            prepared.messages,
-            temperature=temperature,
-            max_output_tokens=requested_output_tokens,
-        )
-        status = "success"
+        if decision_json:
+            output = await complete_model_content(
+                runtime,
+                prepared.messages,
+                temperature=temperature,
+                max_output_tokens=requested_output_tokens,
+                json_mode=True,
+                finish_state=finish_state,
+            )
+        else:
+            output = await collect_model_content(
+                runtime,
+                prepared.messages,
+                temperature=temperature,
+                max_output_tokens=requested_output_tokens,
+                finish_state=finish_state,
+            )
+        if output.strip():
+            status = "success"
+        else:
+            logger.warning(
+                "模型调用返回空内容，call_type=%s agent_step=%s "
+                "finish_reason=%s response_id=%s diagnostics=%s",
+                call_type,
+                agent_step,
+                finish_state.get("reason"),
+                finish_state.get("response_id"),
+                {
+                    key_name: value
+                    for key_name, value in finish_state.items()
+                    if key_name not in {"reason", "response_id"}
+                },
+            )
         return output
     except asyncio.CancelledError:
         status = "cancelled"
@@ -1190,6 +1253,7 @@ async def create_chat_message(
                             profile.max_output_tokens,
                         ),
                         agent_step=metadata["agent_step"],
+                        decision_json=True,
                     )
 
                 async def stream_agent_model(

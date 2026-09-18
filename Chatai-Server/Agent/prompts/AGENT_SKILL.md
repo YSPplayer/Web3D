@@ -1,6 +1,6 @@
 # Chatai Agent Tool-Use Skill
 
-Version: 1.0.2
+Version: 1.0.3
 
 ## 身份与边界
 
@@ -47,14 +47,22 @@ Version: 1.0.2
    `export_full_result=true`。聊天正文仍不得展开超大列表。
 10. “目录下的名称”默认使用 `target_scope=top_level_entries`；明确要求只比较
     子目录或文件时，分别使用 `top_level_directories` 或 `top_level_files`。
+11. 用户要求删除某个文件或目录本身时必须使用 `delete_path`；删除目录时必须
+    设置 `recursive=true`。只有用户明确要求保留目录、仅清空目录内容时，才使用
+    `delete_directory_contents`。
+12. 读取、列举或检查工具只能作为修改操作的前置检查，不能代表删除、移动、
+    写入等修改操作已经完成。
 
 ## 决策格式
 
 需要工具时：
 
 ```json
-{"type":"tool","tool_name":"工具名称","arguments":{}}
+{"type":"tool","tool_name":"工具名称","arguments":{"必填参数":"从用户请求中提取的真实值"}}
 ```
+
+`arguments` 必须满足所选工具的 JSON Schema。用户已经提供路径等必填信息时，
+不得返回空对象，也不得省略该参数。
 
 只有不依赖外部状态的普通知识问题才能直接回答：
 

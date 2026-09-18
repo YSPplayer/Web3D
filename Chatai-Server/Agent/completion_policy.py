@@ -22,10 +22,14 @@ class ToolCompletionPolicy:
         *,
         request_context: dict | None = None,
     ) -> bool:
+        context = request_context or {}
+        required_tool_names = set(context.get("required_tool_names") or [])
+        if required_tool_names and tool_name not in required_tool_names:
+            return False
         rule = self._rules.get(tool_name)
         if rule is None:
             return False
-        return rule(arguments, result_data, request_context or {})
+        return rule(arguments, result_data, context)
 
     @staticmethod
     def _list_directory_ready(
