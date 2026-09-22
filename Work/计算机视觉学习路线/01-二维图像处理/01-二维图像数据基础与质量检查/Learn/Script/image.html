@@ -68,6 +68,11 @@
     text-align: right;
     flex-shrink: 0;  /* 不缩小 */    
     }
+    .label_fixed_left {
+    width: 3em;
+    text-align: left;
+    flex-shrink: 0;  /* 不缩小 */    
+    }
     .no_select {
     user-select: none;           /* 标准属性 */
     -webkit-user-select: none;   /* Safari */
@@ -90,18 +95,21 @@
             <div class="flex_column_center">
                 <div class="flex_row" style="gap:0.5rem">
                     <label class="label_fixed">对比度</label>
-                    <input class="style_slider" type="range" min="0" max="100" value="0" id="slider">
-                    <label>1</label>
+                    <input class="style_slider" type="range" min="-5" max="5" value="1" step="0.001"  id="sliderContrast">
+                    <label class="label_fixed_left" id="labelContrast">1</label>
                 </div>
                 <div class="flex_row" style="gap:0.5rem">
                     <label class="label_fixed">亮度</label>
-                    <input class="style_slider" type="range" min="0" max="100" value="0" id="slider">
-                    <label>1</label>
+                    <input class="style_slider" type="range" min="-100" max="100" value="0" step="0.001"  id="sliderBrightness">
+                    <label class="label_fixed_left" id="labelBrightness">1</label>
                 </div>  
             </div>
         </div>
     </div>
     <script src="src/ui.js"></script>
+    <script src="src/store.js"></script>
+    <script src="src/util.js"></script>
+    <script src="src/algorithm.js"></script>
     <script src="src/image.js"></script>
 </body>
 </html>

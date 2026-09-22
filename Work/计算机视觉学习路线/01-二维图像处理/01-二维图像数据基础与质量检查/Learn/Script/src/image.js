@@ -1,4 +1,11 @@
-
+const affineTransform = ()=> {
+    if(store.imageData === null) return 
+    const contrast = Number(labelContrast.textContent)
+    const brightness = Number(labelBrightness.textContent)
+    const ctx = canvasChange.getContext('2d')
+    const imageData = alg.affineTransform(contrast,brightness,store.imageData)
+    ctx.putImageData(imageData, 0, 0)
+}
 const init = ()=> {
      uiInit()
      uploadBtn.addEventListener('click', () => {
@@ -14,33 +21,25 @@ const init = ()=> {
             const img = new Image()
             img.onload = () => {
                 // 3. 图片加载完，绘制到 canvas
-                drawImageToCanvas(canvasRoot,img)
+                util.drawImageToCanvas(canvasRoot,img)
+                util.drawImageToCanvas(canvasChange,img)
+                store.imageData = util.getCanvasImageData(canvasRoot)
             }
             img.src = event.target.result
         }
         reader.readAsDataURL(file)
     });
+    sliderContrast.addEventListener('input',(e) => { //对比度调整
+        labelContrast.textContent = sliderContrast.value
+        affineTransform()
+    });
+    sliderBrightness.addEventListener('input',(e) => { //对比度调整
+        labelBrightness.textContent = sliderBrightness.value
+        affineTransform()
+    })
 }
 
-const drawImageToCanvas = (canvas,img) => {
-    const ctx = canvas.getContext('2d')
-    // 清空 canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    // 计算缩放比例（保持宽高比，铺满 canvas）
-    const scale = Math.min(
-        canvas.width / img.width,
-        canvas.height / img.height
-    )
-     // 计算绘制尺寸
-    const drawWidth = img.width * scale
-    const drawHeight = img.height * scale
-    // 计算居中位置
-    const offsetX = (canvas.width - drawWidth) / 2
-    const offsetY = (canvas.height - drawHeight) / 2
-    // 绘制
-    ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
 
-}
 
 window.onload = ()=> {
     init()
