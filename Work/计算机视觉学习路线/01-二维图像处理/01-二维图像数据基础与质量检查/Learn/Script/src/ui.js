@@ -7,4 +7,6 @@ const uiInit = ()=> {
     window.sliderBrightness = document.getElementById('sliderBrightness')
     window.labelContrast = document.getElementById('labelContrast')
     window.labelBrightness = document.getElementById('labelBrightness')
+    window.sliderGamma = document.getElementById('sliderGamma')
+    window.labelGamma = document.getElementById('labelGamma')
     }

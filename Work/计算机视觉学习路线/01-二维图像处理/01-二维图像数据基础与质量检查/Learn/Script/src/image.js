@@ -3,7 +3,7 @@ const affineTransform = ()=> {
     const contrast = Number(labelContrast.textContent)
     const brightness = Number(labelBrightness.textContent)
     const ctx = canvasChange.getContext('2d')
-    const imageData = alg.affineTransform(contrast,brightness,store.imageData)
+    const imageData = alg.affineTransform(store.imageData,contrast,brightness)
     ctx.putImageData(imageData, 0, 0)
 }
 const init = ()=> {
@@ -23,7 +23,8 @@ const init = ()=> {
                 // 3. 图片加载完，绘制到 canvas
                 util.drawImageToCanvas(canvasRoot,img)
                 util.drawImageToCanvas(canvasChange,img)
-                store.imageData = util.getCanvasImageData(canvasRoot)
+                store.imageDataRoot = util.getCanvasImageData(canvasRoot)
+                store.imageDataChange = store.imageDataRoot
             }
             img.src = event.target.result
         }
@@ -35,6 +36,10 @@ const init = ()=> {
     });
     sliderBrightness.addEventListener('input',(e) => { //对比度调整
         labelBrightness.textContent = sliderBrightness.value
+        affineTransform()
+    });
+    sliderGamma.addEventListener('input',(e) => { //对比度调整
+        labelGamma.textContent = sliderGamma.value
         affineTransform()
     })
 }
