@@ -1,7 +1,20 @@
+const algargs = {
+    contrast:0,//对比度
+    brightness:0,//亮度
+    gamma:0//伽马亮度
+}
 const alg = {
-   processAny(imageData,func,...args) {
+   funcMap : new Map(),
+   processFunc(color,func,...args) {
+        color.r = util.clamp(func(color.r,...args),0,255)
+        color.g = util.clamp(func(color.g,...args),0,255)
+        color.b = util.clamp(func(color.b,...args),0,255)
+        color.a = util.clamp(color.a,0,255)
+   },
+   processAll(imageData) {
         const { width, height, data } = imageData //data = [r,g,b,a]
         const outData = new Uint8ClampedArray(width * height * 4) //输出像素
+        const states = stateMachine.getState()
         for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const index = (y * width + x) * 4
@@ -9,41 +22,64 @@ const alg = {
             const g = data[index + 1]
             const b = data[index + 2]
             const a = data[index + 3]
-            outData[index] = func(r,...args)
-            outData[index + 1] = func(g,...args)
-            outData[index + 2] = func(b,...args)
-            outData[index + 3] = util.clamp(a,0,255)
+            const color = {r:r,g:g,b:b,a:a}
+            for(let i = 0; i < states.length; ++i) {
+                const state = states[i]
+                const func = alg.funcMap.get(state)
+                if(state === Type_AffineTransform) {
+
+                }
+                    // alg.processFunc(color,func,algargs.contrast,algargs.brightness)
+                else if(state ===Type_Gamma)
+                    alg.processFunc(color,func,algargs.gamma)
+            }
+            outData[index] = color.r
+            outData[index + 1] = color.g
+            outData[index + 2] = color.b
+            outData[index + 3] = color.a
         }
         }
         return new ImageData(outData, width, height)
     },
-    affineTransformProcess(value,contrast,brightness) {
-        return util.clamp(contrast * (value - 128) + 128 + brightness,0,255)
+    /**
+     * 全部更新当前的状态参数
+     * @param {Json} args 
+     */
+    updateArgs(args) {
+        algargs.contrast = args.contrast,
+        algargs.brightness = args.brightness,
+        algargs.gamma = args.gamma
     },
-    gammaProcess(value,gamma) {
-        value = value / 255.0
-        value = Math.pow(value,gamma)
-        return util.clamp(value,0,255)
+    /**
+     * 更新当前的图像渲染
+     */
+    render(imageData) {
+        return alg.processAll(imageData)
     },
     /**
      * 修改图像的亮度/对比度
-     * @param {any} imageData 
+     * @param {number} value 
      * @param {number} contrast 
      * @param {number} brightness 
      * @returns 
      */
-    affineTransform(imageData,contrast,brightness) {
-       return alg.processAny(imageData,alg.affineTransformProcess,contrast,brightness)
+    affineTransform(value,contrast,brightness) {
+        return util.clamp(contrast * (value - 128) + 128 + brightness,0,255)
     },
     /**
      * 修改图像的伽马亮度
-     * @param {any} imageData 
+     * @param {number} value 
      * @param {number} gamma 
      * @returns 
      */
-    gamma(imageData,gamma) {
-        return alg.processAny(imageData,alg.gammaProcess,gamma)
+    gamma(value,gamma) {
+        value = Math.pow(value / 255.0, gamma) * 255.0
+        return util.clamp(value,0,255)
     }
-
- 
 }
+alg.funcMap = new Map(
+    [
+        [Type_AffineTransform, alg.affineTransform],
+        [Type_Gamma, alg.gamma],
+    ]
+)

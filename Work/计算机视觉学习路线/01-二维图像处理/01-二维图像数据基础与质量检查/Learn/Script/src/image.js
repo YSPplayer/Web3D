@@ -1,10 +1,21 @@
-const affineTransform = ()=> {
+
+const render = () => {
+    const algargs = {
+       contrast: Number(labelContrast.textContent),
+       brightness:Number(labelBrightness.textContent),
+       gamma:Number(labelGamma.textContent)
+    }
+    alg.updateArgs(algargs)
     if(store.imageData === null) return 
-    const contrast = Number(labelContrast.textContent)
-    const brightness = Number(labelBrightness.textContent)
     const ctx = canvasChange.getContext('2d')
-    const imageData = alg.affineTransform(store.imageData,contrast,brightness)
+    const imageData = alg.render(store.imageDataRoot)
     ctx.putImageData(imageData, 0, 0)
+}
+const resetData = ()=> {
+    //更新数据图像
+    store.imageDataRoot = util.getCanvasImageData(canvasRoot)
+    //重置状态机状态
+    stateMachine.resetState()
 }
 const init = ()=> {
      uiInit()
@@ -23,8 +34,7 @@ const init = ()=> {
                 // 3. 图片加载完，绘制到 canvas
                 util.drawImageToCanvas(canvasRoot,img)
                 util.drawImageToCanvas(canvasChange,img)
-                store.imageDataRoot = util.getCanvasImageData(canvasRoot)
-                store.imageDataChange = store.imageDataRoot
+                resetData()
             }
             img.src = event.target.result
         }
@@ -32,15 +42,18 @@ const init = ()=> {
     });
     sliderContrast.addEventListener('input',(e) => { //对比度调整
         labelContrast.textContent = sliderContrast.value
-        affineTransform()
+        stateMachine.pushState(Type_AffineTransform)
+        render()
     });
     sliderBrightness.addEventListener('input',(e) => { //对比度调整
         labelBrightness.textContent = sliderBrightness.value
-        affineTransform()
+        stateMachine.pushState(Type_AffineTransform)
+        render()
     });
-    sliderGamma.addEventListener('input',(e) => { //对比度调整
+    sliderGamma.addEventListener('input',(e) => { //伽马亮度调整
         labelGamma.textContent = sliderGamma.value
-        affineTransform()
+        stateMachine.pushState(Type_Gamma)
+        render()
     })
 }
 
