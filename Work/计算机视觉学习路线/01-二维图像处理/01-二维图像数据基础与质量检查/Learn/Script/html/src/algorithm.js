@@ -1,3 +1,6 @@
+import { Type_AffineTransform, Type_Gamma, stateMachine } from './stateMachine.js'
+import { util } from './util.js'
+
 const algargs = {
     contrast:0,//对比度
     brightness:0,//亮度
@@ -83,3 +86,5 @@ alg.funcMap = new Map(
         [Type_Gamma, alg.gamma],
     ]
 )
+
+export { alg }

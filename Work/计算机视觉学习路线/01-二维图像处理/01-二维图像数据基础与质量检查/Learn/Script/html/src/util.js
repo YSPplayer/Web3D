@@ -28,3 +28,5 @@ const util = {
         return Math.min(max, Math.max(min, value))
     }
 }
+
+export { util }

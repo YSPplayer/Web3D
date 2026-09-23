@@ -18,7 +18,7 @@ const stateMachine = {
      * 重置状态机
      */
     resetState() {
-        states = []
+        stateMachine.states = []
     },
     /**
      * 返回排序后的状态机
@@ -32,3 +32,5 @@ const stateMachine = {
 
 
 }
+
+export { Type_AffineTransform, Type_Gamma, stateMachine }
