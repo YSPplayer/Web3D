@@ -75,7 +75,7 @@
                   v-model="changeChannel"
                   :class="['channel_select', `channel_select_${changeChannel}`]"
                   popper-class="channel_select_dropdown"
-                  size="small"
+                  size="small" @change="handleChangeChange"
                 >
                   <el-option class="channel_option channel_option_r" label="R" value="r" />
                   <el-option class="channel_option channel_option_g" label="G" value="g" />
@@ -212,13 +212,21 @@ const rootChannel = ref('r')
 const changeChannel = ref('r')
 const imageDatasRoot = ref(new Array(256).fill(0)) 
 const imageDatasChange = ref(new Array(256).fill(0)) 
-const updateGetHistogramData =  (target,imageData)=> {
+const updateGetHistogramData =  (target,imageData,type)=> {
     //直方图统计数据更新
     const {r,g,b}  = alg.getHistogramData(imageData)
-    target.value = r
+    if(type === 'r') target.value = r
+    else if(type === 'g') target.value = g
+    else target.value = b
+  
 }
 const handleChangeRoot = (value)=> {
-    console.log('value',value)
+  updateGetHistogramData(imageDatasRoot,store.imageDataRoot,value)
+}
+const handleChangeChange = (value) => {
+  const ctx = canvasChange.value.getContext('2d')
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  updateGetHistogramData(imageDatasChange,imageData,value)
 }
 const render = () => {
   alg.updateArgs({
@@ -231,15 +239,15 @@ const render = () => {
   const ctx = canvasChange.value.getContext('2d')
   const imageData = alg.render(store.imageDataRoot)
   ctx.putImageData(imageData, 0, 0)
-  updateGetHistogramData(imageDatasChange,imageData)
+  updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
 
 }
 
 const resetData = () => {
   store.imageDataRoot = util.getCanvasImageData(canvasRoot.value)
   stateMachine.resetState()
-  updateGetHistogramData(imageDatasRoot,store.imageDataRoot)
-  updateGetHistogramData(imageDatasChange,store.imageDataRoot)
+  updateGetHistogramData(imageDatasRoot,store.imageDataRoot,rootChannel.value)
+  updateGetHistogramData(imageDatasChange,store.imageDataRoot,changeChannel.value)
 }
 
 const openFileInput = () => {
