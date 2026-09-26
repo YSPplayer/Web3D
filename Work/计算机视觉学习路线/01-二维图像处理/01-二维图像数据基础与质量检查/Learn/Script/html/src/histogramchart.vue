@@ -21,10 +21,10 @@
     const chartOption  = computed(()=>{
         return {
             grid: {
-                left: '0%',      // 图表距离容器左侧的距离
-                right: '15%',     // 图表距离容器右侧的距离
-                bottom: '0%',   // 图表距离容器底部的距离
-                top: '7%',      // 图表距离容器顶部的距离
+                left: '5%',      // 图表距离容器左侧的距离
+                right: '5%',     // 图表距离容器右侧的距离
+                bottom: '10%',   // 图表距离容器底部的距离
+                top: '10%',      // 图表距离容器顶部的距离
                 containLabel: true // 坐标轴标签是否自动包含在 grid 区域内
             },
             xAxis: {
@@ -32,6 +32,8 @@
                  min: 0,               // 最小值 0
                  max: 255,             // 最大值 255（8位图）
                  name: '像素值',
+                 nameLocation: 'middle',
+                 nameGap: 24,
                  boundaryGap: false,   // 数值轴通常不需要，但可保留
                  interval: 1           // 可选：每个刻度间隔 1
             },
@@ -68,7 +70,9 @@
 
 <style scoped>
 .histogram_chart {
-    width: 700px;
-    height: 500px;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
 }
 </style>
