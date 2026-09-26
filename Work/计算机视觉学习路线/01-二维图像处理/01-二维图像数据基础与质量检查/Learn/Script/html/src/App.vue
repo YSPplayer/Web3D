@@ -11,8 +11,19 @@
       />
     </div>
     <div class="flex_row" style="gap: 1rem">
-      <canvas ref="canvasRoot" class="img_canvas" width="500" height="500"></canvas>
-      <canvas ref="canvasChange" class="img_canvas" width="500" height="500"></canvas>
+      <div class="flex_column">
+          <div class="flex_row" style="gap: 1rem">
+             <canvas ref="canvasRoot" class="img_canvas" width="500" height="500"></canvas>
+            <canvas ref="canvasChange" class="img_canvas" width="500" height="500"></canvas>
+          </div>
+           <div class="flex_row" style="gap: 1rem">
+              <histogramchart :imageDatas="imageDatasRoot" ref="histogramchartRoot" > 
+              </histogramchart>
+                <!-- <histogramchart/>
+                <histogramchart/> -->
+           </div>
+      </div>
+     
       <div class="flex_column_center">
         <div class="flex_row" style="gap: 0.5rem">
           <label class="label_fixed">对比度</label>
@@ -60,13 +71,16 @@ import { alg } from './algorithm.js'
 import { Type_AffineTransform, Type_Gamma, stateMachine } from './stateMachine.js'
 import { store } from './store.js'
 import { util } from './util.js'
+import histogramchart  from './histogramchart.vue'
 
+const histogramchartRoot = ref(null)
 const fileInput = ref(null)
 const canvasRoot = ref(null)
 const canvasChange = ref(null)
 const contrast = ref(1)
 const brightness = ref(0)
 const gamma = ref(1)
+const imageDatasRoot = ref([]) 
 
 const render = () => {
   alg.updateArgs({
@@ -79,6 +93,9 @@ const render = () => {
   const ctx = canvasChange.value.getContext('2d')
   const imageData = alg.render(store.imageDataRoot)
   ctx.putImageData(imageData, 0, 0)
+  //直方图统计数据更新
+    const {r,g,b}  = alg.getHistogramData(imageData)
+    imageDatasRoot.value = r
 }
 
 const resetData = () => {

@@ -29,10 +29,8 @@ const alg = {
             for(let i = 0; i < states.length; ++i) {
                 const state = states[i]
                 const func = alg.funcMap.get(state)
-                if(state === Type_AffineTransform) {
-
-                }
-                    // alg.processFunc(color,func,algargs.contrast,algargs.brightness)
+                if(state === Type_AffineTransform) 
+                    alg.processFunc(color,func,algargs.contrast,algargs.brightness)
                 else if(state ===Type_Gamma)
                     alg.processFunc(color,func,algargs.gamma)
             }
@@ -52,6 +50,22 @@ const alg = {
         algargs.contrast = args.contrast,
         algargs.brightness = args.brightness,
         algargs.gamma = args.gamma
+    },
+    getHistogramData(imageData) {
+       const { width, height, data } = imageData
+       const arrayr = new Array(256).fill(0)
+       const arrayg = new Array(256).fill(0)
+       const arrayb = new Array(256).fill(0)
+       for (let i = 0; i < data.length; i += 4) {
+            arrayr[data[i]]++
+            arrayg[data[i + 1]]++
+            arrayb[data[i + 2]]++
+        }
+        return {
+            r:arrayr,
+            g:arrayg,
+            b:arrayb
+        }
     },
     /**
      * 更新当前的图像渲染
