@@ -186,6 +186,7 @@
               />
             </div>
           </article>
+          <el-button @click="clickHistogramEqualize">直方图均衡化</el-button>
         </div>
 
       </aside>
@@ -220,11 +221,19 @@ const updateGetHistogramData =  (target,imageData,type)=> {
     else target.value = b
   
 }
+const clickHistogramEqualize = ()=> {
+   if (store.imageDataRoot === null) return
+   const ctx = canvasChange.value.getContext('2d')
+   const imageData = alg.histogram(store.imageDataRoot)
+   ctx.putImageData(imageData, 0, 0)
+   updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
+}
 const handleChangeRoot = (value)=> {
   updateGetHistogramData(imageDatasRoot,store.imageDataRoot,value)
 }
 const handleChangeChange = (value) => {
-  const ctx = canvasChange.value.getContext('2d')
+  const canvas = canvasChange.value
+  const ctx = canvas.getContext('2d')
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   updateGetHistogramData(imageDatasChange,imageData,value)
 }
@@ -240,7 +249,6 @@ const render = () => {
   const imageData = alg.render(store.imageDataRoot)
   ctx.putImageData(imageData, 0, 0)
   updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
-
 }
 
 const resetData = () => {
