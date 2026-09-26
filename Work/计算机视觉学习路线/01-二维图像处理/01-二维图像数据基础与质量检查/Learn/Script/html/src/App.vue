@@ -19,8 +19,8 @@
            <div class="flex_row" style="gap: 1rem">
               <histogramchart :imageDatas="imageDatasRoot" ref="histogramchartRoot" > 
               </histogramchart>
-                <!-- <histogramchart/>
-                <histogramchart/> -->
+               <histogramchart :imageDatas="imageDatasChange" ref="histogramchartChange" > 
+              </histogramchart>
            </div>
       </div>
      
@@ -74,14 +74,20 @@ import { util } from './util.js'
 import histogramchart  from './histogramchart.vue'
 
 const histogramchartRoot = ref(null)
+const histogramchartChange = ref(null)
 const fileInput = ref(null)
 const canvasRoot = ref(null)
 const canvasChange = ref(null)
 const contrast = ref(1)
 const brightness = ref(0)
 const gamma = ref(1)
-const imageDatasRoot = ref([]) 
-
+const imageDatasRoot = ref(new Array(256).fill(0)) 
+const imageDatasChange = ref(new Array(256).fill(0)) 
+const updateGetHistogramData =  (target,imageData)=> {
+    //直方图统计数据更新
+    const {r,g,b}  = alg.getHistogramData(imageData)
+    target.value = r
+}
 const render = () => {
   alg.updateArgs({
     contrast: Number(contrast.value),
@@ -93,14 +99,15 @@ const render = () => {
   const ctx = canvasChange.value.getContext('2d')
   const imageData = alg.render(store.imageDataRoot)
   ctx.putImageData(imageData, 0, 0)
-  //直方图统计数据更新
-    const {r,g,b}  = alg.getHistogramData(imageData)
-    imageDatasRoot.value = r
+  updateGetHistogramData(imageDatasChange,imageData)
+
 }
 
 const resetData = () => {
   store.imageDataRoot = util.getCanvasImageData(canvasRoot.value)
   stateMachine.resetState()
+  updateGetHistogramData(imageDatasRoot,store.imageDataRoot)
+  updateGetHistogramData(imageDatasChange,store.imageDataRoot)
 }
 
 const openFileInput = () => {

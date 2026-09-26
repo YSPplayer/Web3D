@@ -22,7 +22,7 @@
         return {
             grid: {
                 left: '0%',      // 图表距离容器左侧的距离
-                right: '6%',     // 图表距离容器右侧的距离
+                right: '15%',     // 图表距离容器右侧的距离
                 bottom: '0%',   // 图表距离容器底部的距离
                 top: '7%',      // 图表距离容器顶部的距离
                 containLabel: true // 坐标轴标签是否自动包含在 grid 区域内
@@ -68,7 +68,7 @@
 
 <style scoped>
 .histogram_chart {
-    width: 500px;
-    height: 360px;
+    width: 700px;
+    height: 500px;
 }
 </style>
