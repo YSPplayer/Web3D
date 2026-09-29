@@ -26,6 +26,21 @@ const util = {
     },
     clamp(value, min, max)  {
         return Math.min(max, Math.max(min, value))
+    },
+    //创建一个空的二维数组
+    createArray2(y,x) {
+        const tiles = []
+        for (let i = 0; i < y; i++) {
+            arr[i] = [];
+            for (let j = 0; j < x; j++) {
+                arr[i][j] = {};
+            }
+        }
+        return tiles
+    },
+    //检查是否array二维数组中存在选中的元素
+    hasArray2Data(array,x,y) {
+        
     }
 }
 

@@ -75,12 +75,106 @@ const alg = {
         }
     },
     /**
-     * 直方图均衡化
+     * 局部直方图均衡化
+     * @param {any} imageData 
+     */
+    limitHistogram(imageData) {
+        const { width, height, data } = imageData
+        //默认8*8的分组
+        const kernelX = 8
+        const kernelY = 8
+        const tileW = Math.ceil(width / kernelX) //进一位
+        const tileH = Math.ceil(height / kernelY)
+        const tiles = util.createArray2(kernelY,kernelX)
+
+        for (let ty = 0; ty < kernelY; ty++) {
+            for (let tx = 0; tx < kernelX; tx++) {
+                const x0 = kernelX * tileW
+                const y0 = kernelY * tileH
+                const x1 = Math.min(x0 + tileW,width) //边缘整除不足会被包含
+                const y1 = Math.min(y0 + tileH,height)
+                const tileWidth = x1 - x0
+                const tileHeight = y1 - y0
+                const tilePixels = tileWidth * tileHeight
+                if(tilePixels === 0) continue //数据不存在就跳过
+                // 每块自己的 RGBA 数组
+                const tileData = new Uint8ClampedArray(tilePixels * 4)
+                let ti = 0
+                for(let y = y0; y < y1;++y) {
+                     for (let x = x0; x < x1; x++) {
+                        const index = (y * width + x) * 4
+                        tileData[ti++] = data[index]
+                        tileData[ti++] = data[index + 1]
+                        tileData[ti++] = data[index + 2]
+                        tileData[ti++] = data[index + 3]
+                     }
+                }
+                tiles[kernelY][kernelX] = {
+                    tx,
+                    ty,
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    tileWidth,
+                    tileHeight, 
+                    imageData : new ImageData(tileData, tileWidth, tileHeight)
+                }
+            }
+        }
+        //直方图均衡化
+        for (let i = 0; i < kernelY; i++) {
+            for (let j = 0; j < kernelX; j++) {
+               const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[i][j]
+               tiles[i][j].imageData = alg.histogram(imageData)
+            }
+        }
+        //直方图插值
+        insertTiles = util.createArray2(kernelY,kernelX)
+        for (let iy = 0; iy < kernelY; iy++) {
+            for (let ix = 0; ix < kernelX; ix++) {
+                const tx_left = ix - 1
+                const tx_right = ix + 1
+                const ty_up = iy - 1
+                const ty_down = iy + 1
+                const fx_left = 0
+                const fx_right = 0
+                const fy_up = 0
+                const fy_down = 0
+                const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[iy][ix]
+                if(tx_left >= 0) { //当前点的左侧区域块
+                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[iy][tx_left]
+                    fx_left = (x0 + x1) / 2
+                }  
+                if(tx_right < kernelX) {//当前点的右侧区域块
+                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[iy][tx_right]
+                    fx_right = (x0 + x1) / 2
+                }
+                if(ty_up >= 0) {//当前点的上方区域块
+                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[ty_up][ix]
+                    fy_up = (y0 + y1) / 2
+                }
+                if(ty_down < kernelY) {//当前点的下方区域块
+                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[ty_up][ix]
+                    fy_down = (y0 + y1) / 2
+                }
+                for(let y = y0; y < y1;++y) {
+                    for (let x = x0; x < x1; x++) {
+                        const index = (y * width + x) * 4
+                        index = 
+                    }
+                }
+                
+            }
+        }
+    },
+    /**
+     * 全局直方图均衡化
      * @param {any} imageData 
      * @returns 
      */
     histogram(imageData) {
-       const { width, height, data } = imageData //data = [r,g,b,a]
+        const { width, height, data } = imageData //data = [r,g,b,a]
         const { r: histR, g: histG, b: histB } = alg.getHistogramData(imageData)
         const outData = new Uint8ClampedArray(width * height * 4) //输出像素
         //计算CDF统一查表
