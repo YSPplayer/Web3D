@@ -190,21 +190,36 @@
              <div class="control_card_header">
               <h3>直方图均衡化</h3>
              </div>
-             <div>
+             <div class="flex_row" style=" align-items: center; ">
                 <el-switch
                 v-model="histogramValue"
                 active-color="#13ce66"
                 inactive-color="#ff4949">
               </el-switch>
               <label class="hs_label">局部均衡</label>
-              <el-button class="reset_button" circle  @click="resetHistogramEqualize">
+              <el-button class="reset_button" style="margin-left: auto;" circle  @click="resetHistogramEqualize">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
                 </svg>
                 </el-button>
             </div>
-            <el-button type="primary" @click="clickHistogramEqualize">均衡化</el-button>
+            <el-button type="primary" @click="clickHistogramEqualize" style="margin-left: auto; display: flex;" >应用</el-button>
           </article>
+           <article class="control_card flex_colum" style="gap:0.5rem">
+              <div class="control_card_header">
+              <h3>灰度处理</h3>
+             </div>
+             <div>
+             <div>
+                <el-select v-model="greymodeValue">
+                    <el-option label="灰度平均" value="1" />
+                    <el-option label="加权平均" value="2" />
+                </el-select>
+              <el-button type="primary" @click="clickHistogramEqualize" style="margin-top: 0.5rem; margin-left: auto; display: flex;" >应用</el-button>
+              </div>
+             </div>
+
+           </article>
         </div>
 
       </aside>
@@ -219,6 +234,7 @@ import { store } from './store.js'
 import { util } from './util.js'
 import HistogramChart from './histogramchart.vue'
 
+const greymodeValue = ref('1')
 const histogramchartRoot = ref(null)
 const histogramchartChange = ref(null)
 const histogramValue = ref(false)
@@ -308,7 +324,6 @@ const openFileInput = () => {
 const handleFileChange = (event) => {
   const file = event.target.files[0]
   if (!file) return
-
   const reader = new FileReader()
   reader.onload = (readerEvent) => {
     const img = new Image()

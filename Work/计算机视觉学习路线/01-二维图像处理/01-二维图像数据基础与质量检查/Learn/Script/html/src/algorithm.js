@@ -256,6 +256,43 @@ const alg = {
         return new ImageData(outData, width, height)
     },
     /**
+     * 灰度平均
+     * @param {any} imageData 
+     */
+    grayAverage(imageData) {
+        const { width, height, data } = imageData
+        const length = width * height * 4
+        const outData = new Uint8ClampedArray(length) //输出像素
+        for (let i = 0; i < length; i += 4) {
+            const averageValue = (data[i] + data[i + 1] +
+            data[i + 2]) / 3.0
+            outData[i] = averageValue
+            outData[i + 1] = averageValue
+            outData[i + 2] = averageValue
+            outData[i + 3] = data[i + 3] 
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
+     * 灰度加权平均
+     * @param {any} imageData 
+     */
+    grayWeightedAverage(imageData) {
+        const { width, height, data } = imageData
+        const length = width * height * 4
+        const outData = new Uint8ClampedArray(length) 
+        for (let i = 0; i < length; i += 4) {
+            const averageValue = 
+            data[i] * 0.299 + outData[i + 1] * 0.587
+            + outData[i + 2] * 0.114
+            outData[i] = averageValue
+            outData[i + 1] = averageValue
+            outData[i + 2] = averageValue
+            outData[i + 3] = data[i + 3] 
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
      * 更新当前的图像渲染
      */
     render(imageData) {
