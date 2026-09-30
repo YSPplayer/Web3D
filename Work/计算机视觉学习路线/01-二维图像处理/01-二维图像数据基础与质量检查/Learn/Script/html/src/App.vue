@@ -186,7 +186,20 @@
               />
             </div>
           </article>
-          <el-button @click="clickHistogramEqualize">直方图均衡化</el-button>
+          <article class="control_card">
+             <div class="control_card_header">
+              <h3>直方图均衡化</h3>
+             </div>
+             <div>
+                <el-switch
+                v-model="histogramValue"
+                active-color="#13ce66"
+                inactive-color="#ff4949">
+              </el-switch>
+              <label class="hs_label">局部均衡</label>
+            </div>
+            <el-button type="primary" @click="clickHistogramEqualize">均衡化</el-button>
+          </article>
         </div>
 
       </aside>
@@ -203,6 +216,7 @@ import HistogramChart from './histogramchart.vue'
 
 const histogramchartRoot = ref(null)
 const histogramchartChange = ref(null)
+const histogramValue = ref(false)
 const fileInput = ref(null)
 const canvasRoot = ref(null)
 const canvasChange = ref(null)
@@ -224,7 +238,7 @@ const updateGetHistogramData =  (target,imageData,type)=> {
 const clickHistogramEqualize = ()=> {
    if (store.imageDataRoot === null) return
    const ctx = canvasChange.value.getContext('2d')
-   const imageData = alg.histogram(store.imageDataRoot)
+   const imageData = histogramValue.value ? alg.limitHistogram(store.imageDataRoot) : alg.histogram(store.imageDataRoot)
    ctx.putImageData(imageData, 0, 0)
    updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
 }
@@ -314,6 +328,10 @@ onMounted(() => {
 })
 </script>
 <style>
+.hs_label {
+  margin-left: 0.5rem;
+  font-size: 13px;
+}
 :root {
   color: #172033;
   background: #f3f6fb;

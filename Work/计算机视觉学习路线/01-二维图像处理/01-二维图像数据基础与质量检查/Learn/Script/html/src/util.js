@@ -38,10 +38,61 @@ const util = {
         }
         return tiles
     },
-    //检查是否array二维数组中存在选中的元素
-    hasArray2Data(array,x,y) {
-        
+    /**
+     * 生成恒等 LUT
+     * 输入是多少，输出还是多少
+     */
+    createIdentityLut() {
+        const lut = new Uint8Array(256)
+        for (let i = 0; i < 256; i++) {
+            lut[i] = i
+        }
+        return lut
+    },
+    /*
+        根据一个通道的直方图生成均衡化LUT
+    */
+    createEqualizeLut(histogram, pixelCount) {
+        if (pixelCount === 0) {
+            return util.createIdentityLut()
+        }
+        const lut = new Uint8Array(256)
+        let cdf = 0
+        let cdfMin = 0
+        for (let i = 0; i < 256; i++) {
+            cdf += histogram[i]
+
+            if (cdfMin === 0 && cdf > 0) {
+                cdfMin = cdf
+            }
+        }
+        const denominator = pixelCount - cdfMin
+        // 整个区域只有一种像素值时，保持原值
+        if (denominator <= 0) {
+            return util.createIdentityLut()
+        }
+        cdf = 0
+        for (let i = 0; i < 256; i++) {
+            cdf += histogram[i]
+            const mappedValue = Math.round(
+                ((cdf - cdfMin) / denominator) * 255
+            )
+            lut[i] = Math.max(
+                0,
+                Math.min(255, mappedValue)
+            )
+        }
+        return lut
+    },
+    /*
+    双线性插值
+    */
+    bilinear(value00,value10,value01,value11,fx,fy) {
+        const top = value00 + (value10 - value00) * fx
+        const bottom = value01 + (value11 - value01) * fx
+        return Math.round(top + (bottom - top) * fy)
     }
+    
 }
 
 export { util }

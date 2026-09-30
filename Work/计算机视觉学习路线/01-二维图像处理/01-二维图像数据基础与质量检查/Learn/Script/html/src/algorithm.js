@@ -80,93 +80,144 @@ const alg = {
      */
     limitHistogram(imageData) {
         const { width, height, data } = imageData
-        //默认8*8的分组
-        const kernelX = 8
-        const kernelY = 8
-        const tileW = Math.ceil(width / kernelX) //进一位
-        const tileH = Math.ceil(height / kernelY)
-        const tiles = util.createArray2(kernelY,kernelX)
-
-        for (let ty = 0; ty < kernelY; ty++) {
-            for (let tx = 0; tx < kernelX; tx++) {
-                const x0 = kernelX * tileW
-                const y0 = kernelY * tileH
-                const x1 = Math.min(x0 + tileW,width) //边缘整除不足会被包含
-                const y1 = Math.min(y0 + tileH,height)
-                const tileWidth = x1 - x0
-                const tileHeight = y1 - y0
-                const tilePixels = tileWidth * tileHeight
-                if(tilePixels === 0) continue //数据不存在就跳过
-                // 每块自己的 RGBA 数组
-                const tileData = new Uint8ClampedArray(tilePixels * 4)
-                let ti = 0
-                for(let y = y0; y < y1;++y) {
-                     for (let x = x0; x < x1; x++) {
+        //最多8 * 8 防止图像宽度小于8
+        const tilesX = Math.min(8, width)
+        const tilesY = Math.min(8, height)
+        // 每个元素保存当前区域的 R、G、B 三张 LUT，创建初始的局部直方图存储数组
+        const tileLuts = Array.from(
+            { length: tilesY },
+            () => new Array(tilesX)
+        )
+        /*
+            统计每一个区域的直方图，并生成对应的LUT
+        */
+       for(let ty = 0; ty < tilesY; ty ++) {
+            //获取到当前的Y方向起始位置
+            const y0 =  Math.floor(ty * (height / tilesY))
+            //获取当前的Y方向结尾位置
+            const y1 = Math.floor((ty + 1) * (height / tilesY))
+            for (let tx = 0; tx < tilesX; tx++) {
+                //获取到当前的X方向起始位置
+                const x0 = Math.floor(tx * (width / tilesX))
+                //获取到当前的X方向结尾位置
+                const x1 = Math.floor((tx + 1) * (width / tilesX))
+                const histR = new Uint32Array(256)
+                const histG = new Uint32Array(256)
+                const histB = new Uint32Array(256)
+                //获取到像素数量
+                let pixelCount = 0
+                for(let y = y0; y < y1; y++) {
+                    for(let x = x0; x < x1; x++) {
                         const index = (y * width + x) * 4
-                        tileData[ti++] = data[index]
-                        tileData[ti++] = data[index + 1]
-                        tileData[ti++] = data[index + 2]
-                        tileData[ti++] = data[index + 3]
-                     }
-                }
-                tiles[kernelY][kernelX] = {
-                    tx,
-                    ty,
-                    x0,
-                    y0,
-                    x1,
-                    y1,
-                    tileWidth,
-                    tileHeight, 
-                    imageData : new ImageData(tileData, tileWidth, tileHeight)
-                }
-            }
-        }
-        //直方图均衡化
-        for (let i = 0; i < kernelY; i++) {
-            for (let j = 0; j < kernelX; j++) {
-               const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[i][j]
-               tiles[i][j].imageData = alg.histogram(imageData)
-            }
-        }
-        //直方图插值
-        insertTiles = util.createArray2(kernelY,kernelX)
-        for (let iy = 0; iy < kernelY; iy++) {
-            for (let ix = 0; ix < kernelX; ix++) {
-                const tx_left = ix - 1
-                const tx_right = ix + 1
-                const ty_up = iy - 1
-                const ty_down = iy + 1
-                const fx_left = 0
-                const fx_right = 0
-                const fy_up = 0
-                const fy_down = 0
-                const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[iy][ix]
-                if(tx_left >= 0) { //当前点的左侧区域块
-                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[iy][tx_left]
-                    fx_left = (x0 + x1) / 2
-                }  
-                if(tx_right < kernelX) {//当前点的右侧区域块
-                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[iy][tx_right]
-                    fx_right = (x0 + x1) / 2
-                }
-                if(ty_up >= 0) {//当前点的上方区域块
-                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[ty_up][ix]
-                    fy_up = (y0 + y1) / 2
-                }
-                if(ty_down < kernelY) {//当前点的下方区域块
-                    const {tx,ty,x0,y0,x1,y1,tileWidth,tileHeight,imageData} = tiles[ty_up][ix]
-                    fy_down = (y0 + y1) / 2
-                }
-                for(let y = y0; y < y1;++y) {
-                    for (let x = x0; x < x1; x++) {
-                        const index = (y * width + x) * 4
-                        index = 
+                        const alpha = data[index + 3]
+                        //不让透明背景影响直方图
+                        if(alpha === 0) continue
+                        histR[data[index]]++
+                        histG[data[index + 1]]++
+                        histB[data[index + 2]]++
+                        pixelCount++
                     }
                 }
-                
+                //设置当前空间块的局部全局直方图
+                tileLuts[ty][tx] = {
+                    r: util.createEqualizeLut(histR, pixelCount),
+                    g: util.createEqualizeLut(histG, pixelCount),
+                    b: util.createEqualizeLut(histB, pixelCount)
+                }
             }
-        }
+
+       }
+       const outData = new Uint8ClampedArray(data.length)
+       /*
+        阶段二，进行线性插值
+       */
+       for(let y = 0; y < height; y++) {
+          //把图像坐标转为相对于当前点像素的中心块的坐标，方便计算权重
+          const gridY = ((y + 0.5) * tilesY / height) - 0.5
+          let ty0
+          let ty1
+          let fy
+          if (gridY <= 0) {
+            ty0 = 0
+            ty1 = 0
+            fy = 0
+          } else if (gridY >= tilesY - 1) {
+            ty0 = tilesY - 1
+            ty1 = tilesY - 1
+            fy = 0
+          } else {
+            ty0 = Math.floor(gridY)
+            ty1 = ty0 + 1
+            fy = gridY - ty0
+          }
+          for (let x = 0; x < width; x++) {
+            const index = (y * width + x) * 4
+            const alpha = data[index + 3]
+            //透明像素保持不变
+            if (alpha === 0) { //先初始化输出像素中的值
+                outData[index] = data[index]
+                outData[index + 1] = data[index + 1]
+                outData[index + 2] = data[index + 2]
+                outData[index + 3] = alpha
+                continue
+            }
+            //X方向映射坐标
+            const gridX = ((x + 0.5) * tilesX / width) - 0.5    
+            let tx0
+            let tx1
+            let fx
+            //获取到fy和fx
+            if (gridX <= 0) {
+                tx0 = 0
+                tx1 = 0
+                fx = 0
+            } else if (gridX >= tilesX - 1) {
+                tx0 = tilesX - 1
+                tx1 = tilesX - 1
+                fx = 0
+            } else {
+                tx0 = Math.floor(gridX)
+                tx1 = tx0 + 1
+                fx = gridX - tx0
+            }
+            //获取到上下左右四个部分的lut查询表
+            const lut00 = tileLuts[ty0][tx0]
+            const lut10 = tileLuts[ty0][tx1]
+            const lut01 = tileLuts[ty1][tx0]
+            const lut11 = tileLuts[ty1][tx1]
+            //获取到要查询表的对象索引
+            const r = data[index]
+            const g = data[index + 1]
+            const b = data[index + 2]
+            //双线性插值
+            outData[index] = util.bilinear(
+                lut00.r[r],
+                lut10.r[r],
+                lut01.r[r],
+                lut11.r[r],
+                fx,
+                fy
+            )
+            outData[index + 1] = util.bilinear(
+                lut00.g[g],
+                lut10.g[g],
+                lut01.g[g],
+                lut11.g[g],
+                fx,
+                fy
+            )
+            outData[index + 2] = util.bilinear(
+                lut00.b[b],
+                lut10.b[b],
+                lut01.b[b],
+                lut11.b[b],
+                fx,
+                fy
+            )
+            outData[index + 3] = alpha
+          }
+       }
+       return new ImageData(outData, width, height)
     },
     /**
      * 全局直方图均衡化
