@@ -197,6 +197,11 @@
                 inactive-color="#ff4949">
               </el-switch>
               <label class="hs_label">局部均衡</label>
+              <el-button class="reset_button" circle  @click="resetHistogramEqualize">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
+                </svg>
+                </el-button>
             </div>
             <el-button type="primary" @click="clickHistogramEqualize">均衡化</el-button>
           </article>
@@ -235,12 +240,32 @@ const updateGetHistogramData =  (target,imageData,type)=> {
     else target.value = b
   
 }
+/*
+均衡化复位
+*/
+const resetHistogramEqualize = ()=> {
+  store.imageDataShot = util.getCanvasImageData(canvasRoot.value)
+  render()
+}
+/*
+直方图均衡化等独立组件的渲染
+*/
+const processOneRender = (func,...args)=> {
+  const canvas = canvasChange.value
+  //需要先记录快照并更新
+  store.imageDataShot = util.getCanvasImageData(canvas)
+  if (store.imageDataShot === null) return
+  const imageData = func(...args)
+  const ctx = canvas.getContext('2d')
+  ctx.putImageData(imageData, 0, 0)
+  updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
+  store.imageDataShot = util.getCanvasImageData(canvas)
+   
+}
 const clickHistogramEqualize = ()=> {
-   if (store.imageDataRoot === null) return
-   const ctx = canvasChange.value.getContext('2d')
-   const imageData = histogramValue.value ? alg.limitHistogram(store.imageDataRoot) : alg.histogram(store.imageDataRoot)
-   ctx.putImageData(imageData, 0, 0)
-   updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
+   processOneRender(histogramValue.value ? alg.limitHistogram :alg.histogram,
+    store.imageDataShot
+   )
 }
 const handleChangeRoot = (value)=> {
   updateGetHistogramData(imageDatasRoot,store.imageDataRoot,value)
@@ -251,22 +276,26 @@ const handleChangeChange = (value) => {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   updateGetHistogramData(imageDatasChange,imageData,value)
 }
+/**
+ * 进入状态机渲染
+ */
 const render = () => {
   alg.updateArgs({
     contrast: Number(contrast.value),
     brightness: Number(brightness.value),
     gamma: Number(gamma.value),
   })
-  if (store.imageDataRoot === null) return
+  if (store.imageDataShot === null) return
 
   const ctx = canvasChange.value.getContext('2d')
-  const imageData = alg.render(store.imageDataRoot)
+  const imageData = alg.render(store.imageDataShot)
   ctx.putImageData(imageData, 0, 0)
   updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
 }
 
 const resetData = () => {
   store.imageDataRoot = util.getCanvasImageData(canvasRoot.value)
+  store.imageDataShot = util.getCanvasImageData(canvasChange.value)
   stateMachine.resetState()
   updateGetHistogramData(imageDatasRoot,store.imageDataRoot,rootChannel.value)
   updateGetHistogramData(imageDatasChange,store.imageDataRoot,changeChannel.value)
