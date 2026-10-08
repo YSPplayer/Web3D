@@ -241,6 +241,24 @@
              </div>
 
            </article>
+           <article class="control_card flex_colum" style="gap:0.5rem">
+              <div class="control_card_header">
+                <h3>噪声混合</h3>
+             </div>
+              <div class="flex_row">
+                 <el-select v-model="noisemodeValue">
+                    <el-option label="高斯噪声" value="1" />
+                    <el-option label="椒盐噪声" value="2" />
+                    <el-option label="散斑噪声" value="3" />
+                </el-select>
+                <el-button class="reset_button" style="margin-left: auto;" circle  @click="resetRender">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
+                </svg>
+                </el-button>
+              </div>
+               <el-button type="primary" @click="clickNoiseProcessing" style="margin-top: 0.5rem; margin-left: auto; display: flex;" >应用</el-button>
+           </article>
         </div>
 
       </aside>
@@ -256,6 +274,7 @@ import { util } from './util.js'
 import HistogramChart from './histogramchart.vue'
 
 const greymodeValue = ref('1')
+const noisemodeValue = ref('1')
 const histogramchartRoot = ref(null)
 const histogramchartChange = ref(null)
 const histogramValue = ref(false)
@@ -355,6 +374,16 @@ const clickGrayscaleProcessing = ()=> {
   let func = null
   if(greymodeValue.value === '1') func = alg.grayAverage
   else func = alg.grayWeightedAverage
+  processOneRender(func,store.imageDataShot)
+}
+/*
+  设置噪声
+*/
+const clickNoiseProcessing = ()=> {
+  let func = null
+  if(noisemodeValue.value === '1') func = alg.gaussianNoise
+  else if(noisemodeValue.value === '2') func = alg.saltPepperNoise
+  else func = alg.speckleNoise
   processOneRender(func,store.imageDataShot)
 }
 const handleChangeRoot = (value)=> {

@@ -288,6 +288,64 @@ const alg = {
         return new ImageData(outData, width, height)
     },
     /**
+     * 正态分布噪音
+     * @param {any} imageData 
+     */
+    gaussianNoise(imageData) {
+        const { width, height, data } = imageData
+        const length = width * height * 4
+        const outData = new Uint8ClampedArray(length) //输出像素
+        for (let i = 0; i < length; i += 4) {
+            outData[i] = data[i] + util.gaussianRandom()
+            outData[i + 1] = data[i + 1] + util.gaussianRandom()
+            outData[i + 2] = data[i + 2] + util.gaussianRandom()
+            outData[i + 3] = data[i + 3] 
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
+     * 椒盐分布噪音
+     * @param {any} imageData 
+     */
+    saltPepperNoise(imageData) {
+        const { width, height, data } = imageData
+        const length = width * height * 4
+        const p = 0.05 //约5%的像素受到污染
+        const outData = new Uint8ClampedArray(length) //输出像素
+        for (let i = 0; i < length; i += 4) {
+            const r = Math.random() //生成0-1之间的随机数
+            if(r <  p / 2) { //2.5%的概率变成胡椒
+                outData[i] = outData[i + 1] = outData[i + 2] = 0
+            } else if(r <  p ) { //2.5%的概率变成盐
+                outData[i] = outData[i + 1] = outData[i + 2] = 255
+            } else {
+                outData[i] = data[i]
+                outData[i + 1] = data[i + 1]
+                outData[i + 2] = data[i + 2]
+            }
+            outData[i + 3] = data[i + 3]
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
+     * 散斑噪音
+     * @param {any} imageData 
+     * @returns 
+     */
+    speckleNoise(imageData) {
+        const { width, height, data } = imageData
+        const length = width * height * 4
+        const outData = new Uint8ClampedArray(length)
+        for (let i = 0; i < length; i += 4) {
+            const noise = 1 + util.gaussianRandom(0,0.1)
+            outData[i]     = data[i] * noise
+            outData[i + 1] = data[i + 1] * noise
+            outData[i + 2] = data[i + 2] * noise
+            outData[i + 3] = data[i + 3]
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
      * 灰度平均
      * @param {any} imageData 
      */
