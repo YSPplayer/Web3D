@@ -75,6 +75,38 @@ const alg = {
         }
     },
     /**
+     * 获取到当前的最大像素和最小像素值
+     * @param {any} imageData 
+     */
+    getMinMaxPixelValue(imageData) {
+         const { width, height, data } = imageData
+         const length = width * height * 4
+         if(length === 0) return { minR: 0, maxR: 0, minG: 0, maxG: 0, minB: 0, maxB: 0 }
+         let minR = Number.MAX_VALUE
+         let maxR = -Number.MAX_VALUE
+         let minG = Number.MAX_VALUE
+         let maxG = -Number.MAX_VALUE
+         let minB = Number.MAX_VALUE
+         let maxB = -Number.MAX_VALUE
+        for (let i = 0; i < length; i += 4) {
+            if(data[i + 3] === 0) continue 
+            minR = Math.min(minR,data[i])
+            maxR = Math.max(maxR,data[i])
+            minG = Math.min(minG,data[i + 1])
+            maxG = Math.max(maxG,data[i + 1])
+            minB = Math.min(minB,data[i + 2])
+            maxB = Math.max(maxB,data[i + 2])
+        }
+        return {
+            minR:minR,
+            maxR:maxR,
+            minG:minG,
+            maxG:maxG,
+            minB:minB,
+            maxB:maxB
+        }
+    },
+    /**
      * 局部直方图均衡化
      * @param {any} imageData 
      */
@@ -282,9 +314,7 @@ const alg = {
         const length = width * height * 4
         const outData = new Uint8ClampedArray(length) 
         for (let i = 0; i < length; i += 4) {
-            const averageValue = 
-            data[i] * 0.299 + outData[i + 1] * 0.587
-            + outData[i + 2] * 0.114
+            const averageValue = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114
             outData[i] = averageValue
             outData[i + 1] = averageValue
             outData[i + 2] = averageValue

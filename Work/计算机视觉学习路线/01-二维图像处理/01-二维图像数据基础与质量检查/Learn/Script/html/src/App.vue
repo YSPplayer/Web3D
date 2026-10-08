@@ -24,6 +24,13 @@
             </div>
             <div class="canvas_shell">
               <canvas ref="canvasRoot" class="img_canvas" width="500" height="500"></canvas>
+              <div class="bar_wrap_container">
+                    <div class="flex_row">
+                         <label>{{pixelState.maxRootLabel}}</label>
+                         <div class="bar_wrap" :style="barStyleRoot"></div>
+                         <label>{{pixelState.minRootLabel}}</label>
+                    </div>
+              </div>
             </div>
           </article>
 
@@ -34,6 +41,13 @@
             </div>
             <div class="canvas_shell">
               <canvas ref="canvasChange" class="img_canvas" width="500" height="500"></canvas>
+                      <div class="bar_wrap_container">
+                      <div class="flex_row">
+                         <label>{{pixelState.maxChangeLabel}}</label>
+                         <div class="bar_wrap" :style="barStyleChange"></div>
+                         <label>{{pixelState.minChangeLabel}}</label>
+                    </div>
+              </div>
             </div>
           </article>
         </div>
@@ -197,7 +211,7 @@
                 inactive-color="#ff4949">
               </el-switch>
               <label class="hs_label">局部均衡</label>
-              <el-button class="reset_button" style="margin-left: auto;" circle  @click="resetHistogramEqualize">
+              <el-button class="reset_button" style="margin-left: auto;" circle  @click="resetRender">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
                 </svg>
@@ -211,11 +225,18 @@
              </div>
              <div>
              <div>
+              <div class="flex_row">
                 <el-select v-model="greymodeValue">
                     <el-option label="灰度平均" value="1" />
                     <el-option label="加权平均" value="2" />
                 </el-select>
-              <el-button type="primary" @click="clickHistogramEqualize" style="margin-top: 0.5rem; margin-left: auto; display: flex;" >应用</el-button>
+                   <el-button class="reset_button" style="margin-left: auto;" circle  @click="resetRender">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
+                </svg>
+                </el-button>
+                </div>
+              <el-button type="primary" @click="clickGrayscaleProcessing" style="margin-top: 0.5rem; margin-left: auto; display: flex;" >应用</el-button>
               </div>
              </div>
 
@@ -227,7 +248,7 @@
   </div>
 </template>
 <script setup>
-import { computed,onMounted, ref } from 'vue'
+import { computed,onMounted, ref,reactive } from 'vue'
 import { alg } from './algorithm.js'
 import { Type_AffineTransform, Type_Gamma, stateMachine } from './stateMachine.js'
 import { store } from './store.js'
@@ -246,23 +267,70 @@ const brightness = ref(0)
 const gamma = ref(1)
 const rootChannel = ref('r')
 const changeChannel = ref('r')
+const pixelState = reactive({
+    minRoot: 0,
+    maxRoot: 255,
+    minRootLabel: 0,
+    maxRootLabel: 255,
+    minChange: 0,
+    maxChange: 255,
+    minChangeLabel: 0,
+    maxChangeLabel: 255,
+})
 const imageDatasRoot = ref(new Array(256).fill(0)) 
 const imageDatasChange = ref(new Array(256).fill(0)) 
-const updateGetHistogramData =  (target,imageData,type)=> {
+const updateMinMaxPixelValue = (isRoot,min,max) => {
+     if(isRoot) {
+        pixelState.minRoot = min
+        pixelState.minRootLabel = min
+        pixelState.maxRoot = max
+        pixelState.maxRootLabel = max
+      } else {
+        pixelState.minChange = min
+        pixelState.minChangeLabel = min
+        pixelState.maxChange = max
+        pixelState.maxChangeLabel = max
+      }
+}
+const updateRenderState =  (target,imageData,type)=> {
+    const isRoot = target === imageDatasRoot
     //直方图统计数据更新
     const {r,g,b}  = alg.getHistogramData(imageData)
-    if(type === 'r') target.value = r
-    else if(type === 'g') target.value = g
-    else target.value = b
-  
+    //colormap映射组件更新
+    const {minR,maxR,minG,maxG,minB,maxB} = alg.getMinMaxPixelValue(imageData)
+    if(type === 'r') {
+      target.value = r
+      updateMinMaxPixelValue(isRoot,minG,maxG)
+    } 
+    else if(type === 'g') {
+      target.value = g
+      updateMinMaxPixelValue(isRoot,minR,maxR)
+    } 
+    else {
+      target.value = b
+       updateMinMaxPixelValue(isRoot,minB,maxB)
+    } 
 }
+
 /*
-均衡化复位
+渲染复位
 */
-const resetHistogramEqualize = ()=> {
+const resetRender = ()=> {
   store.imageDataShot = util.getCanvasImageData(canvasRoot.value)
   render()
 }
+const barStyleRoot = computed(() => ({
+  background: `linear-gradient(to top,
+    rgb(${pixelState.minRoot},${pixelState.minRoot},${pixelState.minRoot}),
+    rgb(${pixelState.maxRoot},${pixelState.maxRoot},${pixelState.maxRoot}))`
+}))
+
+
+const barStyleChange = computed(() => ({
+  background: `linear-gradient(to top,
+    rgb(${pixelState.minRoot},${pixelState.minRoot},${pixelState.minRoot}),
+    rgb(${pixelState.maxRoot},${pixelState.maxRoot},${pixelState.maxRoot}))`
+}))
 /*
 直方图均衡化等独立组件的渲染
 */
@@ -274,7 +342,7 @@ const processOneRender = (func,...args)=> {
   const imageData = func(...args)
   const ctx = canvas.getContext('2d')
   ctx.putImageData(imageData, 0, 0)
-  updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
+  updateRenderState(imageDatasChange,imageData,changeChannel.value)
   store.imageDataShot = util.getCanvasImageData(canvas)
    
 }
@@ -283,14 +351,20 @@ const clickHistogramEqualize = ()=> {
     store.imageDataShot
    )
 }
+const clickGrayscaleProcessing = ()=> {
+  let func = null
+  if(greymodeValue.value === '1') func = alg.grayAverage
+  else func = alg.grayWeightedAverage
+  processOneRender(func,store.imageDataShot)
+}
 const handleChangeRoot = (value)=> {
-  updateGetHistogramData(imageDatasRoot,store.imageDataRoot,value)
+  updateRenderState(imageDatasRoot,store.imageDataRoot,value)
 }
 const handleChangeChange = (value) => {
   const canvas = canvasChange.value
   const ctx = canvas.getContext('2d')
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  updateGetHistogramData(imageDatasChange,imageData,value)
+  updateRenderState(imageDatasChange,imageData,value)
 }
 /**
  * 进入状态机渲染
@@ -306,15 +380,15 @@ const render = () => {
   const ctx = canvasChange.value.getContext('2d')
   const imageData = alg.render(store.imageDataShot)
   ctx.putImageData(imageData, 0, 0)
-  updateGetHistogramData(imageDatasChange,imageData,changeChannel.value)
+  updateRenderState(imageDatasChange,imageData,changeChannel.value)
 }
 
 const resetData = () => {
   store.imageDataRoot = util.getCanvasImageData(canvasRoot.value)
   store.imageDataShot = util.getCanvasImageData(canvasChange.value)
   stateMachine.resetState()
-  updateGetHistogramData(imageDatasRoot,store.imageDataRoot,rootChannel.value)
-  updateGetHistogramData(imageDatasChange,store.imageDataRoot,changeChannel.value)
+  updateRenderState(imageDatasRoot,store.imageDataRoot,rootChannel.value)
+  updateRenderState(imageDatasChange,store.imageDataRoot,changeChannel.value)
 }
 
 const openFileInput = () => {
@@ -475,7 +549,31 @@ input {
   justify-content: space-between;
   gap: 16px;
 }
-
+.bar_wrap_container {
+  position: absolute;
+  z-index: 10;
+  bottom: 0.3rem;
+  right: 1rem;
+  width: 30px;
+  height: 150px;
+}
+.bar_wrap_container label {
+  display: block;
+  color: white;
+}
+.bar_wrap_container .flex_row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+.bar_wrap_container .bar_wrap {
+  background-color: yellow;
+  z-index: 11;
+  width:30px;
+  height: 100px;
+}
 .section_heading h2,
 .control_heading h2,
 .subsection_heading h2 {
