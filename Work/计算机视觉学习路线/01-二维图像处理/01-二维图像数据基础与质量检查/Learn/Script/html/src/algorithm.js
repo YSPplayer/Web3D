@@ -434,6 +434,50 @@ const alg = {
         return alg.commonFilter(imageData, kernel, kernelSize)
     },
     /**
+     *  梯度图
+     * @param {any} imageData 
+     */
+    gradientMap(imageData) {
+        const { width, height, data } = imageData
+        const outData = new Uint8ClampedArray(width * height * 4)
+        const magnitude = new Float32Array(width * height)
+        let maxM = 0
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const index = (y * width + x) * 4
+                // 边界：复制边缘
+                const xL = Math.max(0, x - 1)
+                const xR = Math.min(width - 1, x + 1)
+                const yU = Math.max(0, y - 1)
+                const yD = Math.min(height - 1, y + 1)
+                // 中心差分
+                const gxR = data[(y * width + xR) * 4] - data[(y * width + xL) * 4]
+                const gyR = data[(yD * width + x) * 4] - data[(yU * width + x) * 4]
+                const gxG = data[(y * width + xR) * 4 + 1] - data[(y * width + xL) * 4 + 1]
+                const gyG = data[(yD * width + x) * 4 + 1] - data[(yU * width + x) * 4 + 1]
+                const gxB = data[(y * width + xR) * 4 + 2] - data[(y * width + xL) * 4 + 2]
+                const gyB = data[(yD * width + x) * 4 + 2] - data[(yU * width + x) * 4 + 2]
+                // 幅值
+                const mR = Math.sqrt(gxR * gxR + gyR * gyR)
+                const mG = Math.sqrt(gxG * gxG + gyG * gyG)
+                const mB = Math.sqrt(gxB * gxB + gyB * gyB)
+                const m = (mR + mG + mB) / 3
+                magnitude[y * width + x] = m
+                if (m > maxM) maxM = m
+            }
+        }
+        // 归一化
+        for (let i = 0; i < magnitude.length; i++) {
+            const val = maxM > 0 ? (magnitude[i] / maxM) * 255 : 0
+            const idx = i * 4
+            outData[idx]     = val
+            outData[idx + 1] = val
+            outData[idx + 2] = val
+            outData[idx + 3] = 255
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
      * 获取残差图
      * @param {any} inputData
      * @param {any} outputData

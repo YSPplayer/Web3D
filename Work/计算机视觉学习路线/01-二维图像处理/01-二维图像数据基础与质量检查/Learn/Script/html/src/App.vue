@@ -148,6 +148,35 @@
                 </article>
               </div>
             </el-tab-pane>
+
+            <el-tab-pane label="梯度图" name="gradient" lazy>
+              <div class="analysis_grid">
+                <article class="analysis_card">
+                  <div class="analysis_title">
+                    <div class="analysis_name">
+                      <span class="color_mark original"></span>
+                      <span>原图</span>
+                    </div>
+                  </div>
+                  <ResidualCanvas
+                    style="margin: 0.5rem;"
+                    :image-data="gradientImageRoot"
+                  />
+                </article>
+                <article class="analysis_card">
+                  <div class="analysis_title">
+                    <div class="analysis_name">
+                      <span class="color_mark result"></span>
+                      <span>结果图</span>
+                    </div>
+                  </div>
+                  <ResidualCanvas
+                    style="margin: 0.5rem;"
+                    :image-data="gradientImageChange"
+                  />
+                </article>
+              </div>
+            </el-tab-pane>
           </el-tabs>
         </div>
       </section>
@@ -374,6 +403,8 @@ const pixelState = reactive({
 const imageDatasRoot = ref(new Array(256).fill(0))
 const imageDatasChange = ref(new Array(256).fill(0))
 const residualImageChange = ref(null)
+const gradientImageRoot = ref(null)
+const gradientImageChange = ref(null)
 let residualInputImage = null
 let residualOutputImage = null
 
@@ -421,8 +452,17 @@ const setResidualSource = (inputImage, outputImage) => {
   if (activeAnalysisTab.value === 'residual') updateResidualImage()
 }
 
+const updateGradientImages = () => {
+  if (!store.imageDataRoot || !store.imageDataResult) return
+  if (!gradientImageRoot.value) {
+    gradientImageRoot.value = alg.gradientMap(store.imageDataRoot)
+  }
+  gradientImageChange.value = alg.gradientMap(store.imageDataResult)
+}
+
 watch(activeAnalysisTab, (value) => {
   if (value === 'residual') updateResidualImage()
+  else if (value === 'gradient') updateGradientImages()
 })
 watch(residualChangeChannel, updateResidualImage)
 
@@ -468,6 +508,7 @@ const render = () => {
   drawImageData(canvasChange.value, imageData)
   setResidualSource(store.imageDataShot, imageData)
   updateRenderState(imageDatasChange, imageData, changeChannel.value)
+  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
 }
 
 const resetRender = () => {
@@ -489,6 +530,7 @@ const processOneRender = (operation) => {
   drawImageData(canvasChange.value, resultImage)
   setResidualSource(inputImage, committedImage)
   updateRenderState(imageDatasChange, resultImage, changeChannel.value)
+  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
 }
 
 const clickHistogramEqualize = () => {
@@ -543,12 +585,15 @@ const resetData = (fullImageData, previewImageData) => {
   store.imageDataShot = cloneImageData(previewImageData)
   store.imageDataResult = cloneImageData(previewImageData)
   store.operations = []
+  gradientImageRoot.value = null
+  gradientImageChange.value = null
   stateMachine.resetState()
   drawImageData(canvasRoot.value, store.imageDataRoot)
   drawImageData(canvasChange.value, store.imageDataResult)
   setResidualSource(store.imageDataShot, store.imageDataResult)
   updateRenderState(imageDatasRoot, store.imageDataRoot, rootChannel.value)
   updateRenderState(imageDatasChange, store.imageDataResult, changeChannel.value)
+  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
 }
 
 const openFileInput = () => {
