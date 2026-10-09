@@ -6,6 +6,7 @@ const algargs = {
     brightness:0,//亮度
     gamma:0//伽马亮度
 }
+const channelOffsets = { r: 0, g: 1, b: 2 }
 const alg = {
    funcMap : new Map(),
    processFunc(color,func,...args) {
@@ -56,54 +57,49 @@ const alg = {
      * @param {any} imageData 
      * @returns 
      */
-    getHistogramData(imageData) {
-       const { width, height, data } = imageData
-       const arrayr = new Array(256).fill(0)
-       const arrayg = new Array(256).fill(0)
-       const arrayb = new Array(256).fill(0)
-       const length = width * height * 4
-       for (let i = 0; i < length; i += 4) {
-            if(data[i + 3] === 0) continue //跳过透明色
-            arrayr[data[i]]++
-            arrayg[data[i + 1]]++
-            arrayb[data[i + 2]]++
+    getHistogramData(imageData, channel = null) {
+        if (channel !== null) {
+            return { [channel]: alg.getChannelStatistics(imageData, channel).histogram }
         }
-        return {
-            r:arrayr,
-            g:arrayg,
-            b:arrayb
+        const result = {
+            r: new Array(256).fill(0),
+            g: new Array(256).fill(0),
+            b: new Array(256).fill(0)
         }
+        const { data } = imageData
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0) continue
+            result.r[data[i]]++
+            result.g[data[i + 1]]++
+            result.b[data[i + 2]]++
+        }
+        return result
     },
     /**
-     * 获取到当前的最大像素和最小像素值
-     * @param {any} imageData 
+     * 单次遍历统计一个通道的直方图和像素范围
+     * @param {ImageData} imageData
+     * @param {'r'|'g'|'b'} channel
      */
-    getMinMaxPixelValue(imageData) {
-         const { width, height, data } = imageData
-         const length = width * height * 4
-         if(length === 0) return { minR: 0, maxR: 0, minG: 0, maxG: 0, minB: 0, maxB: 0 }
-         let minR = Number.MAX_VALUE
-         let maxR = -Number.MAX_VALUE
-         let minG = Number.MAX_VALUE
-         let maxG = -Number.MAX_VALUE
-         let minB = Number.MAX_VALUE
-         let maxB = -Number.MAX_VALUE
-        for (let i = 0; i < length; i += 4) {
-            if(data[i + 3] === 0) continue 
-            minR = Math.min(minR,data[i])
-            maxR = Math.max(maxR,data[i])
-            minG = Math.min(minG,data[i + 1])
-            maxG = Math.max(maxG,data[i + 1])
-            minB = Math.min(minB,data[i + 2])
-            maxB = Math.max(maxB,data[i + 2])
+    getChannelStatistics(imageData, channel) {
+        const offset = channelOffsets[channel]
+        if (offset === undefined) throw new RangeError(`Unsupported channel: ${channel}`)
+        const histogram = new Array(256).fill(0)
+        const { data } = imageData
+        let min = 255
+        let max = 0
+        let pixelCount = 0
+        for (let i = 0; i < data.length; i += 4) {
+            if (data[i + 3] === 0) continue
+            const value = data[i + offset]
+            histogram[value]++
+            min = Math.min(min, value)
+            max = Math.max(max, value)
+            pixelCount++
         }
         return {
-            minR:minR,
-            maxR:maxR,
-            minG:minG,
-            maxG:maxG,
-            minB:minB,
-            maxB:maxB
+            histogram,
+            min: pixelCount === 0 ? 0 : min,
+            max: pixelCount === 0 ? 0 : max
         }
     },
     /**
@@ -291,14 +287,15 @@ const alg = {
      * 正态分布噪音
      * @param {any} imageData 
      */
-    gaussianNoise(imageData) {
+    gaussianNoise(imageData, seed = Date.now()) {
         const { width, height, data } = imageData
         const length = width * height * 4
         const outData = new Uint8ClampedArray(length) //输出像素
+        const random = util.createSeededRandom(seed)
         for (let i = 0; i < length; i += 4) {
-            outData[i] = data[i] + util.gaussianRandom()
-            outData[i + 1] = data[i + 1] + util.gaussianRandom()
-            outData[i + 2] = data[i + 2] + util.gaussianRandom()
+            outData[i] = data[i] + util.gaussianRandom(0, 1, random)
+            outData[i + 1] = data[i + 1] + util.gaussianRandom(0, 1, random)
+            outData[i + 2] = data[i + 2] + util.gaussianRandom(0, 1, random)
             outData[i + 3] = data[i + 3] 
         }
         return new ImageData(outData, width, height)
@@ -307,13 +304,14 @@ const alg = {
      * 椒盐分布噪音
      * @param {any} imageData 
      */
-    saltPepperNoise(imageData) {
+    saltPepperNoise(imageData, seed = Date.now()) {
         const { width, height, data } = imageData
         const length = width * height * 4
         const p = 0.05 //约5%的像素受到污染
         const outData = new Uint8ClampedArray(length) //输出像素
+        const random = util.createSeededRandom(seed)
         for (let i = 0; i < length; i += 4) {
-            const r = Math.random() //生成0-1之间的随机数
+            const r = random() //生成0-1之间的随机数
             if(r <  p / 2) { //2.5%的概率变成胡椒
                 outData[i] = outData[i + 1] = outData[i + 2] = 0
             } else if(r <  p ) { //2.5%的概率变成盐
@@ -332,12 +330,13 @@ const alg = {
      * @param {any} imageData 
      * @returns 
      */
-    speckleNoise(imageData) {
+    speckleNoise(imageData, seed = Date.now()) {
         const { width, height, data } = imageData
         const length = width * height * 4
         const outData = new Uint8ClampedArray(length)
+        const random = util.createSeededRandom(seed)
         for (let i = 0; i < length; i += 4) {
-            const noise = 1 + util.gaussianRandom(0,0.1)
+            const noise = 1 + util.gaussianRandom(0, 0.1, random)
             outData[i]     = data[i] * noise
             outData[i + 1] = data[i + 1] * noise
             outData[i + 2] = data[i + 2] * noise
@@ -435,6 +434,54 @@ const alg = {
         return alg.commonFilter(imageData, kernel, kernelSize)
     },
     /**
+     * 获取残差图
+     * @param {any} inputData
+     * @param {any} outputData
+     */
+    residualPlot(inputData, outputData, channel = 'r') {
+        const { width, height, data } = inputData
+        if (width !== outputData.width || height !== outputData.height) {
+            throw new RangeError('Residual images must have the same dimensions')
+        }
+        const offset = channelOffsets[channel]
+        if (offset === undefined) throw new RangeError(`Unsupported channel: ${channel}`)
+        const length = width * height * 4
+        const odata = outputData.data
+        const outData = new Uint8ClampedArray(length)
+        const residualHistogram = new Uint32Array(256)
+        let nonZeroCount = 0
+        // 先统计当前通道的非零绝对残差分布。
+        for (let i = 0; i < length; i += 4) {
+            const residual = Math.abs(data[i + offset] - odata[i + offset])
+            residualHistogram[residual]++
+            if (residual !== 0) nonZeroCount++
+        }
+        // 使用非零残差的 P99，避免少量极端值把其余差异压成黑色。
+        let percentile99 = 0
+        if (nonZeroCount > 0) {
+            const targetCount = Math.ceil(nonZeroCount * 0.99)
+            let accumulatedCount = 0
+            for (let residual = 1; residual < residualHistogram.length; residual++) {
+                accumulatedCount += residualHistogram[residual]
+                if (accumulatedCount >= targetCount) {
+                    percentile99 = residual
+                    break
+                }
+            }
+        }
+        // 至少以 0~8 作为显示范围，避免只有 1 个灰度级的差异被过度放大。
+        const displayMax = Math.max(percentile99, 8)
+        for (let i = 0; i < length; i += 4) {
+            const residual = Math.abs(data[i + offset] - odata[i + offset])
+            const value = Math.min(255, Math.round(residual / displayMax * 255))
+            outData[i] = value
+            outData[i + 1] = value
+            outData[i + 2] = value
+            outData[i + 3] = 255
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
      * 反锐化高通滤波 
      * @param {any} imageData 
      * @param {number} kernelSize 
@@ -526,6 +573,36 @@ const alg = {
             outData[i + 3] = data[i + 3] 
         }
         return new ImageData(outData, width, height)
+    },
+    /**
+     * 执行一个可序列化的离散操作，供预览和全尺寸导出共同使用
+     */
+    applyOperation(imageData, operation) {
+        const { type, mode, kernelSize, seed } = operation
+        if (type === 'histogram') {
+            return mode === 'local' ? alg.limitHistogram(imageData) : alg.histogram(imageData)
+        }
+        if (type === 'grayscale') {
+            return mode === 'weighted' ? alg.grayWeightedAverage(imageData) : alg.grayAverage(imageData)
+        }
+        if (type === 'noise') {
+            if (mode === 'gaussian') return alg.gaussianNoise(imageData, seed)
+            if (mode === 'saltPepper') return alg.saltPepperNoise(imageData, seed)
+            return alg.speckleNoise(imageData, seed)
+        }
+        if (type === 'filter') {
+            if (mode === 'mean') return alg.meanFilter(imageData, kernelSize)
+            if (mode === 'gaussian') return alg.gaussianFilter(imageData, kernelSize)
+            if (mode === 'median') return alg.medianFilter(imageData, kernelSize)
+            return alg.deSharpFilter(imageData, kernelSize)
+        }
+        throw new RangeError(`Unsupported operation: ${type}`)
+    },
+    applyOperations(imageData, operations) {
+        return operations.reduce(
+            (currentImage, operation) => alg.applyOperation(currentImage, operation),
+            imageData
+        )
     },
     /**
      * 更新当前的图像渲染

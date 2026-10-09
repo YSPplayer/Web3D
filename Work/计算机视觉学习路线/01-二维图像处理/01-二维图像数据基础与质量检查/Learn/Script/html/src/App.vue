@@ -53,56 +53,102 @@
           </article>
         </div>
 
-        <div class="histogram_section">
-          <div class="subsection_heading">
-            <h2>直方图</h2>
-          </div>
-          <div class="histogram_grid">
-            <article class="histogram_card">
-              <div class="histogram_title">
-                <div class="histogram_name">
-                  <span class="color_mark original"></span>
-                  <span>原图</span>
-                </div>
-                <el-select
-                  v-model="rootChannel"
-                  :class="['channel_select', `channel_select_${rootChannel}`]"
-                  popper-class="channel_select_dropdown"
-                  size="small" @change="handleChangeRoot"
-                >
-                  <el-option class="channel_option channel_option_r" label="R" value="r" />
-                  <el-option class="channel_option channel_option_g" label="G" value="g" />
-                  <el-option class="channel_option channel_option_b" label="B" value="b" />
-                </el-select>
+        <div class="analysis_section">
+          <el-tabs v-model="activeAnalysisTab" class="analysis_tabs">
+            <el-tab-pane label="直方图" name="histogram" lazy>
+              <div class="analysis_grid">
+                <article class="analysis_card">
+                  <div class="analysis_title">
+                    <div class="analysis_name">
+                      <span class="color_mark original"></span>
+                      <span>原图</span>
+                    </div>
+                    <el-select
+                      v-model="rootChannel"
+                      :class="['channel_select', `channel_select_${rootChannel}`]"
+                      popper-class="channel_select_dropdown"
+                      size="small" @change="handleChangeRoot"
+                    >
+                      <el-option class="channel_option channel_option_r" label="R" value="r" />
+                      <el-option class="channel_option channel_option_g" label="G" value="g" />
+                      <el-option class="channel_option channel_option_b" label="B" value="b" />
+                    </el-select>
+                  </div>
+                  <HistogramChart
+                    :image-datas="imageDatasRoot"
+                  />
+                </article>
+                <article class="analysis_card">
+                  <div class="analysis_title">
+                    <div class="analysis_name">
+                      <span class="color_mark result"></span>
+                      <span>结果图</span>
+                    </div>
+                    <el-select
+                      v-model="changeChannel"
+                      :class="['channel_select', `channel_select_${changeChannel}`]"
+                      popper-class="channel_select_dropdown"
+                      size="small" @change="handleChangeChange"
+                    >
+                      <el-option class="channel_option channel_option_r" label="R" value="r" />
+                      <el-option class="channel_option channel_option_g" label="G" value="g" />
+                      <el-option class="channel_option channel_option_b" label="B" value="b" />
+                    </el-select>
+                  </div>
+                  <HistogramChart
+                    :image-datas="imageDatasChange"
+                  />
+                </article>
               </div>
-              <HistogramChart
-                ref="histogramchartRoot"
-                :image-datas="imageDatasRoot"
-              />
-            </article>
-            <article class="histogram_card">
-              <div class="histogram_title">
-                <div class="histogram_name">
-                  <span class="color_mark result"></span>
-                  <span>结果图</span>
-                </div>
-                <el-select
-                  v-model="changeChannel"
-                  :class="['channel_select', `channel_select_${changeChannel}`]"
-                  popper-class="channel_select_dropdown"
-                  size="small" @change="handleChangeChange"
-                >
-                  <el-option class="channel_option channel_option_r" label="R" value="r" />
-                  <el-option class="channel_option channel_option_g" label="G" value="g" />
-                  <el-option class="channel_option channel_option_b" label="B" value="b" />
-                </el-select>
+            </el-tab-pane>
+
+            <el-tab-pane label="残差图" name="residual" lazy>
+              <div class="analysis_grid">
+                <article class="analysis_card">
+                  <div class="analysis_title">
+                    <div class="analysis_name">
+                      <span class="color_mark original"></span>
+                      <span>原图</span>
+                    </div>
+                    <el-select
+                      v-model="residualRootChannel"
+                      :class="['channel_select', `channel_select_${residualRootChannel}`]"
+                      popper-class="channel_select_dropdown"
+                      size="small"
+                    >
+                      <el-option class="channel_option channel_option_r" label="R" value="r" />
+                      <el-option class="channel_option channel_option_g" label="G" value="g" />
+                      <el-option class="channel_option channel_option_b" label="B" value="b" />
+                    </el-select>
+                  </div>
+                  <ResidualCanvas style="margin: 0.5rem;"
+                    static-black
+                  />
+                </article>
+                <article class="analysis_card">
+                  <div class="analysis_title">
+                    <div class="analysis_name">
+                      <span class="color_mark result"></span>
+                      <span>结果图</span>
+                    </div>
+                    <el-select
+                      v-model="residualChangeChannel"
+                      :class="['channel_select', `channel_select_${residualChangeChannel}`]"
+                      popper-class="channel_select_dropdown"
+                      size="small"
+                    >
+                      <el-option class="channel_option channel_option_r" label="R" value="r" />
+                      <el-option class="channel_option channel_option_g" label="G" value="g" />
+                      <el-option class="channel_option channel_option_b" label="B" value="b" />
+                    </el-select>
+                  </div>
+                  <ResidualCanvas style="margin: 0.5rem;"
+                    :image-data="residualImageChange"
+                  />
+                </article>
               </div>
-              <HistogramChart
-                ref="histogramchartChange"
-                :image-datas="imageDatasChange"
-              />
-            </article>
-          </div>
+            </el-tab-pane>
+          </el-tabs>
         </div>
       </section>
 
@@ -291,178 +337,218 @@
   </div>
 </template>
 <script setup>
-import { computed,onMounted, ref,reactive } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { alg } from './algorithm.js'
 import { Type_AffineTransform, Type_Gamma, stateMachine } from './stateMachine.js'
 import { store } from './store.js'
-import { util } from './util.js'
 import HistogramChart from './histogramchart.vue'
+import ResidualCanvas from './residualcanvas.vue'
 
+const PREVIEW_MAX_SIZE = 500
 const greymodeValue = ref('1')
 const noisemodeValue = ref('1')
 const filtermodeValue = ref('1')
 const kernelmodeValue = ref(3)
-const histogramchartRoot = ref(null)
-const histogramchartChange = ref(null)
+const activeAnalysisTab = ref('histogram')
 const histogramValue = ref(false)
 const fileInput = ref(null)
 const canvasRoot = ref(null)
 const canvasChange = ref(null)
-// 全尺寸画布只负责保存和处理原始分辨率像素，页面中的 canvas 仍保持 500 × 500 预览。
-const canvasRootFull = document.createElement('canvas')
-const canvasChangeFull = document.createElement('canvas')
-canvasRootFull.width = canvasChangeFull.width = 500
-canvasRootFull.height = canvasChangeFull.height = 500
 const contrast = ref(1)
 const brightness = ref(0)
 const gamma = ref(1)
 const rootChannel = ref('r')
 const changeChannel = ref('r')
+const residualRootChannel = ref('r')
+const residualChangeChannel = ref('r')
 const pixelState = reactive({
-    minRoot: 0,
-    maxRoot: 255,
-    minRootLabel: 0,
-    maxRootLabel: 255,
-    minChange: 0,
-    maxChange: 255,
-    minChangeLabel: 0,
-    maxChangeLabel: 255,
+  minRoot: 0,
+  maxRoot: 255,
+  minRootLabel: 0,
+  maxRootLabel: 255,
+  minChange: 0,
+  maxChange: 255,
+  minChangeLabel: 0,
+  maxChangeLabel: 255,
 })
-const imageDatasRoot = ref(new Array(256).fill(0)) 
-const imageDatasChange = ref(new Array(256).fill(0)) 
-const updateMinMaxPixelValue = (isRoot,min,max) => {
-     if(isRoot) {
-        pixelState.minRoot = min
-        pixelState.minRootLabel = min
-        pixelState.maxRoot = max
-        pixelState.maxRootLabel = max
-      } else {
-        pixelState.minChange = min
-        pixelState.minChangeLabel = min
-        pixelState.maxChange = max
-        pixelState.maxChangeLabel = max
-      }
-}
-const updateRenderState =  (target,imageData,type)=> {
-    const isRoot = target === imageDatasRoot
-    //直方图统计数据更新
-    const {r,g,b}  = alg.getHistogramData(imageData)
-    //colormap映射组件更新
-    const {minR,maxR,minG,maxG,minB,maxB} = alg.getMinMaxPixelValue(imageData)
-    if(type === 'r') {
-      target.value = r
-      updateMinMaxPixelValue(isRoot,minG,maxG)
-    } 
-    else if(type === 'g') {
-      target.value = g
-      updateMinMaxPixelValue(isRoot,minR,maxR)
-    } 
-    else {
-      target.value = b
-       updateMinMaxPixelValue(isRoot,minB,maxB)
-    } 
+const imageDatasRoot = ref(new Array(256).fill(0))
+const imageDatasChange = ref(new Array(256).fill(0))
+const residualImageChange = ref(null)
+let residualInputImage = null
+let residualOutputImage = null
+
+const cloneImageData = (imageData) => new ImageData(
+  new Uint8ClampedArray(imageData.data),
+  imageData.width,
+  imageData.height
+)
+
+const createImageData = (image, width, height) => {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })
+  ctx.drawImage(image, 0, 0, width, height)
+  return ctx.getImageData(0, 0, width, height)
 }
 
-/*
-渲染复位
-*/
-const resetRender = ()=> {
-  store.imageDataShot = util.getCanvasImageData(canvasRootFull)
-  render()
+const drawImageData = (canvas, imageData) => {
+  canvas.width = imageData.width
+  canvas.height = imageData.height
+  canvas.getContext('2d').putImageData(imageData, 0, 0)
 }
+
+const updateAlgorithmArgs = () => {
+  alg.updateArgs({
+    contrast: Number(contrast.value),
+    brightness: Number(brightness.value),
+    gamma: Number(gamma.value),
+  })
+}
+
+const updateResidualImage = () => {
+  if (!residualInputImage || !residualOutputImage) return
+  residualImageChange.value = alg.residualPlot(
+    residualInputImage,
+    residualOutputImage,
+    residualChangeChannel.value
+  )
+}
+
+const setResidualSource = (inputImage, outputImage) => {
+  residualInputImage = inputImage
+  residualOutputImage = outputImage
+  if (activeAnalysisTab.value === 'residual') updateResidualImage()
+}
+
+watch(activeAnalysisTab, (value) => {
+  if (value === 'residual') updateResidualImage()
+})
+watch(residualChangeChannel, updateResidualImage)
+
+const updateMinMaxPixelValue = (isRoot, min, max) => {
+  if (isRoot) {
+    pixelState.minRoot = min
+    pixelState.minRootLabel = min
+    pixelState.maxRoot = max
+    pixelState.maxRootLabel = max
+  } else {
+    pixelState.minChange = min
+    pixelState.minChangeLabel = min
+    pixelState.maxChange = max
+    pixelState.maxChangeLabel = max
+  }
+}
+
+const updateRenderState = (target, imageData, channel) => {
+  if (!imageData) return
+  const isRoot = target === imageDatasRoot
+  const { histogram, min, max } = alg.getChannelStatistics(imageData, channel)
+  target.value = histogram
+  updateMinMaxPixelValue(isRoot, min, max)
+}
+
 const barStyleRoot = computed(() => ({
   background: `linear-gradient(to top,
     rgb(${pixelState.minRoot},${pixelState.minRoot},${pixelState.minRoot}),
     rgb(${pixelState.maxRoot},${pixelState.maxRoot},${pixelState.maxRoot}))`
 }))
 
-
 const barStyleChange = computed(() => ({
   background: `linear-gradient(to top,
-    rgb(${pixelState.minRoot},${pixelState.minRoot},${pixelState.minRoot}),
-    rgb(${pixelState.maxRoot},${pixelState.maxRoot},${pixelState.maxRoot}))`
+    rgb(${pixelState.minChange},${pixelState.minChange},${pixelState.minChange}),
+    rgb(${pixelState.maxChange},${pixelState.maxChange},${pixelState.maxChange}))`
 }))
-/*
-直方图均衡化等独立组件的渲染
-*/
-const processOneRender = (func,...args)=> {
-  const canvas = canvasChangeFull
-  //需要先记录快照并更新
-  store.imageDataShot = util.getCanvasImageData(canvas)
-  if (store.imageDataShot === null) return
-  const imageData = func(...args)
-  const ctx = canvas.getContext('2d')
-  ctx.putImageData(imageData, 0, 0)
-  util.drawImageToCanvas(canvasChange.value, canvas)
-  updateRenderState(imageDatasChange,imageData,changeChannel.value)
-  store.imageDataShot = util.getCanvasImageData(canvas)
-   
-}
-const clickHistogramEqualize = ()=> {
-   processOneRender(histogramValue.value ? alg.limitHistogram :alg.histogram,
-    store.imageDataShot
-   )
-}
-const clickGrayscaleProcessing = ()=> {
-  let func = null
-  if(greymodeValue.value === '1') func = alg.grayAverage
-  else func = alg.grayWeightedAverage
-  processOneRender(func,store.imageDataShot)
-}
-/**
- * 设置滤波
- */
-const clickFilterProcessing = ()=> {
-  let func = null
-  if(filtermodeValue.value === '1') func = alg.meanFilter
-  else if(filtermodeValue.value === '2') func = alg.gaussianFilter
-  else if(filtermodeValue.value === '3') func = alg.medianFilter
-  else if(filtermodeValue.value === '4') func = alg.deSharpFilter
-  processOneRender(func,store.imageDataShot,kernelmodeValue.value)
-}
-/*
-  设置噪声
-*/
-const clickNoiseProcessing = ()=> {
-  let func = null
-  if(noisemodeValue.value === '1') func = alg.gaussianNoise
-  else if(noisemodeValue.value === '2') func = alg.saltPepperNoise
-  else func = alg.speckleNoise
-  processOneRender(func,store.imageDataShot)
-}
-const handleChangeRoot = (value)=> {
-  updateRenderState(imageDatasRoot,store.imageDataRoot,value)
-}
-const handleChangeChange = (value) => {
-  const canvas = canvasChangeFull
-  const ctx = canvas.getContext('2d')
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  updateRenderState(imageDatasChange,imageData,value)
-}
-/**
- * 进入状态机渲染
- */
+
 const render = () => {
-  alg.updateArgs({
-    contrast: Number(contrast.value),
-    brightness: Number(brightness.value),
-    gamma: Number(gamma.value),
-  })
-  if (store.imageDataShot === null) return
-
-  const ctx = canvasChangeFull.getContext('2d')
+  if (!store.imageDataShot) return
+  updateAlgorithmArgs()
   const imageData = alg.render(store.imageDataShot)
-  ctx.putImageData(imageData, 0, 0)
-  util.drawImageToCanvas(canvasChange.value, canvasChangeFull)
-  updateRenderState(imageDatasChange,imageData,changeChannel.value)
+  store.imageDataResult = imageData
+  drawImageData(canvasChange.value, imageData)
+  setResidualSource(store.imageDataShot, imageData)
+  updateRenderState(imageDatasChange, imageData, changeChannel.value)
 }
 
-const resetData = () => {
-  store.imageDataRoot = util.getCanvasImageData(canvasRootFull)
-  store.imageDataShot = util.getCanvasImageData(canvasChangeFull)
+const resetRender = () => {
+  if (!store.imageDataRoot) return
+  store.operations = []
+  store.imageDataShot = cloneImageData(store.imageDataRoot)
+  render()
+}
+
+const processOneRender = (operation) => {
+  if (!store.imageDataShot) return
+  const inputImage = store.imageDataShot
+  const committedImage = alg.applyOperation(inputImage, operation)
+  store.operations.push({ ...operation })
+  store.imageDataShot = committedImage
+  updateAlgorithmArgs()
+  const resultImage = alg.render(committedImage)
+  store.imageDataResult = resultImage
+  drawImageData(canvasChange.value, resultImage)
+  setResidualSource(inputImage, committedImage)
+  updateRenderState(imageDatasChange, resultImage, changeChannel.value)
+}
+
+const clickHistogramEqualize = () => {
+  processOneRender({
+    type: 'histogram',
+    mode: histogramValue.value ? 'local' : 'global'
+  })
+}
+
+const clickGrayscaleProcessing = () => {
+  processOneRender({
+    type: 'grayscale',
+    mode: greymodeValue.value === '1' ? 'average' : 'weighted'
+  })
+}
+
+const clickFilterProcessing = () => {
+  const modes = { '1': 'mean', '2': 'gaussian', '3': 'median', '4': 'deSharp' }
+  processOneRender({
+    type: 'filter',
+    mode: modes[filtermodeValue.value],
+    kernelSize: Number(kernelmodeValue.value)
+  })
+}
+
+const createNoiseSeed = () => {
+  const values = new Uint32Array(1)
+  crypto.getRandomValues(values)
+  return values[0]
+}
+
+const clickNoiseProcessing = () => {
+  const modes = { '1': 'gaussian', '2': 'saltPepper', '3': 'speckle' }
+  processOneRender({
+    type: 'noise',
+    mode: modes[noisemodeValue.value],
+    seed: createNoiseSeed()
+  })
+}
+
+const handleChangeRoot = (value) => {
+  updateRenderState(imageDatasRoot, store.imageDataRoot, value)
+}
+
+const handleChangeChange = (value) => {
+  updateRenderState(imageDatasChange, store.imageDataResult, value)
+}
+
+const resetData = (fullImageData, previewImageData) => {
+  store.sourceImageDataFull = fullImageData
+  store.imageDataRoot = previewImageData
+  store.imageDataShot = cloneImageData(previewImageData)
+  store.imageDataResult = cloneImageData(previewImageData)
+  store.operations = []
   stateMachine.resetState()
-  updateRenderState(imageDatasRoot,store.imageDataRoot,rootChannel.value)
-  updateRenderState(imageDatasChange,store.imageDataRoot,changeChannel.value)
+  drawImageData(canvasRoot.value, store.imageDataRoot)
+  drawImageData(canvasChange.value, store.imageDataResult)
+  setResidualSource(store.imageDataShot, store.imageDataResult)
+  updateRenderState(imageDatasRoot, store.imageDataRoot, rootChannel.value)
+  updateRenderState(imageDatasChange, store.imageDataResult, changeChannel.value)
 }
 
 const openFileInput = () => {
@@ -478,31 +564,32 @@ const handleFileChange = (event) => {
     img.onload = () => {
       const width = img.naturalWidth || img.width
       const height = img.naturalHeight || img.height
-      canvasRootFull.width = canvasChangeFull.width = width
-      canvasRootFull.height = canvasChangeFull.height = height
-
-      canvasRootFull.getContext('2d').drawImage(img, 0, 0, width, height)
-      canvasChangeFull.getContext('2d').drawImage(img, 0, 0, width, height)
-      util.drawImageToCanvas(canvasRoot.value, canvasRootFull)
-      util.drawImageToCanvas(canvasChange.value, canvasChangeFull)
-      resetData()
+      const previewScale = Math.min(1, PREVIEW_MAX_SIZE / width, PREVIEW_MAX_SIZE / height)
+      const previewWidth = Math.max(1, Math.round(width * previewScale))
+      const previewHeight = Math.max(1, Math.round(height * previewScale))
+      resetData(
+        createImageData(img, width, height),
+        createImageData(img, previewWidth, previewHeight)
+      )
     }
     img.src = readerEvent.target.result
   }
   reader.readAsDataURL(file)
+  event.target.value = ''
 }
+
 const handleFileSave = () => {
-  const imageData = store.imageDataShot
-  if (!imageData) return
-  // 1. 创建临时 canvas
+  if (!store.sourceImageDataFull) return
+  updateAlgorithmArgs()
+  const replaySource = cloneImageData(store.sourceImageDataFull)
+  const committedImage = alg.applyOperations(replaySource, store.operations)
+  const imageData = alg.render(committedImage)
   const canvas = document.createElement('canvas')
   canvas.width = imageData.width
   canvas.height = imageData.height
-  // 2. 把 ImageData 画上去
-  const ctx = canvas.getContext('2d')
-  ctx.putImageData(imageData, 0, 0)
-  // 3. 转成 blob 下载
+  canvas.getContext('2d').putImageData(imageData, 0, 0)
   canvas.toBlob((blob) => {
+    if (!blob) return
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -684,7 +771,7 @@ input {
 }
 
 .preview_grid,
-.histogram_grid {
+.analysis_grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
@@ -696,7 +783,7 @@ input {
 }
 
 .media_card,
-.histogram_card {
+.analysis_card {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -707,7 +794,7 @@ input {
 }
 
 .media_card,
-.histogram_card {
+.analysis_card {
   display: flex;
   flex-direction: column;
 }
@@ -772,7 +859,7 @@ input {
   background: transparent;
 }
 
-.histogram_section {
+.analysis_section {
   min-height: 0;
   display: flex;
   margin-top: 0;
@@ -781,12 +868,47 @@ input {
   border-top: 1px solid #e9eef5;
 }
 
-.histogram_grid {
+.analysis_tabs {
   flex: 1;
-  margin-top: 10px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.histogram_title {
+.analysis_tabs > .el-tabs__header {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+}
+
+.analysis_tabs > .el-tabs__header .el-tabs__item {
+  height: 34px;
+  padding: 0 18px;
+  color: #6b778c;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.analysis_tabs > .el-tabs__header .el-tabs__item.is-active {
+  color: #409eff;
+}
+
+.analysis_tabs > .el-tabs__header .el-tabs__active-bar {
+  height: 2px;
+  border-radius: 2px;
+}
+
+.analysis_tabs > .el-tabs__content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.analysis_tabs .el-tab-pane,
+.analysis_grid {
+  height: 100%;
+}
+
+.analysis_title {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -798,7 +920,7 @@ input {
   font-weight: 650;
 }
 
-.histogram_name {
+.analysis_name {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -1001,7 +1123,7 @@ input {
   }
 
   .preview_grid,
-  .histogram_grid,
+  .analysis_grid,
   .control_list {
     grid-template-columns: 1fr;
   }
