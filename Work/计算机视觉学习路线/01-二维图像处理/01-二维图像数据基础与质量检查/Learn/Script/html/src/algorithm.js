@@ -346,6 +346,153 @@ const alg = {
         return new ImageData(outData, width, height)
     },
     /**
+     * 构建高斯滤波核
+     * @param {number} kernelSize 
+     * @param {number} sigma 
+     */
+    createGaussianKernel(kernelSize, sigma) {
+        const kernel = new Float32Array(kernelSize * kernelSize)
+        const center = Math.floor(kernelSize / 2)
+        let sum = 0
+        for (let y = 0; y < kernelSize; y++) {
+            for (let x = 0; x < kernelSize; x++) {
+                const dx = x - center
+                const dy = y - center
+                const value = Math.exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))
+                kernel[y * kernelSize + x] = value
+                sum += value
+            }
+        }
+        // 归一化
+        for (let i = 0; i < kernel.length; i++) {
+            kernel[i] /= sum
+        }
+        return kernel
+    },
+    /**
+     * 构建均值滤波核
+     * @param {number} kernelSize 
+     */
+    createMeanKernel(kernelSize) {
+        const length = kernelSize * kernelSize
+        return new Float32Array(length).fill(1 / length)
+    },
+    
+    /**
+     * 通用滤波函数
+     * @param {any} imageData 
+     * @param {number} kernelSize 
+     */
+    commonFilter(imageData,kernel,kernelSize) {
+        const { width, height, data } = imageData
+        const outData = new Uint8ClampedArray(width * height * 4)
+        const half = Math.floor(kernelSize / 2)
+        for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+                let sumR = 0, sumG = 0, sumB = 0
+                let weightSum = 0//实际使用的权重之和
+                for (let ky = -half; ky <= half; ky++) {
+                    for (let kx = -half; kx <= half; kx++) {
+                        const ny = y + ky
+                        const nx = x + kx
+                        if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                            const idx = (ny * width + nx) * 4
+                            const w = kernel[(ky + half) * kernelSize + (kx + half)]
+                            //权重相乘
+                            sumR += data[idx] * w
+                            sumG += data[idx + 1] * w
+                            sumB += data[idx + 2] * w
+                            weightSum += w
+                        }
+                    }
+                }
+                const index = (y * width + x) * 4
+                outData[index]     = Math.round(sumR / weightSum)
+                outData[index + 1] = Math.round(sumG / weightSum)
+                outData[index + 2] = Math.round(sumB / weightSum)
+                outData[index + 3] = data[index + 3]
+            }
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
+     * 均值滤波
+     * @param {any} imageData 
+     * @param {number} kernelSize 
+     */
+    meanFilter(imageData, kernelSize)  {
+        const kernel = alg.createMeanKernel(kernelSize)
+        return alg.commonFilter(imageData, kernel, kernelSize)
+    },
+    /**
+     * 高斯滤波
+     * @param {any} imageData 
+     * @param {number} kernelSize 
+     * @returns 
+     */
+    gaussianFilter(imageData, kernelSize) {
+        const kernel = alg.createGaussianKernel(kernelSize, 0.5)
+        return alg.commonFilter(imageData, kernel, kernelSize)
+    },
+    /**
+     * 反锐化高通滤波 
+     * @param {any} imageData 
+     * @param {number} kernelSize 
+     */
+    deSharpFilter(imageData, kernelSize) {
+        const kernelData = alg.gaussianFilter(imageData, kernelSize)
+        const kdata = kernelData.data
+        const { width, height, data } = imageData
+        const length = width * height * 4
+        const amount = 1.0
+        const outData = new Uint8ClampedArray(length)
+        for (let i = 0; i < length; i += 4)  {
+            outData[i] = data[i] + amount * (data[i] - kdata[i])
+            outData[i + 1] = data[i + 1] + amount * (data[i + 1] - kdata[i + 1])
+            outData[i + 2] = data[i + 2] + amount * (data[i + 2] - kdata[i + 2])
+            outData[i + 3] = data[i + 3]
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
+     * 中值滤波
+     * @param {any} imageData 
+     * @param {*} kernelSize 
+     * @returns 
+     */
+    medianFilter(imageData, kernelSize) {
+        const { width, height, data } = imageData
+        const outData = new Uint8ClampedArray(width * height * 4)
+        const half = Math.floor(kernelSize / 2)
+        const total = kernelSize * kernelSize
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const rList = [], gList = [], bList = []
+                for (let ky = -half; ky <= half; ky++) {
+                    for (let kx = -half; kx <= half; kx++) {
+                        const ny = y + ky
+                        const nx = x + kx
+                        if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+                            const idx = (ny * width + nx) * 4
+                            rList.push(data[idx])
+                            gList.push(data[idx + 1])
+                            bList.push(data[idx + 2])
+                        }
+                    }
+                }
+                rList.sort((a, b) => a - b)
+                gList.sort((a, b) => a - b)
+                bList.sort((a, b) => a - b)
+                const index = (y * width + x) * 4
+                outData[index]     = rList[Math.floor(rList.length / 2)]
+                outData[index + 1] = gList[Math.floor(gList.length / 2)]
+                outData[index + 2] = bList[Math.floor(bList.length / 2)]
+                outData[index + 3] = data[index + 3]
+            }
+        }
+        return new ImageData(outData, width, height)
+    },
+    /**
      * 灰度平均
      * @param {any} imageData 
      */

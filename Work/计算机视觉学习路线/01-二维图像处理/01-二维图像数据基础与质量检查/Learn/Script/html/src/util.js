@@ -148,7 +148,14 @@ const util = {
         if (u1 === 0) u1 = 1e-10
         const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
         return mean + z * sigma
-   }
+   },
+    sumArray(arr) {
+        let sum = 0
+        for (let i = 0; i < arr.length; i++) {
+            sum += arr[i]
+        }
+        return sum
+    }
 }
 
 export { util }

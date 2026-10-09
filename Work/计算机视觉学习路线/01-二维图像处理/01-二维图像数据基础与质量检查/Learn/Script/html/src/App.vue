@@ -10,6 +10,7 @@
           style="display: none"
           @change="handleFileChange"
         />
+        <el-button type="primary" @click="handleFileSave">导出图片</el-button>
       </div>
     </header>
 
@@ -259,6 +260,30 @@
               </div>
                <el-button type="primary" @click="clickNoiseProcessing" style="margin-top: 0.5rem; margin-left: auto; display: flex;" >应用</el-button>
            </article>
+            <article class="control_card flex_colum" style="gap:0.5rem">
+              <div class="control_card_header">
+                <h3>图像滤波</h3>
+             </div>
+              <div class="flex_row" style="gap:0.4rem;">
+                 <el-select v-model="filtermodeValue">
+                    <el-option label="均值滤波" value="1" />
+                    <el-option label="高斯滤波" value="2" />
+                    <el-option label="中值滤波" value="3" />
+                    <el-option label="反锐化" value="4" />
+                </el-select>
+                  <el-select v-model="kernelmodeValue">
+                    <el-option label="3" :value="3" />
+                    <el-option label="5" :value="5" />
+                    <el-option label="7" :value="7" />
+                </el-select>
+                <el-button class="reset_button" style="margin-left: auto;" circle  @click="resetRender">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6" />
+                </svg>
+                </el-button>
+              </div>
+               <el-button type="primary" @click="clickFilterProcessing" style="margin-top: 0.5rem; margin-left: auto; display: flex;" >应用</el-button>
+           </article>
         </div>
 
       </aside>
@@ -275,12 +300,19 @@ import HistogramChart from './histogramchart.vue'
 
 const greymodeValue = ref('1')
 const noisemodeValue = ref('1')
+const filtermodeValue = ref('1')
+const kernelmodeValue = ref(3)
 const histogramchartRoot = ref(null)
 const histogramchartChange = ref(null)
 const histogramValue = ref(false)
 const fileInput = ref(null)
 const canvasRoot = ref(null)
 const canvasChange = ref(null)
+// 全尺寸画布只负责保存和处理原始分辨率像素，页面中的 canvas 仍保持 500 × 500 预览。
+const canvasRootFull = document.createElement('canvas')
+const canvasChangeFull = document.createElement('canvas')
+canvasRootFull.width = canvasChangeFull.width = 500
+canvasRootFull.height = canvasChangeFull.height = 500
 const contrast = ref(1)
 const brightness = ref(0)
 const gamma = ref(1)
@@ -335,7 +367,7 @@ const updateRenderState =  (target,imageData,type)=> {
 渲染复位
 */
 const resetRender = ()=> {
-  store.imageDataShot = util.getCanvasImageData(canvasRoot.value)
+  store.imageDataShot = util.getCanvasImageData(canvasRootFull)
   render()
 }
 const barStyleRoot = computed(() => ({
@@ -354,13 +386,14 @@ const barStyleChange = computed(() => ({
 直方图均衡化等独立组件的渲染
 */
 const processOneRender = (func,...args)=> {
-  const canvas = canvasChange.value
+  const canvas = canvasChangeFull
   //需要先记录快照并更新
   store.imageDataShot = util.getCanvasImageData(canvas)
   if (store.imageDataShot === null) return
   const imageData = func(...args)
   const ctx = canvas.getContext('2d')
   ctx.putImageData(imageData, 0, 0)
+  util.drawImageToCanvas(canvasChange.value, canvas)
   updateRenderState(imageDatasChange,imageData,changeChannel.value)
   store.imageDataShot = util.getCanvasImageData(canvas)
    
@@ -376,6 +409,17 @@ const clickGrayscaleProcessing = ()=> {
   else func = alg.grayWeightedAverage
   processOneRender(func,store.imageDataShot)
 }
+/**
+ * 设置滤波
+ */
+const clickFilterProcessing = ()=> {
+  let func = null
+  if(filtermodeValue.value === '1') func = alg.meanFilter
+  else if(filtermodeValue.value === '2') func = alg.gaussianFilter
+  else if(filtermodeValue.value === '3') func = alg.medianFilter
+  else if(filtermodeValue.value === '4') func = alg.deSharpFilter
+  processOneRender(func,store.imageDataShot,kernelmodeValue.value)
+}
 /*
   设置噪声
 */
@@ -390,7 +434,7 @@ const handleChangeRoot = (value)=> {
   updateRenderState(imageDatasRoot,store.imageDataRoot,value)
 }
 const handleChangeChange = (value) => {
-  const canvas = canvasChange.value
+  const canvas = canvasChangeFull
   const ctx = canvas.getContext('2d')
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
   updateRenderState(imageDatasChange,imageData,value)
@@ -406,15 +450,16 @@ const render = () => {
   })
   if (store.imageDataShot === null) return
 
-  const ctx = canvasChange.value.getContext('2d')
+  const ctx = canvasChangeFull.getContext('2d')
   const imageData = alg.render(store.imageDataShot)
   ctx.putImageData(imageData, 0, 0)
+  util.drawImageToCanvas(canvasChange.value, canvasChangeFull)
   updateRenderState(imageDatasChange,imageData,changeChannel.value)
 }
 
 const resetData = () => {
-  store.imageDataRoot = util.getCanvasImageData(canvasRoot.value)
-  store.imageDataShot = util.getCanvasImageData(canvasChange.value)
+  store.imageDataRoot = util.getCanvasImageData(canvasRootFull)
+  store.imageDataShot = util.getCanvasImageData(canvasChangeFull)
   stateMachine.resetState()
   updateRenderState(imageDatasRoot,store.imageDataRoot,rootChannel.value)
   updateRenderState(imageDatasChange,store.imageDataRoot,changeChannel.value)
@@ -431,13 +476,40 @@ const handleFileChange = (event) => {
   reader.onload = (readerEvent) => {
     const img = new Image()
     img.onload = () => {
-      util.drawImageToCanvas(canvasRoot.value, img)
-      util.drawImageToCanvas(canvasChange.value, img)
+      const width = img.naturalWidth || img.width
+      const height = img.naturalHeight || img.height
+      canvasRootFull.width = canvasChangeFull.width = width
+      canvasRootFull.height = canvasChangeFull.height = height
+
+      canvasRootFull.getContext('2d').drawImage(img, 0, 0, width, height)
+      canvasChangeFull.getContext('2d').drawImage(img, 0, 0, width, height)
+      util.drawImageToCanvas(canvasRoot.value, canvasRootFull)
+      util.drawImageToCanvas(canvasChange.value, canvasChangeFull)
       resetData()
     }
     img.src = readerEvent.target.result
   }
   reader.readAsDataURL(file)
+}
+const handleFileSave = () => {
+  const imageData = store.imageDataShot
+  if (!imageData) return
+  // 1. 创建临时 canvas
+  const canvas = document.createElement('canvas')
+  canvas.width = imageData.width
+  canvas.height = imageData.height
+  // 2. 把 ImageData 画上去
+  const ctx = canvas.getContext('2d')
+  ctx.putImageData(imageData, 0, 0)
+  // 3. 转成 blob 下载
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `image_${Date.now()}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, 'image/png')
 }
 
 const handleContrastInput = () => {
