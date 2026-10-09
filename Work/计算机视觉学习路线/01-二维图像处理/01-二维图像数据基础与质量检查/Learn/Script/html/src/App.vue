@@ -449,7 +449,6 @@ const updateResidualImage = () => {
 const setResidualSource = (inputImage, outputImage) => {
   residualInputImage = inputImage
   residualOutputImage = outputImage
-  if (activeAnalysisTab.value === 'residual') updateResidualImage()
 }
 
 const updateGradientImages = () => {
@@ -459,12 +458,6 @@ const updateGradientImages = () => {
   }
   gradientImageChange.value = alg.gradientMap(store.imageDataResult)
 }
-
-watch(activeAnalysisTab, (value) => {
-  if (value === 'residual') updateResidualImage()
-  else if (value === 'gradient') updateGradientImages()
-})
-watch(residualChangeChannel, updateResidualImage)
 
 const updateMinMaxPixelValue = (isRoot, min, max) => {
   if (isRoot) {
@@ -488,6 +481,24 @@ const updateRenderState = (target, imageData, channel) => {
   updateMinMaxPixelValue(isRoot, min, max)
 }
 
+const refreshActiveAnalysis = (refreshRoot = false) => {
+  if (activeAnalysisTab.value === 'histogram') {
+    if (refreshRoot) {
+      updateRenderState(imageDatasRoot, store.imageDataRoot, rootChannel.value)
+    }
+    updateRenderState(imageDatasChange, store.imageDataResult, changeChannel.value)
+  } else if (activeAnalysisTab.value === 'residual') {
+    updateResidualImage()
+  } else if (activeAnalysisTab.value === 'gradient') {
+    updateGradientImages()
+  }
+}
+
+watch(activeAnalysisTab, () => refreshActiveAnalysis(true))
+watch(residualChangeChannel, () => {
+  if (activeAnalysisTab.value === 'residual') updateResidualImage()
+})
+
 const barStyleRoot = computed(() => ({
   background: `linear-gradient(to top,
     rgb(${pixelState.minRoot},${pixelState.minRoot},${pixelState.minRoot}),
@@ -507,8 +518,7 @@ const render = () => {
   store.imageDataResult = imageData
   drawImageData(canvasChange.value, imageData)
   setResidualSource(store.imageDataShot, imageData)
-  updateRenderState(imageDatasChange, imageData, changeChannel.value)
-  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
+  refreshActiveAnalysis()
 }
 
 const resetRender = () => {
@@ -529,8 +539,7 @@ const processOneRender = (operation) => {
   store.imageDataResult = resultImage
   drawImageData(canvasChange.value, resultImage)
   setResidualSource(inputImage, committedImage)
-  updateRenderState(imageDatasChange, resultImage, changeChannel.value)
-  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
+  refreshActiveAnalysis()
 }
 
 const clickHistogramEqualize = () => {
@@ -591,9 +600,7 @@ const resetData = (fullImageData, previewImageData) => {
   drawImageData(canvasRoot.value, store.imageDataRoot)
   drawImageData(canvasChange.value, store.imageDataResult)
   setResidualSource(store.imageDataShot, store.imageDataResult)
-  updateRenderState(imageDatasRoot, store.imageDataRoot, rootChannel.value)
-  updateRenderState(imageDatasChange, store.imageDataResult, changeChannel.value)
-  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
+  refreshActiveAnalysis(true)
 }
 
 const openFileInput = () => {
