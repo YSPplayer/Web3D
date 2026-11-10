@@ -1,13 +1,22 @@
 import json
 import unittest
+from types import SimpleNamespace
 
 from Agent.result import ToolExecutionResult
 from Agent.runner import AgentRunner
 
 
 class FakeDispatcher:
-    def __init__(self, result_status: str = "success"):
+    def __init__(
+        self,
+        result_status: str = "success",
+        *,
+        requires_confirmation: bool = False,
+        risk_level: str = "low",
+    ):
         self.result_status = result_status
+        self.requires_confirmation = requires_confirmation
+        self.risk_level = risk_level
         self.calls: list[dict] = []
 
     async def model_schemas_for_user(self, user_id: int) -> list[dict]:
@@ -52,6 +61,23 @@ class FakeDispatcher:
                     },
                 },
             },
+            {
+                "type": "function",
+                "function": {
+                    "name": "delete_path",
+                    "description": "删除单个文件或目录，目录可递归删除",
+                    "parameters": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "path": {"type": "string"},
+                            "recursive": {"type": "boolean"},
+                            "use_trash": {"type": "boolean"},
+                        },
+                        "required": ["path"],
+                    },
+                },
+            },
         ]
 
     async def execute(self, **kwargs) -> ToolExecutionResult:
@@ -76,6 +102,12 @@ class FakeDispatcher:
                 "max_depth": kwargs["arguments"].get("max_depth", 0),
                 "truncated": False,
             }
+        elif kwargs["tool_name"] == "delete_path":
+            data = {
+                "path": kwargs["arguments"]["path"],
+                "deleted": True,
+                "mode": "trash",
+            }
         else:
             data = {"datetime": "2026-08-31 12:00:00"}
         return ToolExecutionResult(
@@ -84,6 +116,18 @@ class FakeDispatcher:
             status=self.result_status,
             data=data if self.result_status == "success" else None,
             error=None if self.result_status == "success" else "工具不可用",
+        )
+
+    async def get_tool_policy(self, user_id: int, tool_name: str):
+        return SimpleNamespace(
+            tool_id=1,
+            tool_name=tool_name,
+            display_name="测试工具",
+            description="测试工具描述",
+            source_kind="system",
+            is_enabled=True,
+            requires_confirmation=self.requires_confirmation,
+            risk_level=self.risk_level,
         )
 
 
@@ -151,6 +195,84 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
             {"type": "delta", "content": "当前不需要调用工具"}
         ])
         self.assertEqual(dispatcher.calls, [])
+
+    async def test_missing_required_tool_argument_is_retried_before_execution(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher, max_decision_retries=1)
+        decisions = iter([
+            '{"type":"tool","tool_name":"list_directory","arguments":{}}',
+            '{"type":"tool","tool_name":"list_directory",'
+            '"arguments":{"path":"E:\\\\case_query\\\\data_out_x3p"}}',
+            '{"type":"final","reason_code":"completed_with_tool"}',
+        ])
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            yield "目录查询完成"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=1,
+                conversation_id=49,
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        "E:\\case_query\\data_out_x3p 分析一下这里有多少文件"
+                    ),
+                }],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertEqual(len(dispatcher.calls), 1)
+        self.assertEqual(
+            dispatcher.calls[0]["arguments"]["path"],
+            "E:\\case_query\\data_out_x3p",
+        )
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["tool_start", "tool_result", "delta"],
+        )
+
+    async def test_empty_decision_is_retried_without_empty_assistant_message(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher, max_decision_retries=1)
+        decisions = iter([
+            "",
+            '{"type":"final","reason_code":"knowledge_only"}',
+        ])
+        decision_calls = []
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            decision_calls.append([dict(message) for message in messages])
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            yield "回答完成"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=1,
+                conversation_id=49,
+                messages=[{"role": "user", "content": "解释矩阵乘法"}],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertEqual([event["type"] for event in events], ["delta"])
+        self.assertEqual(len(decision_calls), 2)
+        self.assertFalse(any(
+            message.get("role") == "assistant"
+            and not str(message.get("content", "")).strip()
+            for message in decision_calls[1]
+        ))
+        self.assertIn("上一个模型响应为空", decision_calls[1][-1]["content"])
 
     async def test_repeated_tool_failure_returns_deterministic_error(self):
         dispatcher = FakeDispatcher(result_status="denied")
@@ -437,6 +559,132 @@ class AgentRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(decision_calls), 1)
         self.assertEqual(decision_calls[0]["max_output_tokens"], 256)
         self.assertEqual(events[-1]["type"], "delta")
+
+    async def test_delete_request_cannot_finish_after_read_only_preflight(self):
+        dispatcher = FakeDispatcher()
+        runner = AgentRunner(dispatcher, max_decision_retries=1)
+        target = "E:\\case_query\\data_out_x3p\\92G_9800959_S1"
+        decisions = iter([
+            '{"type":"tool","tool_name":"list_directory",'
+            '"arguments":{"path":"E:\\\\case_query\\\\data_out_x3p",'
+            '"max_depth":0}}',
+            '{"type":"final","reason_code":"completed_with_tool"}',
+            '{"type":"tool","tool_name":"delete_path",'
+            '"arguments":{"path":"E:\\\\case_query\\\\data_out_x3p'
+            '\\\\92G_9800959_S1","recursive":true,"use_trash":true}}',
+            '{"type":"final","reason_code":"completed_with_tool"}',
+        ])
+
+        async def complete_model(messages: list[dict], metadata: dict) -> str:
+            return next(decisions)
+
+        async def stream_model(messages: list[dict], metadata: dict):
+            self.assertTrue(any(
+                '"deleted": true' in str(message.get("content", ""))
+                for message in messages
+            ))
+            yield "目标文件夹已送入回收站"
+
+        events = [
+            event
+            async for event in runner.run_stream(
+                user_id=1,
+                conversation_id=49,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": (
+                            "E:\\case_query\\data_out_x3p 中有文件夹 "
+                            "92G_9800959_S1"
+                        ),
+                    },
+                    {"role": "assistant", "content": "已经查询到该文件夹"},
+                    {
+                        "role": "user",
+                        "content": (
+                            "OK，帮我把这个92G_9800959_S1的文件夹和其内部的"
+                            "文件全部删除，开始行动"
+                        ),
+                    },
+                ],
+                complete_model=complete_model,
+                stream_model=stream_model,
+            )
+        ]
+
+        self.assertTrue(AgentRunner._request_requires_tool([
+            {
+                "role": "user",
+                "content": "把这个文件夹和其内部文件全部删除",
+            }
+        ]))
+        self.assertEqual(
+            [call["tool_name"] for call in dispatcher.calls],
+            ["list_directory", "delete_path"],
+        )
+        self.assertEqual(dispatcher.calls[1]["arguments"]["path"], target)
+        self.assertEqual(
+            [event["type"] for event in events],
+            ["tool_start", "tool_result", "tool_start", "tool_result", "delta"],
+        )
+
+    def test_delete_tool_is_pinned_into_limited_schema_selection(self):
+        schemas = [
+            {
+                "type": "function",
+                "function": {
+                    "name": f"read_candidate_{index}",
+                    "description": "读取文件和目录数据",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            }
+            for index in range(15)
+        ]
+        schemas.append({
+            "type": "function",
+            "function": {
+                "name": "delete_path",
+                "description": "删除单个文件或目录",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"path": {"type": "string"}},
+                    "required": ["path"],
+                },
+            },
+        })
+
+        selected = AgentRunner._select_tool_schemas(
+            [{
+                "role": "user",
+                "content": "把这个文件夹及其内部文件全部删除",
+            }],
+            schemas,
+            maximum=10,
+        )
+
+        selected_names = {
+            schema["function"]["name"]
+            for schema in selected
+        }
+        self.assertEqual(len(selected), 1)
+        self.assertEqual(selected_names, {"delete_path"})
+
+    def test_decision_context_keeps_only_recent_messages_and_system(self):
+        messages = [
+            {"role": "system", "content": "system"},
+            *[
+                {"role": "user", "content": f"message-{index}"}
+                for index in range(12)
+            ],
+        ]
+
+        selected = AgentRunner._decision_context(messages)
+
+        self.assertEqual(selected[0]["content"], "system")
+        self.assertEqual(
+            [message["content"] for message in selected[1:]],
+            [f"message-{index}" for index in range(4, 12)],
+        )
 
 
 if __name__ == "__main__":

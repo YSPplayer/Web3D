@@ -53,6 +53,37 @@ class ToolCompletionPolicyTests(unittest.TestCase):
             request_context={"directories_only": True},
         ))
 
+    def test_path_name_comparison_can_finalize_without_another_tool_decision(self):
+        result = {
+            "match_count": 25,
+            "items": [{"name": "sample"}],
+            "has_more": True,
+            "result_complete": True,
+        }
+        self.assertTrue(self.policy.can_finalize(
+            "compare_path_names",
+            {},
+            result,
+        ))
+
+    def test_read_only_result_cannot_finalize_required_delete_operation(self):
+        result = {
+            "entries": [{"name": "target", "type": "directory"}],
+            "directory_count": 1,
+            "max_depth": 0,
+            "truncated": False,
+        }
+
+        self.assertFalse(self.policy.can_finalize(
+            "list_directory",
+            {"path": "E:\\case_query\\data_out_x3p", "max_depth": 0},
+            result,
+            request_context={
+                "directories_only": True,
+                "required_tool_names": ["delete_path"],
+            },
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

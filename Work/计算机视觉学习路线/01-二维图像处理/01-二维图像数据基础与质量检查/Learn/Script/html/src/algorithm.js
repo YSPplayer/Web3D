@@ -434,48 +434,141 @@ const alg = {
         return alg.commonFilter(imageData, kernel, kernelSize)
     },
     /**
-     *  梯度图
-     * @param {any} imageData 
+     * 计算灰度亮度图的中心差分，供普通梯度图和 NMS 梯度图共用。
+     * @param {ImageData} imageData
+     * @param {boolean} keepComponents 是否保留 Gx、Gy
      */
-    gradientMap(imageData) {
+    calculateGradientData(imageData, keepComponents = false) {
         const { width, height, data } = imageData
-        const outData = new Uint8ClampedArray(width * height * 4)
-        const magnitude = new Float32Array(width * height)
-        let maxM = 0
+        const pixelCount = width * height
+        const magnitude = new Float32Array(pixelCount)
+        const gxArr = keepComponents ? new Float32Array(pixelCount) : null
+        const gyArr = keepComponents ? new Float32Array(pixelCount) : null
+        const luminanceAt = (index) => (
+            data[index] * 0.299 +
+            data[index + 1] * 0.587 +
+            data[index + 2] * 0.114
+        )
+        let maxMagnitude = 0
+
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                const index = (y * width + x) * 4
-                // 边界：复制边缘
                 const xL = Math.max(0, x - 1)
                 const xR = Math.min(width - 1, x + 1)
                 const yU = Math.max(0, y - 1)
                 const yD = Math.min(height - 1, y + 1)
-                // 中心差分
-                const gxR = data[(y * width + xR) * 4] - data[(y * width + xL) * 4]
-                const gyR = data[(yD * width + x) * 4] - data[(yU * width + x) * 4]
-                const gxG = data[(y * width + xR) * 4 + 1] - data[(y * width + xL) * 4 + 1]
-                const gyG = data[(yD * width + x) * 4 + 1] - data[(yU * width + x) * 4 + 1]
-                const gxB = data[(y * width + xR) * 4 + 2] - data[(y * width + xL) * 4 + 2]
-                const gyB = data[(yD * width + x) * 4 + 2] - data[(yU * width + x) * 4 + 2]
-                // 幅值
-                const mR = Math.sqrt(gxR * gxR + gyR * gyR)
-                const mG = Math.sqrt(gxG * gxG + gyG * gyG)
-                const mB = Math.sqrt(gxB * gxB + gyB * gyB)
-                const m = (mR + mG + mB) / 3
-                magnitude[y * width + x] = m
-                if (m > maxM) maxM = m
+                const leftIndex = (y * width + xL) * 4
+                const rightIndex = (y * width + xR) * 4
+                const upperIndex = (yU * width + x) * 4
+                const lowerIndex = (yD * width + x) * 4
+                const gx = luminanceAt(rightIndex) - luminanceAt(leftIndex)
+                const gy = luminanceAt(lowerIndex) - luminanceAt(upperIndex)
+                const value = Math.sqrt(gx * gx + gy * gy)
+                const index = y * width + x
+
+                magnitude[index] = value
+                if (keepComponents) {
+                    gxArr[index] = gx
+                    gyArr[index] = gy
+                }
+                if (value > maxMagnitude) maxMagnitude = value
             }
         }
-        // 归一化
+
+        return { width, height, magnitude, gxArr, gyArr, maxMagnitude }
+    },
+    /**
+     * 把flot3d位的梯度图转为u8可视化图
+     * @param {*} magnitude 
+     * @param {*} width 
+     * @param {*} height 
+     * @param {*} maxMagnitude 
+     * @returns 
+     */
+    createGradientImageData(magnitude, width, height, maxMagnitude) {
+        const outData = new Uint8ClampedArray(width * height * 4)
         for (let i = 0; i < magnitude.length; i++) {
-            const val = maxM > 0 ? (magnitude[i] / maxM) * 255 : 0
-            const idx = i * 4
-            outData[idx]     = val
-            outData[idx + 1] = val
-            outData[idx + 2] = val
-            outData[idx + 3] = 255
+            const value = maxMagnitude > 0 ? magnitude[i] / maxMagnitude * 255 : 0
+            const index = i * 4
+            outData[index] = value
+            outData[index + 1] = value
+            outData[index + 2] = value
+            outData[index + 3] = 255
         }
         return new ImageData(outData, width, height)
+    },
+    /**
+     * 梯度图
+     * @param {ImageData} imageData
+     */
+    gradientMap(imageData) {
+        const gradient = alg.calculateGradientData(imageData)
+        return alg.createGradientImageData(
+            gradient.magnitude,
+            gradient.width,
+            gradient.height,
+            gradient.maxMagnitude
+        )
+    },
+    /**
+     * NMS梯度图
+     * @param {any} imageData
+     */
+    gradientMapWithNMS(imageData) {
+        const {
+            width,
+            height,
+            magnitude,
+            gxArr,
+            gyArr
+        } = alg.calculateGradientData(imageData, true)
+        const nmsArr = new Float32Array(width * height)
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x
+                const m = magnitude[idx]
+                if (m === 0) continue
+                const gx = gxArr[idx]
+                const gy = gyArr[idx]
+                // 方向（度）
+                let angle = Math.atan2(gy, gx) * 180 / Math.PI
+                if (angle < 0) angle += 180
+                // 量化到 4 个方向
+                let dir
+                if (angle < 22.5 || angle >= 157.5) dir = 0        // 0°
+                else if (angle < 67.5) dir = 45                     // 45°
+                else if (angle < 112.5) dir = 90                    // 90°
+                else dir = 135                                      // 135°
+                // 沿方向取左右邻居
+                let left = 0, right = 0
+                const xL = Math.max(0, x - 1)
+                const xR = Math.min(width - 1, x + 1)
+                const yU = Math.max(0, y - 1)
+                const yD = Math.min(height - 1, y + 1)
+                if (dir === 0) {
+                    left = magnitude[y * width + xL]
+                    right = magnitude[y * width + xR]
+                } else if (dir === 45) {
+                    left = magnitude[yU * width + xL]
+                    right = magnitude[yD * width + xR]
+                } else if (dir === 90) {
+                    left = magnitude[yU * width + x]
+                    right = magnitude[yD * width + x]
+                } else {
+                    left = magnitude[yD * width + xL]
+                    right = magnitude[yU * width + xR]
+                }
+                // 一侧使用严格比较，避免相邻等高峰同时保留成双像素宽边缘。
+                if (m >= left && m > right) {
+                    nmsArr[idx] = m
+                }
+            }
+        }
+        let maxN = 0
+        for (let i = 0; i < nmsArr.length; i++) {
+            if (nmsArr[i] > maxN) maxN = nmsArr[i]
+        }
+        return alg.createGradientImageData(nmsArr, width, height, maxN)
     },
     /**
      * 获取残差图

@@ -169,6 +169,13 @@
                       <span class="color_mark result"></span>
                       <span>结果图</span>
                     </div>
+                    <div class="gradient_mode_control">
+                      <span>NMS</span>
+                      <el-switch
+                        v-model="gradientNmsEnabled"
+                        @change="handleGradientNmsChange"
+                      />
+                    </div>
                   </div>
                   <ResidualCanvas
                     style="margin: 0.5rem;"
@@ -405,6 +412,7 @@ const imageDatasChange = ref(new Array(256).fill(0))
 const residualImageChange = ref(null)
 const gradientImageRoot = ref(null)
 const gradientImageChange = ref(null)
+const gradientNmsEnabled = ref(false)
 let residualInputImage = null
 let residualOutputImage = null
 
@@ -453,10 +461,19 @@ const setResidualSource = (inputImage, outputImage) => {
 
 const updateGradientImages = () => {
   if (!store.imageDataRoot || !store.imageDataResult) return
+  const gradientMap = gradientNmsEnabled.value
+    ? alg.gradientMapWithNMS
+    : alg.gradientMap
   if (!gradientImageRoot.value) {
-    gradientImageRoot.value = alg.gradientMap(store.imageDataRoot)
+    gradientImageRoot.value = gradientMap(store.imageDataRoot)
   }
-  gradientImageChange.value = alg.gradientMap(store.imageDataResult)
+  gradientImageChange.value = gradientMap(store.imageDataResult)
+}
+
+const handleGradientNmsChange = () => {
+  gradientImageRoot.value = null
+  gradientImageChange.value = null
+  if (activeAnalysisTab.value === 'gradient') updateGradientImages()
 }
 
 const updateMinMaxPixelValue = (isRoot, min, max) => {
@@ -976,6 +993,13 @@ input {
   display: flex;
   align-items: center;
   gap: 9px;
+}
+
+.gradient_mode_control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
 }
 
 .channel_select {

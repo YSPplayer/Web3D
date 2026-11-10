@@ -11,7 +11,7 @@ class AgentSkillLoaderTests(unittest.TestCase):
         second = loader.get()
 
         self.assertEqual(first.name, "chatai_agent_tool_use")
-        self.assertEqual(first.version, "1.0.1")
+        self.assertEqual(first.version, "1.0.3")
         self.assertEqual(len(first.content_hash), 64)
         self.assertIs(first, second)
         self.assertIn("必须调用工具的场景", first.content)
